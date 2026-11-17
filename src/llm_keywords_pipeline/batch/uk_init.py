@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Batch UK init: create _clean.json and _meta.json for all categories."""
 
+import argparse
 import json
 import re
+from datetime import date
 from pathlib import Path
+
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 # Translation dictionary RU → UK. Keys are whole RU word forms (translate_keyword
 # matches whole words only), taken from real RU keywords.
@@ -24,7 +28,6 @@ TRANSLATIONS = {
     "аккумуляторная": "акумуляторна",
     "аккумуляторную": "акумуляторну",
     "машинкой": "машинкою",
-    "машина": "машина",
     "воск": "віск",
     "покрытие": "покриття",
     "покрытия": "покриття",
@@ -45,11 +48,8 @@ TRANSLATIONS = {
     "салоне": "салоні",
     "салонов": "салонів",
     "двигателя": "двигуна",
-    "диск": "диск",
-    "шин": "шин",
     "пена": "піна",
     "пятновыводитель": "плямовивідник",
-    "запах": "запах",
     "обезжириватель": "знежирювач",
     "варежка": "рукавичка",
     "микрофибра": "мікрофібра",
@@ -67,19 +67,13 @@ TRANSLATIONS = {
     "ведро": "відро",
     "ведра": "відра",
     "набор": "набір",
-    "скотч": "скотч",
     "оборудование": "обладнання",
-    "торнадор": "торнадор",
-    "силант": "силант",
     "детейлинг": "детейлінг",
     "детейлинга": "детейлінгу",
-    "круг": "круг",
     "меховой": "хутряний",
-    "паст": "паст",
     "омыватель": "омивач",
     "омыватели": "омивачі",
     # Verbs/adjectives
-    "ручной": "ручного",
     "купить": "купити",
     "аксессуары": "аксесуари",
     "химчистка": "хімчистка",
@@ -221,9 +215,18 @@ def translate_h1(h1_ru: str, slug: str) -> str:
     return result.strip()
 
 
-def process_category(slug: str, ru_meta_path: str) -> dict:
-    """Process single category: read RU, create UK files."""
-    base = Path.cwd()
+def _write_unless_exists(path: Path, text: str, force: bool, skipped: list[str]) -> None:
+    """Write text to path; an existing file is kept and listed in skipped unless force."""
+    if path.exists() and not force:
+        skipped.append(str(path))
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def process_category(slug: str, ru_meta_path: str, force: bool = False) -> dict:
+    """Process single category: read RU, create UK files (existing ones kept unless force)."""
+    base = PROJECT_ROOT
     ru_meta = base / ru_meta_path
     uk_dir = base / "uk" / "categories" / slug
 
@@ -244,7 +247,7 @@ def process_category(slug: str, ru_meta_path: str) -> dict:
         },
         "h1": translate_h1(meta_ru["h1"], slug) if meta_ru.get("h1") else name_uk,
         "status": "generated",
-        "updated_at": "2026-01-23",
+        "updated_at": date.today().isoformat(),
     }
 
     # Add keywords_in_content if present
@@ -257,10 +260,11 @@ def process_category(slug: str, ru_meta_path: str) -> dict:
         }
 
     # Write UK meta
+    skipped: list[str] = []
     meta_path = uk_dir / "meta" / f"{slug}_meta.json"
-    meta_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(meta_uk, f, ensure_ascii=False, indent=2)
+    _write_unless_exists(
+        meta_path, json.dumps(meta_uk, ensure_ascii=False, indent=2), force, skipped
+    )
 
     # Create UK clean.json
     clean_uk = {
@@ -318,9 +322,9 @@ def process_category(slug: str, ru_meta_path: str) -> dict:
 
     # Write UK clean
     clean_path = uk_dir / "data" / f"{slug}_clean.json"
-    clean_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(clean_path, "w", encoding="utf-8") as f:
-        json.dump(clean_uk, f, ensure_ascii=False, indent=2)
+    _write_unless_exists(
+        clean_path, json.dumps(clean_uk, ensure_ascii=False, indent=2), force, skipped
+    )
 
     # Create CONTEXT.md
     context_md = f"""# Research Context: {name_uk}
@@ -348,15 +352,14 @@ See: {(Path(ru_meta_path).parent.parent / "research" / "RESEARCH_DATA.md").as_po
 2. Write uk/categories/{slug}/content/{slug}_uk.md
 """
     context_path = uk_dir / "research" / "CONTEXT.md"
-    context_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(context_path, "w", encoding="utf-8") as f:
-        f.write(context_md)
+    _write_unless_exists(context_path, context_md, force, skipped)
 
     return {
         "slug": slug,
         "meta_created": str(meta_path),
         "clean_created": str(clean_path),
         "context_created": str(context_path),
+        "skipped": skipped,
     }
 
 
@@ -413,13 +416,19 @@ CATEGORIES = {
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--force", action="store_true", help="overwrite existing UK files")
+    args = parser.parse_args()
+
     success = 0
     errors = []
 
     for slug, ru_path in CATEGORIES.items():
         try:
-            result = process_category(slug, ru_path)
+            result = process_category(slug, ru_path, force=args.force)
             print(f"✓ {slug}")
+            for path in result["skipped"]:
+                print(f"  skipped {path} (exists; --force to overwrite)")
             success += 1
         except Exception as e:
             print(f"✗ {slug}: {e}")
