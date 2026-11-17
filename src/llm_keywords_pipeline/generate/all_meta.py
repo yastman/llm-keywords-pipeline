@@ -177,15 +177,10 @@ def process_categories(
         existing_meta = load_json(meta_file, silent=True)
 
         # Skip existing unless --force
-        if existing_meta and not force:
-            # Preserve manually edited meta (has types/volumes/keywords_in_content)
-            has_manual_data = any(
-                k in existing_meta for k in ["types", "volumes", "keywords_in_content"]
-            )
-            if has_manual_data:
-                print(f"  ℹ️ {slug}: Preserved (manual data)")
-                preserved += 1
-                continue
+        if meta_file.exists() and not force:
+            print(f"  ℹ️ {slug}: Preserved (existing meta)")
+            preserved += 1
+            continue
 
         meta = meta_generator(slug, data)
 
