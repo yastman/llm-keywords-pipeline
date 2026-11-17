@@ -122,9 +122,9 @@ content rules і optional research, потім підготувати або п�
 | --- | --- | --- |
 | `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword в intro і H2, частота ключа. | За шляхом: шлях, що містить `/uk/` (наприклад `uk/categories/`) → uk, інакше ru. |
 | `uv run llm-keywords-density <file.md>` | Щільність ключів, stem-групи, category substrings, spam/warning thresholds. | `--lang ru\|uk`, за замовчуванням ru. |
-| `uv run llm-keywords-audit-brands <file.md>` | Blacklist брендів, згадки міст, NER-сутності. | За шляхом, як check-seo. |
+| `uv run llm-keywords-audit-brands <file.md>` | Blacklist брендів, згадки міст, NER-сутності, AI fluff. Strict-фрази дають FAIL; будь-яке влучання бренду, міста, AI fluff або strict-фрази дає exit 1; NER-сутності лише інформативні (без exit 1). Списки strict і AI fluff — за мовою файлу (зі шляху). | За шляхом, як check-seo. |
 | `uv run llm-keywords-audit-water <file.md>` | Вода, класична та академічна нудота. | `--lang ru\|uk`, за замовчуванням ru. |
-| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>"` | Структура H1/H2, primary keyword в H1 та intro, core і commercial coverage, вода/нудота, blacklist, довжина, content standards, markdown lint, FAQ. | `--lang ru\|uk`, за замовчуванням ru. |
+| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>"` | Структура H1/H2, primary keyword в H1 та intro, core і commercial coverage, вода/нудота, blacklist, довжина, content standards, markdown lint, FAQ. | `--lang ru\|uk`, за замовчуванням ru; blacklist перевіряється тією ж мовою. |
 
 Morphology-aware для української та російської (леми pymorphy3): matching ключів у
 check-seo, підрахунок ключів у density (ключі рахуються за n-грамами лем) і core coverage
