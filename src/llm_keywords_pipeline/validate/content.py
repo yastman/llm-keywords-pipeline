@@ -748,7 +748,7 @@ def check_markdown_lint(file_path: str) -> dict:
     results = {"violations": [], "violation_count": 0, "overall": "UNKNOWN", "note": None}
 
     if not MDLINT_AVAILABLE:
-        results["note"] = "MD-Lint check unavailable (install: uv add pymarkdownlnt)"
+        results["note"] = "MD-Lint check unavailable (install: uv sync --group nlp)"
         results["overall"] = "SKIPPED"
         return results
 

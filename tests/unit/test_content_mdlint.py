@@ -23,7 +23,7 @@ def test_mdlint_unavailable_hint_names_uv(monkeypatch: pytest.MonkeyPatch) -> No
     result = content.check_markdown_lint("missing.md")
 
     assert result["overall"] == "SKIPPED"
-    assert "uv add pymarkdownlnt" in result["note"]
+    assert "uv sync --group nlp" in result["note"]
 
 
 @pytest.mark.parametrize(("available", "expected"), [(False, True), (True, False)])
