@@ -20,6 +20,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 from llm_keywords_pipeline.core.text import clean_markdown, get_stopwords
 
 try:
@@ -93,7 +94,7 @@ def calculate_metrics_from_text(text: str, lang: str = "ru") -> dict | None:
 
     Args:
         text: Markdown текст для анализа
-        lang: 'ru' or 'uk' - язык для стоп-слов
+        lang: 'ru' or 'uk' - язык для стоп-слов и лемматизации
 
     Returns:
         Dict с метриками или None если текст пустой
@@ -142,10 +143,13 @@ def calculate_metrics_from_text(text: str, lang: str = "ru") -> dict | None:
     water_percent_raw = (water_count / total_words) * 100
     water_percent = water_percent_raw * ADVEGO_MULTIPLIER
 
-    # 2. ЛЕММАТИЗАЦИЯ
+    # 2. ЛЕММАТИЗАЦИЯ (natasha — только русская морфология; для uk — pymorphy3 uk)
     lemmas = []
+    uk_morph = MorphAnalyzer("uk") if lang == "uk" else None
     for token in cyrillic_tokens:
-        if morph_tagger and hasattr(token, "pos"):
+        if uk_morph:
+            lemmas.append(uk_morph.get_lemma(token.text))
+        elif morph_tagger and hasattr(token, "pos"):
             token.lemmatize(morph_vocab)
             if token.lemma:
                 lemmas.append(token.lemma)
@@ -314,7 +318,7 @@ def check_water(
     print("   (вспомогательная метрика)")
 
     print()
-    print("ℹ️ Используется библиотека Natasha для морфологического анализа")
+    print("ℹ️ Морфология: Natasha (ru), pymorphy3 (uk)")
 
     return status
 
@@ -327,8 +331,12 @@ def main(argv: list[str] | None = None) -> int:
         description="Аудит водности и тошноты текста.",
     )
     parser.add_argument("file_path", help="Путь к .md файлу")
-    parser.add_argument("target_min", nargs="?", type=int, default=40, help="Мин. % воды (default: 40)")
-    parser.add_argument("target_max", nargs="?", type=int, default=60, help="Макс. % воды (default: 60)")
+    parser.add_argument(
+        "target_min", nargs="?", type=int, default=40, help="Мин. %% воды (default: 40)"
+    )
+    parser.add_argument(
+        "target_max", nargs="?", type=int, default=60, help="Макс. %% воды (default: 60)"
+    )
     parser.add_argument("--lang", choices=["ru", "uk"], default="ru", help="Язык (default: ru)")
 
     args = parser.parse_args(argv)
