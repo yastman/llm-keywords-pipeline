@@ -1,1 +1,1 @@
-"""Audit utilities for SEO Ultimate."""
+"""Audit utilities for category texts and meta."""

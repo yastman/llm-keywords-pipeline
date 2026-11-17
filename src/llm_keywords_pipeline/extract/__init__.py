@@ -6,7 +6,6 @@ from llm_keywords_pipeline.extract import (
     export_uk_texts,
     ru_keywords_list,
     ru_keywords_mapping,
-    uk_keywords,
     uk_keywords_list,
 )
 
@@ -15,7 +14,6 @@ __all__ = [
     "categories",
     "ru_keywords_list",
     "ru_keywords_mapping",
-    "uk_keywords",
     "uk_keywords_list",
     "export_uk_texts",
 ]

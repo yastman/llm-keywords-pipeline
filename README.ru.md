@@ -64,7 +64,7 @@ Workflow начинается с выгрузки ключей: CSV или ст�
   этого пакета (ни один модуль его не пишет), pipeline только читает его;
 - кластеризованный clean JSON, например `categories/{slug}/data/{slug}_clean.json`;
 - синхронизация master CSV в `_clean.json`;
-- CSV restore/compare utilities для drift, missing keywords и изменившихся volumes.
+- CSV compare utilities для drift, missing keywords и изменившихся volumes.
 
 D+E fallback pattern сначала берет `_clean.json`, потом raw parsed JSON, потом CSV
 fallback. На практике `_clean.json` становится главным рабочим артефактом для следующих
@@ -120,7 +120,7 @@ content rules и optional research, затем подготовить или п�
 
 | Команда | Что проверяет | Язык |
 | --- | --- | --- |
-| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword в intro и H2, частота ключа. | По пути: путь, содержащий `/uk/` (например `uk/categories/`) → uk, иначе ru. |
+| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword в intro и H2, частота ключа. | По пути: путь, который начинается с `uk/categories/` или содержит `/uk/` → uk, иначе ru. |
 | `uv run llm-keywords-density <file.md>` | Плотность ключей, stem-группы, category substrings, spam/warning thresholds. | `--lang ru\|uk`, по умолчанию ru. |
 | `uv run llm-keywords-audit-brands <file.md>` | Blacklist брендов, упоминания городов, NER-сущности, AI fluff. Strict-фразы дают FAIL; любое попадание бренда, города, AI fluff или strict-фразы даёт exit 1; NER-сущности только информативны (без exit 1). Списки strict и AI fluff — по языку файла (из пути). | По пути, как check-seo. |
 | `uv run llm-keywords-audit-water <file.md>` | Вода, классическая и академическая тошнота. | `--lang ru\|uk`, по умолчанию ru. |
@@ -176,7 +176,7 @@ density и coverage ключей (validate.content) оставляют слов�
 | Density and spam | Считает ключи по n-граммам лемм (exact) и отдельным леммам (partial), плюс stem-группы и category substrings, против warning/spam thresholds. |
 | Water and nausea | Считает воду (доля стоп-слов, калиброванная), классическую тошноту (√ частоты топ-леммы), академическую тошноту (доля топ-леммы среди повторяющихся значимых лемм) и повтор лемм. |
 | Generation | Генерирует meta artifacts, SQL exports, semantic review files, catalog JSON и checklists. |
-| Repair and sync | Обновляет volumes, восстанавливает `_clean.json` из CSV, merge master keyword data (одна строка на категорию, тип и фразу; побеждает больший volume) и чинит misplaced terms. |
+| Sync | Переносит master CSV в `_clean.json`, обновляет volumes, merge master keyword data (одна строка на категорию, тип и фразу; побеждает больший volume). |
 
 ---
 
@@ -189,8 +189,7 @@ src/llm_keywords_pipeline/
   core/         keyword matching, morphology, SEO rules, text utilities
   generate/     meta, checklist, semantic review, catalog и export tools
   validate/     content, meta, heading, density, language и data validators
-  sync/         CSV/master-data synchronization и _clean.json repair
-  fix/          точечные cleanup utilities
+  sync/         CSV/master-data synchronization в _clean.json
   compare/      keyword distribution и dataset comparison helpers
   automation/   orchestrator prepare→produce→validate→deliver, batch runner, LLM client (библиотека, без CLI)
 tests/          pytest suite и public fixtures

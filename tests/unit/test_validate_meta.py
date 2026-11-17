@@ -57,6 +57,11 @@ class TestValidateTitle:
         result = validate_title(title)
         assert not result["checks"]["no_fluff"]["passed"]
 
+    def test_niche_phrases_are_not_generic_fluff(self):
+        # Product claims of one niche ("без разводов", "густая пена") are not fluff
+        for title in ("Стеклоочиститель без разводов купить (50 chars)", "Густая пена для мойки"):
+            assert validate_title(title)["checks"]["no_fluff"]["passed"]
+
 
 class TestValidateDescription:
     def test_regex_encoding(self):

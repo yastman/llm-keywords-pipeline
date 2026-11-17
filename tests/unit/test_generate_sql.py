@@ -1,9 +1,13 @@
 """Tests for generate_sql.py"""
 
+import pytest
+
 from llm_keywords_pipeline.generate.sql import (
     escape_sql,
     md_to_html,
 )
+
+OPENCART = '[opencart]\ntable_prefix = "oc_"\nlanguage_ids = { ru = 3 }\n'
 
 
 class TestEscapeSql:
@@ -67,6 +71,7 @@ class TestGenerateUpdateSqlMeta:
         import llm_keywords_pipeline.generate.sql as sql_mod
 
         monkeypatch.setattr(sql_mod, "PROJECT_DIR", tmp_path)
+        (tmp_path / "project.toml").write_text(OPENCART, encoding="utf-8")
         cat = tmp_path / "categories" / "slug"
         (cat / "content").mkdir(parents=True)
         (cat / "content" / "slug_ru.md").write_text("# H1\n\nText", encoding="utf-8")
@@ -106,3 +111,70 @@ class TestGenerateUpdateSqlMeta:
         out = self._setup(tmp_path, monkeypatch, '{"title": "T", "description": "D", "h1": "H"}')
         assert "`meta_title` = 'T'," in out
         assert "`meta_description` = 'D'," in out
+
+
+class TestGenerateUpdateSqlOpencart:
+    """Table and language id come from [opencart] of project.toml, no default."""
+
+    def _sql(self, tmp_path, monkeypatch, project_toml):
+        import llm_keywords_pipeline.generate.sql as sql_mod
+
+        monkeypatch.setattr(sql_mod, "PROJECT_DIR", tmp_path)
+        content = tmp_path / "categories" / "slug" / "content"
+        content.mkdir(parents=True)
+        (content / "slug_ru.md").write_text("# H1\n\nText", encoding="utf-8")
+        (tmp_path / "project.toml").write_text(project_toml, encoding="utf-8")
+        return sql_mod.generate_update_sql("slug", 7)
+
+    def test_prefix_and_ru_language_id_from_config(self, tmp_path, monkeypatch):
+        out = self._sql(
+            tmp_path,
+            monkeypatch,
+            '[opencart]\ntable_prefix = "shop_"\nlanguage_ids = { uk = 1, ru = 4 }\n',
+        )
+        assert "UPDATE `shop_category_description`" in out
+        assert "WHERE `category_id` = 7 AND `language_id` = 4;" in out
+
+    @pytest.mark.parametrize(
+        ("project_toml", "key"),
+        [
+            ("", "[opencart] table_prefix"),
+            ("[opencart]\nlanguage_ids = { ru = 3 }\n", "[opencart] table_prefix"),
+            ('[opencart]\ntable_prefix = "oc_"\nlanguage_ids = { uk = 1 }\n', "language_ids.ru"),
+        ],
+    )
+    def test_missing_key_stops_naming_it(self, tmp_path, monkeypatch, project_toml, key):
+        with pytest.raises(SystemExit) as exc:
+            self._sql(tmp_path, monkeypatch, project_toml)
+        assert key in str(exc.value)
+        assert "project.toml" in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    ("project_toml", "key"),
+    [
+        (None, "[opencart] table_prefix"),
+        ("[opencart]\nlanguage_ids = { ru = 3 }\n", "[opencart] table_prefix"),
+        ('[opencart]\ntable_prefix = "oc_"\nlanguage_ids = { uk = 1 }\n', "language_ids.ru"),
+    ],
+)
+def test_cli_without_opencart_key_stops_before_writing(tmp_path, project_toml, key):
+    """The shipped empty CATEGORY_MAP still checks [opencart] and writes no file."""
+    import os
+    import subprocess
+    import sys
+
+    if project_toml is not None:
+        (tmp_path / "project.toml").write_text(project_toml, encoding="utf-8")
+    env = {**os.environ, "LLM_KEYWORDS_PROJECT_ROOT": str(tmp_path)}
+
+    result = subprocess.run(
+        [sys.executable, "-m", "llm_keywords_pipeline.generate.sql"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert key in result.stderr
+    assert not (tmp_path / "content_updates.sql").exists()

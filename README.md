@@ -63,7 +63,7 @@ The project keeps several paths for that handoff:
   package (no module writes it); the pipeline only reads it;
 - clustered clean JSON, such as `categories/{slug}/data/{slug}_clean.json`;
 - master CSV sync into `_clean.json`;
-- CSV restore/compare utilities for drift, missing keywords, and changed volumes.
+- CSV compare utilities for drift, missing keywords, and changed volumes.
 
 The D+E fallback pattern prefers `_clean.json` first, then raw parsed JSON, then CSV
 fallback. In practice, `_clean.json` is the main working artifact for the next stages.
@@ -116,7 +116,7 @@ points:
 
 | Command | Checks | Language |
 | --- | --- | --- |
-| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword in intro and H2, keyword frequency. | From the path: a path containing `/uk/` (e.g. `uk/categories/`) → uk, else ru. |
+| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword in intro and H2, keyword frequency. | From the path: a path starting with `uk/categories/` or containing `/uk/` → uk, else ru. |
 | `uv run llm-keywords-density <file.md>` | Keyword density, stem groups, category substrings, spam/warning thresholds. | `--lang ru\|uk`, default ru. |
 | `uv run llm-keywords-audit-brands <file.md>` | Blacklisted brands, city mentions, NER entities, AI fluff. Strict phrases give FAIL; any brand, city, AI-fluff or strict hit gives exit 1; NER entities are info only (no exit 1). Strict and AI-fluff lists follow the file's language (from the path). | From the path, as check-seo. |
 | `uv run llm-keywords-audit-water <file.md>` | Water, classic nausea, academic nausea. | `--lang ru\|uk`, default ru. |
@@ -172,7 +172,7 @@ lemmatizes with pymorphy3.
 | Density and spam | Counts keywords by lemma n-grams (exact) and single lemmas (partial), plus stem groups and category substrings, against warning/spam thresholds. |
 | Water and nausea | Calculates water (stop-word share, calibrated), classic nausea (√ of the top lemma frequency), academic nausea (top lemma share among repeated significant lemmas), and lemma repetition. |
 | Generation | Produces meta artifacts, SQL exports, semantic review files, catalog JSON, and checklists. |
-| Repair and sync | Updates volumes, restores clean JSON from CSV, merges master keyword data (one row per category, type and phrase; the higher volume wins), and fixes ordering or misplaced terms. |
+| Sync | Pushes the master CSV into clean JSON, updates volumes, and merges master keyword data (one row per category, type and phrase; the higher volume wins). |
 
 ---
 
@@ -185,8 +185,7 @@ src/llm_keywords_pipeline/
   core/         keyword matching, morphology, SEO rules, text utilities
   generate/     meta, checklist, semantic review, catalog, and export tools
   validate/     content, meta, heading, density, language, and data validators
-  sync/         CSV/master-data synchronization and _clean.json repair
-  fix/          focused cleanup utilities
+  sync/         CSV/master-data synchronization into _clean.json
   compare/      keyword distribution and dataset comparison helpers
   automation/   prepare→produce→validate→deliver orchestrator, batch runner, LLM client (library, no CLI)
 tests/          pytest suite and public fixtures

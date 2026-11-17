@@ -55,10 +55,6 @@ DESC_MAX_LENGTH = QUALITY_THRESHOLDS["description_max"]
 COLON_PATTERN = re.compile(r":\s")
 
 MARKETING_FLUFF = [
-    r"без разводов",
-    r"без розводів",
-    r"густая пена",
-    r"густа піна",
     r"быстро",
     r"швидко",
     r"качественн",

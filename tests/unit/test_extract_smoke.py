@@ -13,9 +13,6 @@ class TestExtractPackageImports:
     def test_all_keywords_importable(self):
         from llm_keywords_pipeline.extract import all_keywords  # noqa: F401
 
-    def test_uk_keywords_importable(self):
-        from llm_keywords_pipeline.extract import uk_keywords  # noqa: F401
-
 
 class TestExtractKeywordsFromFile:
     """One keyword per normalized key, written in its first original form."""
@@ -27,14 +24,6 @@ class TestExtractKeywordsFromFile:
 
     def test_ru_list_dedups_variants_keeps_original(self, tmp_path):
         from llm_keywords_pipeline.extract.ru_keywords_list import extract_keywords_from_file
-
-        path = tmp_path / "x_clean.json"
-        path.write_text(self.DATA, encoding="utf-8")
-
-        assert extract_keywords_from_file(path) == {"пам'ять елки": "Пам’ять Ёлки"}
-
-    def test_uk_keywords_dedups_variants_keeps_original(self, tmp_path):
-        from llm_keywords_pipeline.extract.uk_keywords import extract_keywords_from_file
 
         path = tmp_path / "x_clean.json"
         path.write_text(self.DATA, encoding="utf-8")

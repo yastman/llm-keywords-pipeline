@@ -6,6 +6,9 @@ This module is intentionally test-first friendly:
 - Pure helpers for Markdown → HTML conversion
 - Safe SQL escaping
 - File-based orchestration in `main()`
+
+Writes RU content (`{slug}_ru.md`). Table and language id come from [opencart] of
+<data root>/project.toml: `table_prefix` and `language_ids.ru`; unset stops the command.
 """
 
 from __future__ import annotations
@@ -13,10 +16,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 import markdown
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.project import load_project, required
 
 PROJECT_DIR = PROJECT_ROOT
 OUTPUT_FILE = PROJECT_DIR / "content_updates.sql"
@@ -24,8 +29,15 @@ OUTPUT_FILE = PROJECT_DIR / "content_updates.sql"
 # Can be overridden in tests/usage.
 CATEGORY_MAP: dict[str, int] = {}
 
-# OpenCart defaults for this project (RU content).
-LANGUAGE_ID = 3
+
+def opencart_target(root: Path, lang: str) -> tuple[str, int]:
+    """Category description table and language id of [opencart] in <root>/project.toml."""
+    project = load_project(root)
+    prefix = required(project.opencart_table_prefix, root, "[opencart] table_prefix")
+    language_id = required(
+        project.opencart_language_ids.get(lang), root, f"[opencart] language_ids.{lang}"
+    )
+    return f"{prefix}category_description", language_id
 
 
 def escape_sql(value: str) -> str:
@@ -97,7 +109,8 @@ def _read_category_meta(slug: str) -> CategoryMeta:
     data = json.loads(meta_path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         return CategoryMeta()
-    # Nested {"meta": {...}} (prompts/produce.md) or top-level {"title", "description"} (older files).
+    # Nested {"meta": {"title", "description"}} (the shape validate.meta reads) or top-level
+    # {"title", "description"}.
     meta = data["meta"] if isinstance(data.get("meta"), dict) else data
     return CategoryMeta(
         title=str(meta.get("title", "") or ""),
@@ -106,6 +119,7 @@ def _read_category_meta(slug: str) -> CategoryMeta:
 
 
 def generate_update_sql(slug: str, category_id: int) -> str:
+    table, language_id = opencart_target(PROJECT_DIR, "ru")
     md_text = _read_category_md(slug)
     if not md_text:
         return f"-- {slug} (category_id: {category_id})\n-- Нет контента\n"
@@ -126,12 +140,12 @@ def generate_update_sql(slug: str, category_id: int) -> str:
     return "\n".join(
         [
             f"-- {slug} (category_id: {category_id})",
-            "UPDATE `oc_category_description`",
+            f"UPDATE `{table}`",
             "SET",
             f"    `description` = '{html_sql}',",
             *meta_lines,
             f"    `meta_h1` = '{h1_sql}'",
-            f"WHERE `category_id` = {category_id} AND `language_id` = {LANGUAGE_ID};",
+            f"WHERE `category_id` = {category_id} AND `language_id` = {language_id};",
             "",
         ]
     )
@@ -152,6 +166,8 @@ def _header_sql() -> str:
 
 
 def main() -> None:
+    # Check [opencart] before writing anything, even with no category to update
+    opencart_target(PROJECT_DIR, "ru")
     chunks: list[str] = [_header_sql()]
     for slug, category_id in CATEGORY_MAP.items():
         chunks.append(generate_update_sql(slug, category_id))

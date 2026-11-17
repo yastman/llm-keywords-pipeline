@@ -43,7 +43,7 @@ Create `categories/{slug}/content/{slug}_ru.md`.
 
 1. **H1:** Must match `h1` from JSON exactly.
 2. **Intro:** ~50 words. **Crucial:** `main_keyword` must be in the first sentence.
-3. **H2 "Как выбрать..." (Buying Guide):** Real advice, parameters (pH, material, etc.),
+3. **H2 "Как выбрать..." (Buying Guide):** Real advice, the product's real parameters,
    pros/cons.
 4. **H2 "Виды..." (Classification):** List of types with brief descriptions.
 5. **H2 "Характеристики" (Table):** *Required* if comparing types/specs.

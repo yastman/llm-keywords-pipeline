@@ -3,37 +3,8 @@
 Client-specific rules live in this file, not in code. No file means an empty
 config: no client rule applies; generic defaults stay in code.
 
-    [project]
-    brand = "Genesis"             # title suffix " | Genesis"; empty = no suffix
-    [meta]
-    required_phrases = { uk = ["опт\\b"], ru = [] }        # regexes per language, FAIL if missing
-    recommended_phrases = { uk = ["роздріб"] }              # regexes per language, WARNING if missing
-    description_template = { uk = "{name} оптом від {brand}. {types}." }  # all_meta; else filler
-    type_skip_brands = ["rupes"]  # all_meta: entities containing one are not product types
-    [slugs.ru]                    # category name -> slug; a name not listed = slugify(name)
-    "Активная пена" = "aktivnaya-pena"
-    [markers]
-    commercial = { uk = ["оптом"] }  # core.seo / analyze.category: added to generic words
-    [synonyms]
-    strip_terms = ["авто"]        # core.synonyms: dropped from a keyword before comparing
-    stems = { "полиров" = "полир" }                         # core.synonyms: word prefix -> stem
-    map = { "машина" = "авто" }   # analyze.duplicates: substring -> replacement
-    commercial_markers = ["киев"] # core.synonyms (RU): added to its generic commercial markers
-    [blacklist]
-    brands = ["koch"]             # audit.ner_brands findings
-    cities = true                 # city check of audit.ner_brands; false = off
-    phrases_allow = ["широкий асортимент"]                  # strict phrases not checked
-    [density.category_substrings.ru]
-    aktivnaya-pena = { primary = ["пен"], anti = ["шампун"] }
-    [structure.l2_forbidden]
-    avtoshampuni = ["ручн.*мойк"]                           # regexes per L2 slug
-    [content_standards]           # validate.content quality mode; all false when not set
-    safety_block = true
-    howto_steps = true
-    evergreen_math = true
-    warnings = true
-    [niche]
-    tone = "эксперт по оптовым поставкам сладостей"         # editorial tone of the analyze brief
+Every key, the module that reads it and a commented example: AGENTS.md, section
+"New client".
 """
 
 import re
@@ -52,12 +23,19 @@ class ProjectConfigError(ValueError):
     """project.toml exists but cannot be parsed."""
 
 
+def required[T](value: T | None, root: Path, key: str) -> T:
+    """Value of a key a command cannot run without; unset stops with a message naming it."""
+    if value is None:
+        raise SystemExit(f"{root / PROJECT_FILE}: {key} is not set; this command needs it")
+    return value
+
+
 @dataclass(frozen=True)
 class ProjectConfig:
     brand: str = ""
     site: str = ""
     languages: tuple[str, ...] = ()
-    # Structure CSV, relative to the data root; None = the module's legacy name.
+    # Structure CSV, relative to the data root; None = not set.
     semantics_csv: str | None = None
     # Meta description regexes per language; a language not listed requires none.
     required_phrases: dict[str, tuple[str, ...]] = field(default_factory=dict)
@@ -82,6 +60,9 @@ class ProjectConfig:
         default_factory=lambda: dict.fromkeys(CONTENT_STANDARD_KEYS, False)
     )
     tone: str = ""
+    # OpenCart: None / no entry = not set (generate.sql and plural_sql stop on it).
+    opencart_table_prefix: str | None = None
+    opencart_language_ids: dict[str, int] = field(default_factory=dict)
 
 
 def _table(data: dict[str, Any], key: str, path: Path, where: str | None = None) -> dict[str, Any]:
@@ -197,6 +178,15 @@ def _content_standards(data: dict[str, Any], path: Path) -> dict[str, bool]:
     return {key: table.get(key, False) for key in CONTENT_STANDARD_KEYS}
 
 
+def _language_ids(opencart: dict[str, Any], path: Path) -> dict[str, int]:
+    value = opencart.get("language_ids", {})
+    if not isinstance(value, dict) or not all(
+        isinstance(v, int) and not isinstance(v, bool) for v in value.values()
+    ):
+        raise ProjectConfigError(f"{path}: opencart.language_ids must be a table of integers")
+    return dict(value)
+
+
 @cache
 def load_project(root: Path) -> ProjectConfig:
     """Read <root>/project.toml once per root."""
@@ -216,6 +206,7 @@ def load_project(root: Path) -> ProjectConfig:
     synonyms = _table(data, "synonyms", path)
     blacklist = _table(data, "blacklist", path)
     niche = _table(data, "niche", path)
+    opencart = _table(data, "opencart", path)
     cities = blacklist.get("cities", True)
     if not isinstance(cities, bool):
         raise ProjectConfigError(f"{path}: blacklist.cities must be true or false")
@@ -253,6 +244,8 @@ def load_project(root: Path) -> ProjectConfig:
         l2_forbidden=_l2_forbidden(_table(data, "structure", path), path),
         content_standards=_content_standards(data, path),
         tone=_str(niche, "tone", "niche", path) or "",
+        opencart_table_prefix=_str(opencart, "table_prefix", "opencart", path),
+        opencart_language_ids=_language_ids(opencart, path),
     )
 
 

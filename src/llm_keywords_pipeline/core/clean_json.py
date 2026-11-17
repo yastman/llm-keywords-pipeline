@@ -40,7 +40,7 @@ def keyword_entries(data: dict[str, Any]) -> list[dict]:
 
 
 def refresh_stats_totals(data: dict[str, Any]) -> None:
-    """Recompute ``stats`` totals from the keyword entries (as restore_csv writes them).
+    """Recompute ``stats`` totals from the keyword entries.
 
     ``total_volume`` is the sum of keyword volumes; ``after``, when the key exists, is the
     keyword entry count. A file without a ``stats`` dict gets none added.

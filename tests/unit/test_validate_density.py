@@ -6,6 +6,7 @@ from llm_keywords_pipeline.core.text import (
     get_stopwords,
     tokenize,
 )
+from llm_keywords_pipeline.validate import density
 from llm_keywords_pipeline.validate.density import (
     STEMMER_RU,
     count_stem_frequencies,
@@ -100,3 +101,13 @@ class TestStemmer:
             ["полірувальна", "полірувальну", "полірувальною"], lang="uk"
         )
         assert {k: v["count"] for k, v in result.items()} == {"полірувальний": 3}
+
+
+def test_no_stemmer_groups_by_word_form(monkeypatch):
+    # Without a stemmer every word form counts on its own, whatever the niche
+    monkeypatch.setattr(density, "HAS_STEMMER", False)
+    words = ["аккумулятор"] * 3 + ["конфета"] * 3 + ["конфеты"]
+
+    groups = count_stem_frequencies(words, "ru")
+
+    assert {stem: g["count"] for stem, g in groups.items()} == {"аккумулятор": 3, "конфета": 3}

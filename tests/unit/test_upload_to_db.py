@@ -132,6 +132,9 @@ class TestExecuteSqlFile:
         from llm_keywords_pipeline.generate import sql as sql_mod
 
         monkeypatch.setattr(sql_mod, "PROJECT_DIR", tmp_path)
+        (tmp_path / "project.toml").write_text(
+            '[opencart]\ntable_prefix = "oc_"\nlanguage_ids = { ru = 3 }\n', encoding="utf-8"
+        )
         content = tmp_path / "categories" / "a" / "content"
         content.mkdir(parents=True)
         (content / "a_ru.md").write_text("# H1\n\nText\n", encoding="utf-8")

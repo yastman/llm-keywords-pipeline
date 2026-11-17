@@ -16,9 +16,6 @@ from llm_keywords_pipeline.core.project import (
 SEMANTICS_MODULES = [
     "llm_keywords_pipeline.core.config",
     "llm_keywords_pipeline.analyze.category",
-    "llm_keywords_pipeline.fix.find_orphan_keywords",
-    "llm_keywords_pipeline.sync.restore_csv",
-    "llm_keywords_pipeline.compare.raw_clean",
     "llm_keywords_pipeline.batch.generate",
     "llm_keywords_pipeline.extract.export_uk_texts",
 ]
@@ -62,6 +59,20 @@ def test_meta_required_phrases_per_language(tmp_path):
     assert project.required_phrases == {"uk": ("опт\\b", "дистриб"), "ru": ()}
 
 
+def test_opencart_section(tmp_path):
+    (tmp_path / "project.toml").write_text(
+        '[opencart]\ntable_prefix = "oc_"\nlanguage_ids = { uk = 1, ru = 3 }\n', encoding="utf-8"
+    )
+
+    project = load_project(tmp_path)
+
+    assert (project.opencart_table_prefix, project.opencart_language_ids) == (
+        "oc_",
+        {"uk": 1, "ru": 3},
+    )
+    assert load_project(tmp_path / "none").opencart_table_prefix is None
+
+
 def test_no_meta_section_requires_no_phrase(tmp_path):
     (tmp_path / "project.toml").write_text('[project]\nbrand = "X"\n', encoding="utf-8")
 
@@ -82,6 +93,11 @@ def test_no_meta_section_requires_no_phrase(tmp_path):
         '[meta]\nrequired_phrases = { uk = "опт" }\n',
         "[meta]\nrequired_phrases = { uk = [1] }\n",
         '[meta]\nrequired_phrases = { uk = ["(опт"] }\n',
+        'opencart = "oc_"\n',
+        "[opencart]\ntable_prefix = 5\n",
+        "[opencart]\nlanguage_ids = [1, 3]\n",
+        '[opencart]\nlanguage_ids = { uk = "1" }\n',
+        "[opencart]\nlanguage_ids = { uk = true }\n",
     ],
 )
 def test_wrong_type_names_the_file(tmp_path, body):
@@ -104,40 +120,41 @@ def test_load_is_cached_per_root(tmp_path):
     assert load_project(tmp_path) is load_project(tmp_path)
 
 
-@pytest.mark.parametrize(
-    ("module_name", "legacy"),
-    [
-        ("llm_keywords_pipeline.core.config", "Структура _Ultimate.csv"),
-        ("llm_keywords_pipeline.analyze.category", "Структура _Ultimate.csv"),
-        ("llm_keywords_pipeline.fix.find_orphan_keywords", "Структура _Ultimate.csv"),
-        ("llm_keywords_pipeline.sync.restore_csv", "Структура _Ultimate.csv"),
-        ("llm_keywords_pipeline.compare.raw_clean", "Структура _Ultimate.csv"),
-        ("llm_keywords_pipeline.batch.generate", "data/Структура  Ultimate финал - Лист2.csv"),
-        (
-            "llm_keywords_pipeline.extract.export_uk_texts",
-            "data/Структура  Ultimate финал - Лист2.csv",
-        ),
-    ],
-)
-def test_unset_semantics_csv_keeps_old_name(tmp_path, module_name, legacy):
+def test_unset_semantics_csv_is_none(tmp_path):
     # Empty data root: the repo's own files never decide the result.
     code = (
-        "import importlib, sys\n"
-        "from llm_keywords_pipeline.core.project import get_project\n"
-        "assert get_project().semantics_csv is None\n"
-        "print(importlib.import_module(sys.argv[1]).SEMANTICS_CSV)\n"
+        "import importlib, json, sys\n"
+        "print(json.dumps([importlib.import_module(m).SEMANTICS_CSV for m in sys.argv[1:]]))\n"
     )
     env = {**os.environ, "LLM_KEYWORDS_PROJECT_ROOT": str(tmp_path)}
 
     out = subprocess.run(
-        [sys.executable, "-c", code, module_name],
+        [sys.executable, "-c", code, *SEMANTICS_MODULES],
         env=env,
         capture_output=True,
         text=True,
         check=True,
     ).stdout
 
-    assert out.strip() == str(tmp_path.resolve() / legacy)
+    assert json.loads(out) == [None] * len(SEMANTICS_MODULES)
+
+
+def test_command_needing_semantics_csv_stops_naming_the_key(tmp_path):
+    env = {**os.environ, "LLM_KEYWORDS_PROJECT_ROOT": str(tmp_path)}
+
+    result = subprocess.run(
+        [sys.executable, "-m", "llm_keywords_pipeline.batch.generate", "--list"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 1
+    # last line: runpy may warn first that batch/__init__ imported the module
+    assert result.stderr.strip().splitlines()[-1] == (
+        f"{tmp_path.resolve() / 'project.toml'}: [paths] semantics_csv is not set; "
+        "this command needs it"
+    )
 
 
 def test_every_module_reads_semantics_csv_from_project_toml(tmp_path):
