@@ -47,29 +47,6 @@ def normalize_keyword(keyword: str) -> str:
     return " ".join(keyword.lower().split())
 
 
-def get_keyword_variations(keyword: str) -> list[str]:
-    """
-    Генерирует вариации keyword для поиска.
-
-    Пример: "активная пена" -> ["активная пена", "активную пену", "активной пены", ...]
-    """
-    variations = [normalize_keyword(keyword)]
-
-    # Базовые окончания для русского языка (упрощённо)
-    words = keyword.lower().split()
-
-    if len(words) >= 2:
-        # Для двухсловных: "активная пена"
-        base1 = words[0][:-2] if len(words[0]) > 3 else words[0]
-        base2 = words[1][:-1] if len(words[1]) > 3 else words[1]
-
-        # Добавляем частичные совпадения
-        variations.append(f"{base1}")
-        variations.append(f"{base2}")
-
-    return variations
-
-
 def get_token_lemmas(text: str, lang: str = "ru") -> list[str]:
     """Токены текста по порядку: леммы кириллических слов длиннее 2 букв (UK м'який — одно слово) и латиница/цифры ([a-z0-9]+) как есть."""
     morph = MorphAnalyzer("uk" if lang == "uk" else "ru")
@@ -148,50 +125,6 @@ def check_keyword_in_intro(text: str, keyword: str, limit: int = 150, lang: str 
         "message": f"Keyword {'найден' if found else 'НЕ НАЙДЕН'} в INTRO"
         + (f" (в первом предложении: {'да' if in_first_sentence else 'нет'})" if found else ""),
     }
-
-
-def get_russian_word_stems(keyword: str) -> list[str]:
-    """
-    Получает основы слов для поиска с учётом русских падежей.
-
-    Для "активная пена" вернёт: ["активный", "пена"]
-    Это позволит найти: активная/активную/активной + пена/пену/пены/пеной
-
-    Uses MorphAnalyzer for accurate lemmatization.
-    """
-    morph = MorphAnalyzer("ru")
-    words = re.findall(r"[а-яё]+", keyword.lower())
-    return [morph.get_lemma(w) for w in words if len(w) > 2]
-
-
-def get_ukrainian_word_stems(keyword: str) -> list[str]:
-    """
-    Получает основы слов для поиска с учётом украинских падежей.
-
-    Для "активна піна" вернёт: ["активний", "піна"]
-    Это позволит найти: активна/активну/активної + піна/піну/піни/піною
-
-    Uses MorphAnalyzer for accurate lemmatization.
-    """
-    morph = MorphAnalyzer("uk")
-    words = re.findall(r"[а-яёїієґ]+", keyword.lower())
-    return [morph.get_lemma(w) for w in words if len(w) > 2]
-
-
-def get_word_stems(keyword: str, lang: str = "ru") -> list[str]:
-    """
-    Универсальный стеммер — делегирует в RU или UK версию.
-
-    Args:
-        keyword: Ключевое слово или фраза
-        lang: 'ru' или 'uk'
-
-    Returns:
-        Список основ слов
-    """
-    if lang == "uk":
-        return get_ukrainian_word_stems(keyword)
-    return get_russian_word_stems(keyword)
 
 
 def check_keywords_in_h2(text: str, keyword: str, lang: str = "ru") -> dict:

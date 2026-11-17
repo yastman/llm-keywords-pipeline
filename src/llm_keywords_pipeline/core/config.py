@@ -28,11 +28,10 @@ elif _FILE_DIR.name == "core" and _FILE_DIR.parent.name == "llm_keywords_pipelin
 else:
     # Fallback for legacy direct execution.
     PROJECT_ROOT = _FILE_DIR.parent
-SCRIPT_DIR = PROJECT_ROOT / "scripts"  # Keep for compatibility
+
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 DATA_DIR = PROJECT_ROOT / "data"
 TASKS_DIR = DATA_DIR / "tasks"
-STOPWORDS_FILE = DATA_DIR / "stopwords" / "stopwords-ru.txt"
 SEMANTICS_CSV = PROJECT_ROOT / "Структура _Ultimate.csv"
 
 # =============================================================================
@@ -227,26 +226,6 @@ def get_guidelines_coverage_target(keywords_count: int) -> int:
         return 60
     else:
         return 50
-
-
-def get_semantic_depth(keywords_count: int) -> str:
-    """Get semantic depth based on keywords count."""
-    if keywords_count <= 5:
-        return "shallow"
-    elif keywords_count <= 15:
-        return "medium"
-    else:
-        return "deep"
-
-
-def get_category_path(slug: str) -> Path:
-    """Get full path to category directory."""
-    return CATEGORIES_DIR / slug
-
-
-def get_content_path(slug: str) -> Path:
-    """Get path to content file."""
-    return CATEGORIES_DIR / slug / "content" / f"{slug}_ru.md"
 
 
 def get_data_path(slug: str, clean: bool = True) -> Path:

@@ -14,6 +14,7 @@ from llm_keywords_pipeline.batch.uk_init import process_category
 SLUG = "aksessuary"
 RU_META_PATH = "categories/aksessuary/meta/aksessuary_meta.json"
 RU_META = {"h1": "Аксессуары", "meta": {"title": "Аксессуары", "description": "Аксессуары"}}
+CREATED_KEYS = ("meta_created", "clean_created", "context_created")
 
 
 def _write_ru_meta(root):
@@ -62,6 +63,7 @@ def test_existing_files_are_skipped_without_force(root):
 
     assert [p.read_text(encoding="utf-8") for p in outputs] == ["hand-edited"] * 3
     assert result["skipped"] == [str(p) for p in outputs]
+    assert [result[k] for k in CREATED_KEYS] == [None, None, None]
 
 
 def test_existing_files_are_overwritten_with_force(root):
@@ -74,6 +76,7 @@ def test_existing_files_are_overwritten_with_force(root):
 
     assert all(p.read_text(encoding="utf-8") != "hand-edited" for p in outputs)
     assert result["skipped"] == []
+    assert [result[k] for k in CREATED_KEYS] == [str(p) for p in outputs]
 
 
 def test_missing_files_are_written_without_force(root):
@@ -81,6 +84,7 @@ def test_missing_files_are_written_without_force(root):
 
     assert all(p.exists() for p in _outputs(root))
     assert result["skipped"] == []
+    assert [result[k] for k in CREATED_KEYS] == [str(p) for p in _outputs(root)]
 
 
 def _run_main(cwd, env_root, *args):

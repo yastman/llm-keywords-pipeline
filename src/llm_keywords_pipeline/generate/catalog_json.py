@@ -5,7 +5,6 @@ import re
 # Constants
 SOURCE_FILE = "data/reports/STRUCTURE_TREE.md"
 OUTPUT_FILE = "data/catalog_structure.json"
-UK_OUTPUT_FILE = "uk/data/catalog_structure.json"
 
 # Transliteration map (RU -> Latin)
 TRANSLIT_MAP = {

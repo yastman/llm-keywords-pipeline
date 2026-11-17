@@ -37,6 +37,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.seo import (
+    L3_TO_SLUG,
+    SLUG_TO_L3,
+    get_commercial_modifiers,
+)
 
 # =============================================================================
 # Configuration
@@ -53,9 +58,6 @@ def get_categories_dir(lang: str = "ru") -> Path:
         return PROJECT_ROOT / "uk" / "categories"
     return PROJECT_ROOT / "categories"
 
-
-# Current language (set by main)
-CURRENT_LANG = "ru"
 
 # =============================================================================
 # D+E Fallback: Load keywords from best available source
@@ -143,79 +145,6 @@ def load_keywords_for_slug(slug: str, lang: str = "ru") -> tuple[list[dict], str
     keywords = categories.get(l3_name, [])
 
     return keywords, "csv", None
-
-
-# L3 name to slug mapping from package config.
-try:
-    from llm_keywords_pipeline.core.seo import (
-        L3_TO_SLUG,
-        SLUG_TO_L3,
-        get_commercial_modifiers,
-        get_l3_slug,
-    )
-except ImportError:
-    try:
-        from llm_keywords_pipeline.core.config import L3_TO_SLUG, SLUG_TO_L3
-    except ImportError:
-        # Fallback for standalone execution
-        L3_TO_SLUG = {
-            "Активная пена": "aktivnaya-pena",
-            "Для ручной мойки": "dlya-ruchnoy-moyki",
-            "Очистители стекол": "ochistiteli-stekol",
-            "Глина и автоскрабы": "glina-i-avtoskraby",
-            "Антимошка": "antimoshka",
-            "Антибитум": "antibitum",
-            "Чернители шин": "cherniteli-shin",
-            "Очистители дисков": "ochistiteli-diskov",
-            "Очистители шин": "ochistiteli-shin",
-            "Аппараты Tornador": "apparaty-tornador",
-            "Меховые": "mekhovye",
-            "Поролоновые": "porolonovye",
-            "Наборы для мойки": "nabory-dlya-moyki",
-            "Наборы для полировки": "nabory-dlya-polirovki",
-            "Наборы для ухода за кожей": "nabory-dlya-ukhoda-za-kozhey",
-            "Наборы для химчистки": "nabory-dlya-khimchistki",
-            "Подарочные наборы": "podarochnye-nabory",
-        }
-        SLUG_TO_L3 = {v: k for k, v in L3_TO_SLUG.items()}
-
-        def get_l3_slug(name):
-            return L3_TO_SLUG.get(name, name.lower().replace(" ", "-"))
-
-        _COMMERCIAL_MODIFIERS_FALLBACK = [
-            "купить",
-            "цена",
-            "стоимость",
-            "заказать",
-            "в наличии",
-            "доставка",
-            "недорого",
-            "дёшево",
-            "дешево",
-            "интернет-магазин",
-            "магазин",
-            "каталог",
-        ]
-        _COMMERCIAL_MODIFIERS_UK_FALLBACK = [
-            "купити",
-            "ціна",
-            "вартість",
-            "замовити",
-            "в наявності",
-            "доставка",
-            "недорого",
-            "дешево",
-            "інтернет-магазин",
-            "магазин",
-            "каталог",
-        ]
-
-        def get_commercial_modifiers(lang="ru"):
-            return (
-                _COMMERCIAL_MODIFIERS_UK_FALLBACK
-                if lang == "uk"
-                else _COMMERCIAL_MODIFIERS_FALLBACK
-            )
 
 
 # Backwards-compatible exports for tests/legacy imports.
