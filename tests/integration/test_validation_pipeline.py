@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries
 from tests.fixtures.real_data import (
     UK_FIXTURE_CLEAN,
     UK_FIXTURE_CONTENT,
@@ -80,11 +81,10 @@ class TestFullValidationPipeline:
 
         # 1. Load clean.json for primary keyword
         clean_data = json.loads(clean_path.read_text(encoding="utf-8"))
-        keywords = clean_data.get("keywords", [])
-        if keywords and isinstance(keywords[0], dict):
-            primary_keyword = keywords[0].get("keyword", "активная пена")
-        else:
-            primary_keyword = "активная пена"
+        keywords = keyword_entries(clean_data)
+        primary_keyword = (
+            keywords[0].get("keyword", "активная пена") if keywords else "активная пена"
+        )
 
         # 2. Validate meta
         from llm_keywords_pipeline.validate.meta import validate_meta_file
@@ -129,11 +129,12 @@ class TestFullValidationPipeline:
             pytest.skip("UK category data not complete")
 
         # 1. Load clean.json for primary keyword
-        from llm_keywords_pipeline.core.clean_json import keyword_entries
-
         clean_data = json.loads(clean_path.read_text(encoding="utf-8"))
         keywords = keyword_entries(clean_data)
         primary_keyword = keywords[0].get("keyword", "активна піна") if keywords else "активна піна"
+        if clean_path == UK_FIXTURE_CLEAN:
+            # Differs from the default above, so a wrong read of the fixture fails here
+            assert primary_keyword == "активна піна для авто"
 
         # 2. Validate meta
         from llm_keywords_pipeline.validate.meta import validate_meta_file
@@ -212,7 +213,7 @@ class TestCrossValidation:
 
         # Load keywords
         clean_data = json.loads(clean_path.read_text(encoding="utf-8"))
-        keywords = clean_data.get("keywords", [])
+        keywords = keyword_entries(clean_data)
 
         if not keywords:
             pytest.skip("No keywords in clean.json")

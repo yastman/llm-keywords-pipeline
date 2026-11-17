@@ -1,10 +1,10 @@
-"""find_uk_content prefers real UK data under PROJECT_ROOT over the hand-written fixture."""
+"""UK lookups prefer real data under PROJECT_ROOT and fall back to the hand-written fixture."""
 
 import importlib
 
 import pytest
 
-from tests.fixtures.real_data import UK_FIXTURE_CONTENT, UK_FIXTURE_SLUG
+from tests.fixtures.real_data import UK_FIXTURE_CLEAN, UK_FIXTURE_CONTENT, UK_FIXTURE_SLUG
 
 MODULES = [
     "tests.smoke.test_validators_smoke",
@@ -31,3 +31,10 @@ def test_fixture_used_when_real_uk_content_absent(module_name, tmp_path, monkeyp
 
     assert module.find_uk_content(UK_FIXTURE_SLUG) == UK_FIXTURE_CONTENT
     assert module.find_uk_content("no-such-slug") is None
+
+
+def test_uk_clean_fixture_used_when_real_data_absent(tmp_path, monkeypatch):
+    module = importlib.import_module("tests.integration.test_validation_pipeline")
+    monkeypatch.setattr(module, "PROJECT_ROOT", tmp_path)
+
+    assert module.find_uk_clean(UK_FIXTURE_SLUG) == UK_FIXTURE_CLEAN
