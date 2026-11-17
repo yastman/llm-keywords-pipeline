@@ -20,7 +20,10 @@ class TestLoadMasterCsv:
     def test_loads_valid_csv(self, tmp_path):
         """Should load CSV and return list of dicts."""
         csv_file = tmp_path / "master.csv"
-        csv_file.write_text("keyword,volume,category,type,use_in\nтест,100,aktivnaya-pena,keyword,\n", encoding="utf-8")
+        csv_file.write_text(
+            "keyword,volume,category,type,use_in\nтест,100,aktivnaya-pena,keyword,\n",
+            encoding="utf-8",
+        )
         rows = load_master_csv(csv_file)
         assert len(rows) == 1
         assert rows[0]["keyword"] == "тест"

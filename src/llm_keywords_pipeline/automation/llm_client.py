@@ -3,6 +3,7 @@
 LlmClient interface + HTTP implementation (env-configured).
 Keys are read from environment; never logged.
 """
+
 from __future__ import annotations
 
 import os
@@ -83,8 +84,11 @@ class HttpLlmClient(LlmClient):
         max_retries: int = 3,
     ):
         import requests  # noqa: PLC0415 (lazy — optional at import time)
+
         self._requests = requests
-        self.endpoint = endpoint or os.getenv("LLM_ENDPOINT", "https://api.openai.com/v1/chat/completions")
+        self.endpoint = endpoint or os.getenv(
+            "LLM_ENDPOINT", "https://api.openai.com/v1/chat/completions"
+        )
         self.model = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
         self._api_key_env = api_key_env
         self.timeout = timeout
@@ -111,7 +115,9 @@ class HttpLlmClient(LlmClient):
         for attempt in range(self.max_retries):
             try:
                 t0 = time.monotonic()
-                resp = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
+                resp = requests.post(
+                    self.endpoint, json=payload, headers=headers, timeout=self.timeout
+                )
                 latency = int((time.monotonic() - t0) * 1000)
                 resp.raise_for_status()
             except (requests.Timeout, requests.ConnectionError) as exc:
@@ -136,8 +142,9 @@ class HttpLlmClient(LlmClient):
                     latency_ms=latency,
                 )
             if attempt < self.max_retries - 1:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
         raise RuntimeError(f"LLM request failed after {self.max_retries} attempts") from last_exc
+
 
 def render_prompt_template(template_path: Path, variables: dict) -> str:
     """Substitute {name} placeholders in a prompt template file; unknown {keys} stay as is."""

@@ -1,4 +1,5 @@
 """Regression tests for automation defects (audit B9–B13)."""
+
 from __future__ import annotations
 
 import json
@@ -101,7 +102,9 @@ def test_run_batch_default_max_retries_follows_env():
         "print(inspect.signature(run_batch).parameters['max_retries'].default, orchestrator.MAX_RETRIES)\n"
     )
     env = {**os.environ, "LLM_MAX_RETRIES": "5"}
-    out = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True, check=True)
+    out = subprocess.run(
+        [sys.executable, "-c", code], env=env, capture_output=True, text=True, check=True
+    )
     assert out.stdout.split() == ["5", "5"]
 
 
@@ -122,4 +125,7 @@ def test_needs_human_json_overwritten_with_empty_list(tmp_path):
 def test_render_prompt_template_braces(tmp_path):
     tmpl = tmp_path / "t.md"
     tmpl.write_text("slug: {slug}, tier: {tier}, other: {unknown}", encoding="utf-8")
-    assert render_prompt_template(tmpl, {"slug": "abc", "tier": 2}) == "slug: abc, tier: 2, other: {unknown}"
+    assert (
+        render_prompt_template(tmpl, {"slug": "abc", "tier": 2})
+        == "slug: abc, tier: 2, other: {unknown}"
+    )

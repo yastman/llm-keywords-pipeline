@@ -4,6 +4,7 @@ The bug: density.py builds the path as Path(__file__).parent.parent / "categorie
 which resolves to src/llm_keywords_pipeline/categories/... (wrong).
 The fix: use get_data_path(slug) from core.config (PROJECT_ROOT / categories / ...).
 """
+
 import json
 from unittest.mock import patch
 
@@ -25,13 +26,18 @@ class TestLoadKeywordsFromJson:
         data_dir = tmp_path / "categories" / slug / "data"
         data_dir.mkdir(parents=True)
         json_path = data_dir / f"{slug}_clean.json"
-        json_path.write_text(json.dumps({
-            "slug": slug,
-            "keywords": [
-                {"keyword": "тест ключ", "volume": 100},
-                {"keyword": "другой ключ", "volume": 50},
-            ],
-        }), encoding="utf-8")
+        json_path.write_text(
+            json.dumps(
+                {
+                    "slug": slug,
+                    "keywords": [
+                        {"keyword": "тест ключ", "volume": 100},
+                        {"keyword": "другой ключ", "volume": 50},
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
 
         # Patch CATEGORIES_DIR in config so load_keywords_from_json finds the file
         with patch("llm_keywords_pipeline.core.config.CATEGORIES_DIR", tmp_path / "categories"):
@@ -54,6 +60,7 @@ class TestLoadKeywordsFromJson:
         slug = "test-category-2"
         with patch("llm_keywords_pipeline.core.config.CATEGORIES_DIR", tmp_path / "categories"):
             from llm_keywords_pipeline.core import config as cfg
+
             expected_path = cfg.get_data_path(slug, clean=True)
         # Path must end with categories/<slug>/data/<slug>_clean.json
         assert expected_path.name == f"{slug}_clean.json"

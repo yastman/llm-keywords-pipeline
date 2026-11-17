@@ -5,6 +5,7 @@ Confirmed discrepancies:
 2. deliver.md uses density values that don't match SPAM/WARNING_THRESHOLD in density.py.
 Fix: update seo.py docstring to 150; add a note in deliver.md that thresholds come from code.
 """
+
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]

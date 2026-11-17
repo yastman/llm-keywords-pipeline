@@ -17,11 +17,15 @@ class TestAuditH1Primary:
 
         # Write _clean.json
         (cat_dir / "data" / "test-slug_clean.json").write_text(
-            json.dumps({"id": "test-slug", "keywords": [{"keyword": "активна піна", "volume": 1000}]})
+            json.dumps(
+                {"id": "test-slug", "keywords": [{"keyword": "активна піна", "volume": 1000}]}
+            )
         )
 
         # Write _meta.json with matching H1 (plural form)
-        (cat_dir / "meta" / "test-slug_meta.json").write_text(json.dumps({"slug": "test-slug", "h1": "Активні піни"}))
+        (cat_dir / "meta" / "test-slug_meta.json").write_text(
+            json.dumps({"slug": "test-slug", "h1": "Активні піни"})
+        )
 
         result = audit_category("test-slug", base_path=tmp_path, lang="uk")
 
@@ -42,7 +46,9 @@ class TestAuditH1Primary:
         )
 
         (cat_dir / "meta" / "test-slug_meta.json").write_text(
-            json.dumps({"slug": "test-slug", "h1": "Кераміка для авто"})  # does not contain "рідке скло"
+            json.dumps(
+                {"slug": "test-slug", "h1": "Кераміка для авто"}
+            )  # does not contain "рідке скло"
         )
 
         result = audit_category("test-slug", base_path=tmp_path, lang="uk")
@@ -75,7 +81,9 @@ class TestAuditH1Primary:
             (cat_dir / "data" / f"{slug}_clean.json").write_text(
                 json.dumps({"id": slug, "keywords": [{"keyword": "тест", "volume": 100}]})
             )
-            (cat_dir / "meta" / f"{slug}_meta.json").write_text(json.dumps({"slug": slug, "h1": "Тести"}))
+            (cat_dir / "meta" / f"{slug}_meta.json").write_text(
+                json.dumps({"slug": slug, "h1": "Тести"})
+            )
 
         results = audit_all(lang="ru", base_path=tmp_path)
 

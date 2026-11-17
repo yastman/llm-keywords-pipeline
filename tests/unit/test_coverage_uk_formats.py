@@ -5,6 +5,7 @@ This happens when keywords list contains plain strings (V1 UK format) or
 when the load path passes strings through instead of {keyword: str, volume: int}.
 Fix: normalize keywords to list[dict] before passing to audit_category.
 """
+
 import pytest
 
 from llm_keywords_pipeline.core.coverage import audit_category

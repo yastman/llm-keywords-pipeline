@@ -90,7 +90,9 @@ def generate_report(data: list[dict], output_json: Path, output_md: Path) -> Non
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Generate a semantic review report from clean JSON files.")
+    parser = argparse.ArgumentParser(
+        description="Generate a semantic review report from clean JSON files."
+    )
     parser.add_argument("--categories-dir", type=Path, default=Path("categories"))
     parser.add_argument("--output-json", type=Path, default=Path("data/all_keywords.json"))
     parser.add_argument("--output-md", type=Path, default=Path("tasks/reports/SEMANTIC_REVIEW.md"))

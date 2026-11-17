@@ -4,6 +4,7 @@ run_batch() processes a list of Category objects, one per slug.
 One slug failure does NOT abort the batch.
 Returns a BatchReport with per-category results and aggregate metrics.
 """
+
 from __future__ import annotations
 
 import json
@@ -125,6 +126,8 @@ def run_batch(
 
     # Write batch report
     report_path = state_dir / "batch_report.json"
-    report_path.write_text(json.dumps(report.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path.write_text(
+        json.dumps(report.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     return report

@@ -100,7 +100,9 @@ class CategoryBuilder:
             **self._clean_json_extra,
         }
         clean_file = data_dir / f"{self._slug}_clean.json"
-        clean_file.write_text(json.dumps(clean_data, ensure_ascii=False, indent=2), encoding="utf-8")
+        clean_file.write_text(
+            json.dumps(clean_data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
         # 3. Create content/
         if self._content is not None:

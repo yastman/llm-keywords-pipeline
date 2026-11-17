@@ -32,6 +32,4 @@ def test_ruff_no_violations():
         capture_output=True,
         text=True,
     )
-    assert result.returncode == 0, (
-        f"Ruff reported violations:\n{result.stdout}\n{result.stderr}"
-    )
+    assert result.returncode == 0, f"Ruff reported violations:\n{result.stdout}\n{result.stderr}"

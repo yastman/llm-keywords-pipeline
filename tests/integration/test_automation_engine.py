@@ -8,6 +8,7 @@ Covers all 6 phases:
 - #20: Closed produce→validate→revise loop
 - #21: Batch runner + E2E fixture
 """
+
 from __future__ import annotations
 
 import json
@@ -22,6 +23,7 @@ class TestCategoryModel:
 
     def test_v3_list_format(self):
         from llm_keywords_pipeline.core.models import Category
+
         data = {
             "slug": "test",
             "keywords": [{"keyword": "авто", "volume": 100}],
@@ -32,6 +34,7 @@ class TestCategoryModel:
 
     def test_v2_dict_format(self):
         from llm_keywords_pipeline.core.models import Category
+
         data = {
             "slug": "test",
             "keywords": {
@@ -46,6 +49,7 @@ class TestCategoryModel:
 
     def test_v1_string_list(self):
         from llm_keywords_pipeline.core.models import Category
+
         data = {"slug": "test", "keywords": ["авто", "машина", "транспорт"]}
         cat = Category.from_json(data)
         assert len(cat.keywords) == 3
@@ -55,16 +59,19 @@ class TestCategoryModel:
         from pydantic import ValidationError
 
         from llm_keywords_pipeline.core.models import Category
+
         with pytest.raises((ValidationError, TypeError)):
             Category.from_json({"slug": None, "keywords": "invalid"})
 
     def test_keywords_flat(self):
         from llm_keywords_pipeline.core.models import Category
+
         cat = Category.from_json({"slug": "x", "keywords": [{"keyword": "авто", "volume": 100}]})
         assert "авто" in cat.keywords_flat()
 
     def test_schema_version_present(self):
         from llm_keywords_pipeline.core.models import SCHEMA_VERSION, Category
+
         cat = Category(slug="x")
         assert cat.schema_version == SCHEMA_VERSION
 
@@ -82,8 +89,10 @@ class TestValidationReport:
             ReportStatus,
             ValidationReport,
         )
+
         report = ValidationReport(
-            validator="water", status=ReportStatus.PASS,
+            validator="water",
+            status=ReportStatus.PASS,
             checks=[CheckResult(id="water_percent", status=CheckStatus.pass_)],
         )
         assert report.status == ReportStatus.PASS
@@ -96,8 +105,10 @@ class TestValidationReport:
             ReportStatus,
             ValidationReport,
         )
+
         report = ValidationReport(
-            validator="water", status=ReportStatus.FAIL,
+            validator="water",
+            status=ReportStatus.FAIL,
             checks=[CheckResult(id="water_percent", status=CheckStatus.fail, message="too high")],
         )
         assert len(report.failures) == 1
@@ -109,12 +120,19 @@ class TestValidationReport:
             ReportStatus,
             ValidationReport,
         )
+
         report = ValidationReport(
-            validator="water", status=ReportStatus.FAIL,
-            checks=[CheckResult(
-                id="water_percent", status=CheckStatus.fail,
-                message="Water 75%", expected="40–65%", actual=75.0,
-            )],
+            validator="water",
+            status=ReportStatus.FAIL,
+            checks=[
+                CheckResult(
+                    id="water_percent",
+                    status=CheckStatus.fail,
+                    message="Water 75%",
+                    expected="40–65%",
+                    actual=75.0,
+                )
+            ],
         )
         payload = report.to_revise_payload()
         assert len(payload) == 1
@@ -123,17 +141,20 @@ class TestValidationReport:
 
     def test_from_water_metrics_none(self):
         from llm_keywords_pipeline.automation.report import ReportStatus, ValidationReport
+
         report = ValidationReport.from_water_metrics(None)
         assert report.status == ReportStatus.FAIL
 
     def test_from_water_metrics_good(self):
         from llm_keywords_pipeline.automation.report import ReportStatus, ValidationReport
+
         metrics = {"water_percent": 50.0, "classic_nausea": 2.5}
         report = ValidationReport.from_water_metrics(metrics)
         assert report.status == ReportStatus.PASS
 
     def test_json_serializable(self):
         from llm_keywords_pipeline.automation.report import ReportStatus, ValidationReport
+
         report = ValidationReport(validator="test", status=ReportStatus.PASS)
         data = json.loads(report.model_dump_json())
         assert "status" in data
@@ -150,6 +171,7 @@ class TestOrchestrator:
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
         from llm_keywords_pipeline.automation.orchestrator import run_category
         from llm_keywords_pipeline.core.models import Category
+
         cat = Category(slug="test-cat", name="Тест")
         llm = MockLlmClient("# Заголовок\n\nТестовый текст для проверки.")
         state = run_category(cat, llm, state_dir=tmp_path)
@@ -160,6 +182,7 @@ class TestOrchestrator:
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
         from llm_keywords_pipeline.automation.orchestrator import run_category
         from llm_keywords_pipeline.core.models import Category
+
         cat = Category(slug="test-idem")
         llm = MockLlmClient()
         run_category(cat, llm, state_dir=tmp_path)
@@ -172,6 +195,7 @@ class TestOrchestrator:
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
         from llm_keywords_pipeline.automation.orchestrator import run_category
         from llm_keywords_pipeline.core.models import Category
+
         cat = Category(slug="test-stages")
         llm = MockLlmClient()
         state = run_category(cat, llm, state_dir=tmp_path)
@@ -189,6 +213,7 @@ class TestLlmClient:
 
     def test_mock_returns_response(self):
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
+
         client = MockLlmClient("test response")
         resp = client.complete("hello")
         assert resp.text == "test response"
@@ -196,6 +221,7 @@ class TestLlmClient:
 
     def test_mock_records_calls(self):
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
+
         client = MockLlmClient()
         client.complete("prompt1")
         client.complete("prompt2")
@@ -203,20 +229,31 @@ class TestLlmClient:
 
     def test_produce_calls_complete(self):
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
+
         client = MockLlmClient("draft content")
         resp = client.produce("write something")
         assert resp.text == "draft content"
 
     def test_revise_calls_complete(self):
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
+
         client = MockLlmClient("revised content")
-        failures = [{"id": "water", "message": "too high", "expected": "40%", "actual": "75%", "locator": ""}]
+        failures = [
+            {
+                "id": "water",
+                "message": "too high",
+                "expected": "40%",
+                "actual": "75%",
+                "locator": "",
+            }
+        ]
         resp = client.revise("original draft", failures)
         assert resp.text == "revised content"
         assert len(client.calls) == 1
 
     def test_render_prompt_template(self, tmp_path):
         from llm_keywords_pipeline.automation.llm_client import render_prompt_template
+
         tmpl = tmp_path / "tmpl.md"
         tmpl.write_text("Hello {name}, write about {topic}.", encoding="utf-8")
         result = render_prompt_template(tmpl, {"name": "World", "topic": "SEO"})
@@ -271,6 +308,7 @@ class TestBatchRunner:
         from llm_keywords_pipeline.automation.batch_runner import run_batch
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
         from llm_keywords_pipeline.core.models import Category
+
         cats = [Category(slug=f"cat-{i}", name=f"Категория {i}") for i in range(3)]
         llm = MockLlmClient("# Заголовок\n\nТестовый текст для проверки водности.")
         report = run_batch(cats, llm, state_dir=tmp_path)
@@ -285,6 +323,7 @@ class TestBatchRunner:
 
         class BrokenLlm(LlmClient):
             _count = 0
+
             def complete(self, prompt, **kwargs):
                 self._count += 1
                 if self._count == 1:
@@ -300,6 +339,7 @@ class TestBatchRunner:
         from llm_keywords_pipeline.automation.batch_runner import run_batch
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
         from llm_keywords_pipeline.core.models import Category
+
         cats = [Category(slug="report-test")]
         llm = MockLlmClient("# Заголовок\n\nТестовый текст.")
         run_batch(cats, llm, state_dir=tmp_path)
@@ -309,6 +349,7 @@ class TestBatchRunner:
         from llm_keywords_pipeline.automation.batch_runner import run_batch
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
         from llm_keywords_pipeline.core.models import Category
+
         cats = [Category(slug=f"c{i}") for i in range(10)]
         llm = MockLlmClient("# Заголовок\n\nТест.")
         report = run_batch(cats, llm, state_dir=tmp_path, limit=3)
@@ -323,15 +364,17 @@ class TestE2EFixture:
         from llm_keywords_pipeline.automation.llm_client import MockLlmClient
         from llm_keywords_pipeline.core.models import Category
 
-        cat = Category.from_json({
-            "slug": "e2e-fixture",
-            "name": "Автохимия",
-            "lang": "ru",
-            "keywords": [
-                {"keyword": "автохимия купить", "volume": 500, "group": "primary"},
-                {"keyword": "средство для авто", "volume": 200, "group": "secondary"},
-            ],
-        })
+        cat = Category.from_json(
+            {
+                "slug": "e2e-fixture",
+                "name": "Автохимия",
+                "lang": "ru",
+                "keywords": [
+                    {"keyword": "автохимия купить", "volume": 500, "group": "primary"},
+                    {"keyword": "средство для авто", "volume": 200, "group": "secondary"},
+                ],
+            }
+        )
         draft = (
             "# Автохимия купить\n\n"
             "Автохимия — это средство для авто, которое помогает поддерживать чистоту "

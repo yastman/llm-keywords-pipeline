@@ -94,7 +94,9 @@ class TestValidateDescription:
         assert result["checks"]["wholesale"]["passed"]
 
     def test_missing_producer(self):
-        desc = "Хороший шампунь для машины, купить можно у нас в магазине с доставкой." + "а" * 50  # length ok
+        desc = (
+            "Хороший шампунь для машины, купить можно у нас в магазине с доставкой." + "а" * 50
+        )  # length ok
         result = validate_description(desc)
         assert not result["checks"]["producer"]["passed"]
 
@@ -347,7 +349,9 @@ class TestValidateMetaFileH1:
         )
 
         clean_json = tmp_path / "test_clean.json"
-        clean_json.write_text(json.dumps({"id": "test", "keywords": [{"keyword": "активна піна", "volume": 1000}]}))
+        clean_json.write_text(
+            json.dumps({"id": "test", "keywords": [{"keyword": "активна піна", "volume": 1000}]})
+        )
 
         result = validate_meta_file(str(meta_json), str(clean_json), lang="uk")
         assert result["h1"]["validation"]["passed"] is False
