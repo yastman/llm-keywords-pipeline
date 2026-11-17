@@ -6,6 +6,7 @@
 
 import json
 from collections import defaultdict
+from datetime import date
 from pathlib import Path
 
 # Словарь синонимов для нормализации
@@ -84,7 +85,7 @@ def main():
     # Генерация отчета
     print("# ТЗ: Очистка дублей в keywords")
     print()
-    print("**Дата создания:** 2026-01-07")
+    print(f"**Дата создания:** {date.today().isoformat()}")
     print("**Статус:** ⬜ В работе")
     print()
     print("---")
