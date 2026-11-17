@@ -13,7 +13,7 @@ Usage:
 
 Exit codes:
     0 = PASS (no forbidden entities)
-    1 = WARNING (found entities)
+    1 = WARNING (found entities) or FAIL (strict phrases found)
 """
 
 from __future__ import annotations
@@ -176,9 +176,6 @@ CITY_BLACKLIST = {
     "варшава",
 }
 
-# FIX v8.5: Whitelist для false positives
-_FALSE_POSITIVE_CITIES = FALSE_POSITIVE_CITIES or {"ровно", "суми", "сумах"}
-
 # Предлоги для географического контекста
 LOCATION_PREPOSITIONS = {"в", "из", "до", "на", "під", "под", "у", "із", "з"}
 
@@ -187,7 +184,7 @@ def is_false_positive_location(word: str, context: str) -> bool:
     """Check if found word is a false positive city."""
     word_lower = word.lower()
 
-    if word_lower not in _FALSE_POSITIVE_CITIES:
+    if word_lower not in FALSE_POSITIVE_CITIES:
         return False
 
     context_lower = context.lower()
@@ -361,7 +358,7 @@ def check_blacklist(text: str, lang: str = "ru") -> dict:
             upper = text[match.start()].isupper()
             title_case = _is_title_case(text[match.start() : match.end()])
             by_capital = title_case and not _starts_sentence(text, match.start())
-            vetoed = not upper and word in _FALSE_POSITIVE_CITIES and word != "ровно"
+            vetoed = not upper and word in FALSE_POSITIVE_CITIES and word != "ровно"
             if not by_capital and not (after_preposition[k] and not vetoed):
                 continue
         start = max(0, match.start() - 30)
@@ -445,7 +442,7 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
     Язык — по пути файла (detect_language: /uk/ → uk): списки strict/AI-fluff этого языка; natasha NER только для ru.
 
     Returns:
-        0 = PASS, 1 = WARNING (found issues)
+        0 = PASS, 1 = WARNING (found issues) or FAIL (strict phrases)
     """
     path = Path(filepath)
     if not path.exists():
@@ -466,6 +463,7 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
             "brands_count": len(blacklist_results["brands"]),
             "cities_count": len(blacklist_results["cities"]),
             "ai_fluff_count": len(blacklist_results["ai_fluff"]),
+            "strict_count": len(blacklist_results["strict_phrases"]),
             "ner_org_count": len(
                 [e for e in ner_results.get("ner_entities", []) if e["type"] == "ORG"]
             ),
@@ -482,10 +480,15 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
         results["summary"]["brands_count"]
         + results["summary"]["cities_count"]
         + results["summary"]["ai_fluff_count"]
+        + results["summary"]["strict_count"]
     )
 
     results["summary"]["total_issues"] = total_issues
-    results["summary"]["status"] = "PASS" if total_issues == 0 else "WARNING"
+    if results["summary"]["strict_count"]:
+        status = "FAIL"
+    else:
+        status = "PASS" if total_issues == 0 else "WARNING"
+    results["summary"]["status"] = status
 
     if output_json:
         print(json.dumps(results, ensure_ascii=False, indent=2))
@@ -493,6 +496,11 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
         print(f"\n{'=' * 60}")
         print(f"NER & Blacklist Check: {path.name}")
         print(f"{'=' * 60}")
+
+        if blacklist_results["strict_phrases"]:
+            print(f"\n❌ STRICT-ФРАЗЫ ({len(blacklist_results['strict_phrases'])}):")
+            for item in blacklist_results["strict_phrases"][:5]:
+                print(f'   • "{item["entity"]}": {item["context"]}')
 
         if blacklist_results["brands"]:
             print(f"\n⚠️  БРЕНДЫ ({len(blacklist_results['brands'])}):")
@@ -528,6 +536,11 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
         print(f"\n{'=' * 60}")
         if total_issues == 0:
             print("✅ PASS: Запрещённые сущности не найдены")
+        elif status == "FAIL":
+            print(
+                f"❌ FAIL: Найдено {total_issues} проблем, из них strict-фраз: {len(blacklist_results['strict_phrases'])}"
+            )
+            print("   Рекомендация: удалите strict-фразы, упоминания брендов, городов и AI-фраз")
         else:
             print(f"⚠️  WARNING: Найдено {total_issues} проблем")
             print("   Рекомендация: удалите упоминания брендов, городов и AI-фраз")

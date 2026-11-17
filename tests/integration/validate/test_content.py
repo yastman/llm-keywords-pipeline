@@ -245,3 +245,27 @@ Intro текст.
         assert result["safety_block"]
         assert result["warnings_present"]
         assert result["evergreen_math"]
+
+
+class TestValidateContentUkBlacklist:
+    """validate_content checks UK text against the UK blacklist lists."""
+
+    BODY = "\n\nЗасіб для миття авто легко наноситься і швидко змивається водою.\n"
+
+    def _run(self, tmp_path: Path, sentence: str, mode: str = "quality") -> dict:
+        from llm_keywords_pipeline.validate.content import validate_content
+
+        content_file = tmp_path / "uk.md"
+        content_file.write_text(f"# Засіб для миття{self.BODY}{sentence}\n", encoding="utf-8")
+        return validate_content(str(content_file), "засіб для миття", lang="uk", mode=mode)
+
+    def test_uk_strict_phrase_fails(self, tmp_path: Path):
+        for mode in ("quality", "seo"):
+            result = self._run(tmp_path, "Магазин пропонує широкий асортимент засобів.", mode)
+            assert result["checks"]["blacklist"]["overall"] == "FAIL"
+            assert "blacklist" in result["summary"]["blockers"]
+
+    def test_uk_fluff_warns(self, tmp_path: Path):
+        result = self._run(tmp_path, "Підбиваючи підсумки, засіб добре миє.")
+        assert result["checks"]["blacklist"]["overall"] == "WARNING"
+        assert "blacklist" in result["summary"]["warnings"]
