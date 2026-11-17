@@ -11,7 +11,7 @@ def collect_keywords(categories_dir: Path) -> list[dict]:
             with path.open(encoding="utf-8") as f:
                 data = json.load(f)
 
-            slug = data.get("id") or data.get("slug")
+            slug = data.get("id") or data.get("slug") or path.name.removesuffix("_clean.json")
             name = data.get("name", slug)
 
             kws = []

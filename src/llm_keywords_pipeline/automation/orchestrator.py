@@ -8,6 +8,7 @@ State is persisted atomically after each stage.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -71,9 +72,9 @@ def _load_state(state_path: Path) -> CategoryRunState | None:
 
 
 def _save_state(state: CategoryRunState, state_path: Path) -> None:
-    state_path.write_text(
-        json.dumps(state.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    tmp_path = state_path.with_name(state_path.name + ".tmp")
+    tmp_path.write_text(json.dumps(state.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(tmp_path, state_path)
 
 
 def _validate_content(content: str, category: Category) -> ValidationReport:

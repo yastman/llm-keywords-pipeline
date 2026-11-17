@@ -18,6 +18,7 @@ Modes:
 import argparse
 import os
 import re
+from datetime import date
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
@@ -437,7 +438,7 @@ uv run python -m llm_keywords_pipeline.validate.content categories/{slug}/conten
 
 ---
 
-**Last Updated:** 2026-01-02
+**Last Updated:** {updated}
 """
 
 
@@ -488,6 +489,7 @@ def generate_task_file(node, status):
         s_deploy_uk=icon(status["deploy"]) if status["uk"] else "⬜",
         keywords_table=keywords_table,
         k_count=len(node["keywords"]),
+        updated=date.today().isoformat(),
     )
 
     # Write
@@ -543,7 +545,7 @@ def update_pipeline_status(nodes, statuses):
     content = f"""# Pipeline Status — SEO Pipeline
 
 **Total Categories:** {total}
-**Updated:** 2026-01-02
+**Updated:** {date.today().isoformat()}
 
 ---
 
