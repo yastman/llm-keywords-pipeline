@@ -146,7 +146,8 @@ def generate_description(primary_keyword: str, slug: str) -> str:
         print(f"⚠️  WARNING: Description короткий ({len(description)} chars): {description[:50]}...")
     elif len(description) > 160:
         # Обрезаем до 160 chars, сохраняя "Опт и розница."
-        description = description[:145] + "... Опт и розница."
+        suffix = "... Опт и розница."
+        description = description[: 160 - len(suffix)] + suffix
 
     return description
 
