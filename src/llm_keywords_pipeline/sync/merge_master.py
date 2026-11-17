@@ -117,21 +117,23 @@ def load_excel_keywords(excel_path: Path) -> dict[str, int]:
 
 def merge_keywords(existing: list[dict], excel_volumes: dict[str, int]) -> list[dict]:
     """Объединяет ключи: обновляет volume, добавляет новые, дедуплицирует."""
-    # Index existing by keyword
-    by_keyword = {}
+    # Index existing by (category, type, keyword): the same phrase may live in
+    # several categories or as both keyword and synonym
+    by_key = {}
     for row in existing:
-        kw = row["keyword"].lower().strip()
-        if kw not in by_keyword or row["volume"] > by_keyword[kw]["volume"]:
-            by_keyword[kw] = row.copy()
+        key = (row["category"], row["type"], row["keyword"].lower().strip())
+        if key not in by_key or (row["volume"] or 0) > (by_key[key]["volume"] or 0):
+            by_key[key] = row.copy()
 
-    # Update volumes from Excel
+    # Update volumes from Excel: every row of that keyword
     for kw, vol in excel_volumes.items():
         kw_lower = kw.lower().strip()
-        if kw_lower in by_keyword:
-            by_keyword[kw_lower]["volume"] = vol
-        else:
+        matches = [r for (_, _, k), r in by_key.items() if k == kw_lower]
+        for r in matches:
+            r["volume"] = vol
+        if not matches:
             # New keyword from Excel
-            by_keyword[kw_lower] = {
+            by_key[("uncategorized", "keyword", kw_lower)] = {
                 "keyword": kw,
                 "volume": vol,
                 "category": "uncategorized",
@@ -139,13 +141,13 @@ def merge_keywords(existing: list[dict], excel_volumes: dict[str, int]) -> list[
                 "use_in": "",
             }
 
-    return list(by_keyword.values())
+    return list(by_key.values())
 
 
 def save_master_csv(rows: list[dict], output_path: Path):
-    """Сохраняет CSV, сортируя по category, затем по volume DESC."""
+    """Сохраняет CSV, сортируя по category, затем по volume DESC (null = 0)."""
     # Sort
-    sorted_rows = sorted(rows, key=lambda r: (r["category"], -r["volume"]))
+    sorted_rows = sorted(rows, key=lambda r: (r["category"], -(r["volume"] or 0)))
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8", newline="") as f:

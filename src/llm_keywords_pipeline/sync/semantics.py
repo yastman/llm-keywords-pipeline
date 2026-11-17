@@ -28,7 +28,7 @@ def load_master_csv(csv_path: Path) -> list[dict]:
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            row["volume"] = int(row["volume"])
+            row["volume"] = int(row["volume"] or 0)
             rows.append(row)
     return rows
 

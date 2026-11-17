@@ -8,6 +8,7 @@ from llm_keywords_pipeline.sync.semantics import (
     build_synonyms_list,
     find_clean_json_path,
     group_by_category,
+    load_master_csv,
     sync_category,
 )
 
@@ -144,3 +145,19 @@ class TestSyncCategory:
         sync_category("test-cat", rows, tmp_path / "categories", dry_run=True)
 
         assert clean_file.read_text() == original_content
+
+
+class TestLoadMasterCsv:
+    """Test loading master CSV."""
+
+    def test_empty_volume_reads_as_zero(self, tmp_path):
+        """An empty volume cell should be read as 0, no crash."""
+        csv_path = tmp_path / "master.csv"
+        csv_path.write_text(
+            "keyword,volume,category,type,use_in\na,,cat1,keyword,\nb,7,cat1,keyword,\n",
+            encoding="utf-8",
+        )
+
+        rows = load_master_csv(csv_path)
+
+        assert [r["volume"] for r in rows] == [0, 7]
