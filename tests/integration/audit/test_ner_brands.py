@@ -240,3 +240,47 @@ class TestStrictPhrases:
         text = "В современном мире автохимия стала необходимостью"
         result = check_blacklist(text)
         assert len(result["strict_phrases"]) > 0
+
+
+UK_NER_TEXT = "Доставка по Києву, Харкову та Тернополю від компанії Нова Пошта."
+RU_NER_TEXT = "Доставка по Киеву, Харькову и Тернополю от компании Новая Почта."
+
+
+def _analyze_json(path, capsys) -> dict:
+    import json
+
+    ner_brands.analyze_file(str(path), output_json=True)
+    return json.loads(capsys.readouterr().out)
+
+
+def test_uk_file_runs_no_ru_ner(tmp_path, capsys):
+    """UK file: natasha NER (RU-only) skipped, zero counts, no invented PER."""
+    path = tmp_path / "uk" / "categories" / "test.md"
+    path.parent.mkdir(parents=True)
+    path.write_text(UK_NER_TEXT, encoding="utf-8")
+
+    result = _analyze_json(path, capsys)
+
+    assert result["ner"]["ner_entities"] == []
+    assert result["ner"]["skipped"] is True
+    assert "RU-only" in result["ner"]["warning"]
+    assert result["summary"]["ner_per_count"] == 0
+    assert result["summary"]["ner_loc_count"] == 0
+    assert result["summary"]["ner_org_count"] == 0
+
+
+def test_ru_file_still_runs_ner(tmp_path, capsys):
+    path = tmp_path / "ru" / "categories" / "test.md"
+    path.parent.mkdir(parents=True)
+    path.write_text(RU_NER_TEXT, encoding="utf-8")
+
+    result = _analyze_json(path, capsys)
+
+    assert "skipped" not in result["ner"]
+    assert result["summary"]["ner_loc_count"] == 3
+    assert result["summary"]["ner_org_count"] == 1
+
+
+def test_check_ner_lang_switch():
+    assert ner_brands.check_ner(UK_NER_TEXT, "uk")["ner_entities"] == []
+    assert ner_brands.check_ner(RU_NER_TEXT, "ru")["ner_entities"]

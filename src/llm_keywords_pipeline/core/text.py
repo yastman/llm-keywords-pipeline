@@ -487,6 +487,16 @@ def count_chars_no_spaces(text: str) -> int:
     return len(no_spaces)
 
 
+# Cyrillic/Latin letters and digits; an apostrophe between letters keeps the word whole (UK п'ять)
+_WORD_RE = re.compile(r"[а-яёїієґa-z0-9]+(?:'[а-яёїієґa-z0-9]+)*", re.IGNORECASE)
+_APOSTROPHES = str.maketrans({"’": "'", "ʼ": "'"})
+
+
+def split_words(text: str) -> list[str]:
+    """Split text into words, case kept; ’ and ʼ normalised to '."""
+    return _WORD_RE.findall(text.translate(_APOSTROPHES))
+
+
 def tokenize(text: str, lang: str = "ru", remove_stopwords: bool = True) -> list[str]:
     """
     Split text into words, optionally removing stopwords.
@@ -499,8 +509,7 @@ def tokenize(text: str, lang: str = "ru", remove_stopwords: bool = True) -> list
     Returns:
         List of words (lowercase)
     """
-    # Keep only Cyrillic, Latin letters and digits
-    words = re.findall(r"[а-яёїієґa-z0-9]+", text.lower())
+    words = split_words(text.lower())
 
     if remove_stopwords:
         stopwords = get_stopwords(lang)

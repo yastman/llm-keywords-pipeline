@@ -180,3 +180,11 @@ def test_tokenize_keeps_content_words():
     assert "пену" in result
     # "для" should be removed as stopword
     assert "для" not in result
+
+
+def test_tokenize_keeps_uk_apostrophe_words_whole():
+    """UK words with ' ’ ʼ stay whole, the apostrophe normalised to '."""
+    from llm_keywords_pipeline.core.text import tokenize
+
+    result = tokenize("п'ять м’ясо пірʼя", lang="uk", remove_stopwords=False)
+    assert result == ["п'ять", "м'ясо", "пір'я"]

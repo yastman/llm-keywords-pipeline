@@ -95,3 +95,47 @@ class TestNauseaCalculation:
         assert result1 is not None
         assert result2 is not None
         assert result2["classic_nausea"] > result1["classic_nausea"]
+
+
+class TestUkTokenisation:
+    """UK text: whole apostrophe words, no RU-only natasha tools."""
+
+    def test_uk_apostrophe_words_counted_whole(self):
+        text = "П'ять пір’їн. М'ясо та сімʼя."
+        result = calculate_metrics_from_text(text, lang="uk")
+
+        assert result is not None
+        assert result["total_words"] == 5
+        assert result["most_common_lemma"] != "п"
+
+    def test_uk_runs_no_natasha_segmenter_or_tag_morph(self, monkeypatch):
+        from llm_keywords_pipeline.audit import water
+
+        def no_doc(*args, **kwargs):
+            raise AssertionError("natasha Doc used for uk")
+
+        monkeypatch.setattr(water, "Doc", no_doc)
+        result = calculate_metrics_from_text("Активна піна для мийки", lang="uk")
+
+        assert result is not None
+        assert result["total_words"] == 4
+
+
+def test_ru_metrics_unchanged():
+    """RU result pinned to the value main produced before the UK tokenisation change."""
+    text = (
+        "Активная пена для бесконтактной мойки автомобиля. Пена эффективно удаляет грязь, "
+        "а густая пена держится на кузове. Это и есть то, что нужно для мойки."
+    )
+    result = calculate_metrics_from_text(text, lang="ru")
+
+    assert result is not None
+    assert {k: result[k] for k in ("total_words", "water_count", "most_common_lemma")} == {
+        "total_words": 24,
+        "water_count": 10,
+        "most_common_lemma": "пена",
+    }
+    assert result["max_frequency"] == 3
+    assert result["total_significant"] == 5
+    assert result["repeated_words_count"] == 7
+    assert result["unique_lemmas"] == 20

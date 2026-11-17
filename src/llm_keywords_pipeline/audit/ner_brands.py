@@ -26,6 +26,7 @@ from pathlib import Path
 
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 from llm_keywords_pipeline.core.text import clean_markdown
+from llm_keywords_pipeline.validate.seo import detect_language
 
 try:
     from natasha import Doc, NewsEmbedding, NewsNERTagger, Segmenter
@@ -437,8 +438,15 @@ def check_blacklist(text: str) -> dict:
     }
 
 
-def check_ner(text: str) -> dict:
-    """Использует Natasha NER для поиска сущностей."""
+def check_ner(text: str, lang: str = "ru") -> dict:
+    """Natasha NER для поиска сущностей; модель только русская (RU-only), для uk не запускается."""
+    if lang == "uk":
+        return {
+            "ner_entities": [],
+            "skipped": True,
+            "warning": "NER пропущен: natasha NER только для русского (RU-only), для uk не запускается",
+        }
+
     if not NATASHA_FULL:
         return {
             "ner_entities": [],
@@ -473,6 +481,8 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
     """
     Анализирует файл на наличие запрещённых сущностей.
 
+    Язык — по пути файла (detect_language: /uk/ → uk); natasha NER только для ru.
+
     Returns:
         0 = PASS, 1 = WARNING (found issues)
     """
@@ -484,7 +494,7 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
     text = path.read_text(encoding="utf-8")
 
     blacklist_results = check_blacklist(text)
-    ner_results = check_ner(text)
+    ner_results = check_ner(text, detect_language(str(path)))
 
     results = {
         "file": str(path),
@@ -536,6 +546,9 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
             print(f"\n⚠️  AI-FLUFF ({len(blacklist_results['ai_fluff'])}):")
             for item in blacklist_results["ai_fluff"][:5]:
                 print(f'   • "{item["entity"]}": {item["context"]}')
+
+        if ner_results.get("skipped"):
+            print(f"\nℹ️  {ner_results['warning']}")
 
         ner_orgs = [e for e in ner_results.get("ner_entities", []) if e["type"] == "ORG"]
         ner_locs = [e for e in ner_results.get("ner_entities", []) if e["type"] == "LOC"]
