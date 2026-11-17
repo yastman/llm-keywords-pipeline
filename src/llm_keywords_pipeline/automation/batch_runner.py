@@ -12,7 +12,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from llm_keywords_pipeline.automation.llm_client import LlmClient
-from llm_keywords_pipeline.automation.orchestrator import CategoryRunState, run_category
+from llm_keywords_pipeline.automation.orchestrator import (
+    MAX_RETRIES,
+    CategoryRunState,
+    run_category,
+)
 from llm_keywords_pipeline.core.models import Category
 
 
@@ -58,7 +62,7 @@ def run_batch(
     llm: LlmClient,
     state_dir: Path | None = None,
     limit: int | None = None,
-    max_retries: int = 3,
+    max_retries: int = MAX_RETRIES,
 ) -> BatchReport:
     """
     Process a batch of categories.
@@ -114,11 +118,10 @@ def run_batch(
 
     report.finished_at = datetime.now(UTC).isoformat()
 
-    # Write human-queue file
+    # Write human-queue file (always, so an empty run clears a stale queue)
     human_queue = [r.slug for r in report.results if r.state == "needs_human"]
-    if human_queue:
-        queue_path = state_dir / "needs_human.json"
-        queue_path.write_text(json.dumps(human_queue, ensure_ascii=False, indent=2), encoding="utf-8")
+    queue_path = state_dir / "needs_human.json"
+    queue_path.write_text(json.dumps(human_queue, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # Write batch report
     report_path = state_dir / "batch_report.json"
