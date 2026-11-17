@@ -5,7 +5,6 @@ from llm_keywords_pipeline.generate import (
     catalog_json,
     checklists,
     plural_sql,
-    regenerate_meta,
     semantic_review,
     sql,
 )
@@ -19,5 +18,4 @@ __all__ = [
     "plural_sql",
     "semantic_review",
     "sql",
-    "regenerate_meta",
 ]

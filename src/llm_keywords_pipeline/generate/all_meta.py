@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Batch generate meta tags for all categories.
-Formula: {ВЧ Ключ} — купить, цены | Ultimate
+Formula: {ВЧ Ключ} — купить, цены | {brand}; brand from <data root>/project.toml
+[project] brand, none = no suffix.
 
 Usage:
     uv run python -m llm_keywords_pipeline.generate.all_meta [--dry-run] [--force] [--lang ru|uk]
@@ -19,6 +20,7 @@ from pathlib import Path
 
 from llm_keywords_pipeline.core.clean_json import keyword_entries
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.project import load_project
 
 
 def load_json(filepath: Path, silent: bool = False) -> dict | None:
@@ -74,6 +76,18 @@ def get_types_from_entities(data: dict) -> list[str]:
     return types[:3]
 
 
+def build_title(primary_kw: str, buy: str, buy_short: str) -> str:
+    """{kw} — {buy} | {brand}, shortened to fit 60 chars; no brand = no suffix."""
+    brand = load_project(PROJECT_ROOT).brand
+    suffix = f" | {brand}" if brand else ""
+    title = f"{primary_kw} — {buy}{suffix}"
+    if len(title) > 60:
+        title = f"{primary_kw} — {buy_short}{suffix}"
+    if len(title) > 60:
+        title = f"{primary_kw[:40]}...{suffix}"
+    return title
+
+
 def capitalize_first(text: str) -> str:
     """Capitalize first letter only."""
     return text[0].upper() + text[1:] if text else text
@@ -85,12 +99,7 @@ def generate_meta_ru(slug: str, data: dict) -> dict:
     name = capitalize_first(data.get("name", slug))
     types = get_types_from_entities(data)
 
-    # Title: {ВЧ Ключ} — купить, цены | Ultimate (max 60 chars)
-    title = f"{primary_kw} — купить, цены | Ultimate"
-    if len(title) > 60:
-        title = f"{primary_kw} — купить | Ultimate"
-    if len(title) > 60:
-        title = f"{primary_kw[:40]}... | Ultimate"
+    title = build_title(primary_kw, "купить, цены", "купить")
 
     # H1: Primary keyword
     h1 = primary_kw
@@ -98,11 +107,9 @@ def generate_meta_ru(slug: str, data: dict) -> dict:
     # Description: ~150-160 chars
     types_str = ", ".join(types) if types else ""
     if types_str:
-        description = (
-            f"{name} от производителя Ultimate. {capitalize_first(types_str)}. Опт и розница."
-        )
+        description = f"{name}. {capitalize_first(types_str)}."
     else:
-        description = f"{name} от производителя Ultimate. Профессиональное качество. Опт и розница."
+        description = f"{name}. Профессиональное качество."
     if len(description) > 160:
         description = description[:157] + "..."
 
@@ -122,22 +129,15 @@ def generate_meta_uk(slug: str, data: dict) -> dict:
     name = capitalize_first(data.get("name", slug))
     types = get_types_from_entities(data)
 
-    # Title: {ВЧ Ключ} — купити, ціни | Ultimate
-    title = f"{primary_kw} — купити, ціни | Ultimate"
-    if len(title) > 60:
-        title = f"{primary_kw} — купити | Ultimate"
-    if len(title) > 60:
-        title = f"{primary_kw[:40]}... | Ultimate"
+    title = build_title(primary_kw, "купити, ціни", "купити")
 
     h1 = primary_kw
 
     types_str = ", ".join(types) if types else ""
     if types_str:
-        description = (
-            f"{name} від виробника Ultimate. {capitalize_first(types_str)}. Опт і роздріб."
-        )
+        description = f"{name}. {capitalize_first(types_str)}."
     else:
-        description = f"{name} від виробника Ultimate. Професійна якість. Опт і роздріб."
+        description = f"{name}. Професійна якість."
     if len(description) > 160:
         description = description[:157] + "..."
 

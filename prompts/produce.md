@@ -59,11 +59,21 @@ Create `categories/{slug}/content/{slug}_ru.md`.
 
 ### Phase 3: Meta Tags (JSON)
 
-Create `categories/{slug}/meta/{slug}_meta.json`.
+Create `categories/{slug}/meta/{slug}_meta.json` in the shape `validate.meta` reads:
 
-* `title`: 30-60 chars. Must include "Купить", "Цена" or store name.
-* `description`: 100-160 chars. CTA + USP (Delivery, Warranty).
+```json
+{"h1": "...", "meta": {"title": "...", "description": "..."}}
+```
+
 * `h1`: Same as in Markdown.
+* `title`: 30-60 chars before an optional ` | {brand}` suffix (`[project] brand` of
+  `project.toml` in the data root; no brand, no suffix). Contains the main keyword, no colon.
+* `description`: 100-160 chars. Contains the main keyword; state only facts about
+  the store given in the inputs.
+* Client phrases: only those `[meta] required_phrases` of `project.toml` lists for the
+  language; none listed, none required.
+
+Then run `validate.meta` on the file with `--keywords` pointing at the `_clean.json`.
 
 ### Phase 4: Self-Correction
 

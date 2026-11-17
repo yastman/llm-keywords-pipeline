@@ -72,10 +72,11 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
 3. **Brief.** `uv run python -m llm_keywords_pipeline.analyze.category <slug> [--lang uk] [--json]`
    prints the keyword groups, recommended length, coverage target and structure.
 4. **Text and meta.** Write the text by `prompts/produce.md` (RU); prepare and delivery
-   steps are in `prompts/prepare.md` and `prompts/deliver.md`. The meta follows
-   `validate.meta`, not produce.md: the shape above, and a description with the producer
-   phrase (`от производителя Ultimate` / `від виробника Ultimate`) and the wholesale one
-   (`Опт и розница` / `Опт і роздріб`).
+   steps are in `prompts/prepare.md` and `prompts/deliver.md`. The meta has the shape
+   above; a client phrase is required only when `project.toml` in the data root lists it
+   under `[meta] required_phrases` for the language (regexes, e.g.
+   `required_phrases = { uk = ["опт\\b"], ru = [] }`); `[project] brand` is the title
+   suffix ` | {brand}` of the meta generators.
 5. **Validate and fix.** Run every validator below on the file; fix the text and rerun
    until each exits 0; a WARNING you leave in place is named, with the reason, in the hand-over.
 6. **Hand over** the files under the data root. Nothing from steps 1-5 is committed.
@@ -89,7 +90,7 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
 | `uv run llm-keywords-audit-brands <file.md>` | Brands, cities, strict phrases, AI fluff | from the path |
 | `uv run llm-keywords-audit-water <file.md>` | Water, classic and academic nausea | `--lang ru\|uk`, default ru |
 | `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>" --with-analysis <slug>` | H1/H2 structure, keyword in H1 and intro, core and commercial coverage, water, blacklist, length, markdown lint, FAQ | `--lang ru\|uk`, default ru; also picks the RU or UK `_clean.json` for `<slug>` |
-| `uv run python -m llm_keywords_pipeline.validate.meta <meta.json> --keywords <_clean.json>` | Title and description length, primary keyword, producer and wholesale phrases | `--lang ru\|uk` if given, else the meta's `"language"` key, else the path as check-seo, else ru (also under `--all`) |
+| `uv run python -m llm_keywords_pipeline.validate.meta <meta.json> --keywords <_clean.json>` | Title and description length, primary keyword, `[meta] required_phrases` of `project.toml` | `--lang ru\|uk` if given, else the meta's `"language"` key, else the path as check-seo, else ru (also under `--all`) |
 
 Pass the keyword source every time: without `--with-analysis` validate.content has no
 category keywords and reports coverage PASS on zero keywords; without `--keywords`

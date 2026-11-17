@@ -81,8 +81,7 @@ class TestValidateMetaFile:
         result = validate_meta_file(str(meta_file), lang="uk")
 
         assert result["lang"] == "uk"
-        # UK patterns should be validated
-        assert result["description"]["checks"]["producer"]["passed"]
+        assert result["description"]["checks"]["required_phrases"]["passed"]
 
 
 class TestValidateTitle:
@@ -139,23 +138,23 @@ class TestValidateDescription:
 
         assert result["checks"]["length"]["passed"]
 
-    def test_description_producer_pattern_ru(self):
-        """Russian description should check for RU producer pattern."""
+    def test_description_no_required_phrase_by_default_ru(self):
+        """No project.toml [meta]: no RU client phrase is required."""
         from llm_keywords_pipeline.validate.meta import validate_description
 
         desc = "Товар от производителя Ultimate. Опт и розница. Доставка."
         result = validate_description(desc, lang="ru")
 
-        assert result["checks"]["producer"]["passed"]
+        assert result["checks"]["required_phrases"]["passed"]
 
-    def test_description_producer_pattern_uk(self):
-        """Ukrainian description should check for UK producer pattern."""
+    def test_description_no_required_phrase_by_default_uk(self):
+        """No project.toml [meta]: no UK client phrase is required."""
         from llm_keywords_pipeline.validate.meta import validate_description
 
         desc = "Товар від виробника Ultimate. Опт і роздріб. Доставка."
         result = validate_description(desc, lang="uk")
 
-        assert result["checks"]["producer"]["passed"]
+        assert result["checks"]["required_phrases"]["passed"]
 
 
 class TestValidateH1:

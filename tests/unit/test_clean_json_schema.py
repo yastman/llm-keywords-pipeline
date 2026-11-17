@@ -17,7 +17,6 @@ from llm_keywords_pipeline.analyze import synonyms as analyze_synonyms
 from llm_keywords_pipeline.core.clean_json import keyword_entries, keyword_groups
 from llm_keywords_pipeline.extract import all_keywords, ru_keywords_list, uk_keywords
 from llm_keywords_pipeline.fix import keywords_order
-from llm_keywords_pipeline.generate import regenerate_meta
 from llm_keywords_pipeline.generate.all_meta import get_primary_keyword
 from llm_keywords_pipeline.sync import merge_master, update_volume
 from llm_keywords_pipeline.sync.semantics import group_by_category, load_master_csv, sync_category
@@ -234,19 +233,6 @@ class TestReaderCallers:
         result = analyze_synonyms.analyze_category(write_clean(tmp_path, data))
         assert result["keywords_count"] == 2
         assert [kw["keyword"] for kw in result["keywords"]] == ["главный", "второй"]
-
-    @SHAPES
-    def test_regenerate_meta(self, tmp_path, monkeypatch, data):
-        monkeypatch.chdir(tmp_path)
-        clean = write_clean(tmp_path, data)
-        meta = clean.parent.parent / "meta" / "cat_meta.json"
-        meta.parent.mkdir()
-        meta.write_text(json.dumps({"meta": {}}), encoding="utf-8")
-        assert regenerate_meta.regenerate_meta(meta) is True
-        written = read(meta)
-        assert written["keywords_in_content"]["primary"] == ["главный", "второй"]
-        assert written["meta"]["title"] == regenerate_meta.generate_title("главный")
-        assert written["h1"] == regenerate_meta.generate_h1("главный")
 
     @SHAPES
     def test_analyze_duplicates(self, tmp_path, data):

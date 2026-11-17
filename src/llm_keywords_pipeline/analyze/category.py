@@ -137,8 +137,8 @@ def load_keywords_for_slug(slug: str, lang: str = "ru") -> tuple[list[dict], str
 
         return keywords, "raw_json", None
 
-    # 3. Fallback to CSV (RU only: there is no uk semantics CSV)
-    if lang == "uk":
+    # 3. Fallback to CSV (RU only: there is no uk semantics CSV; none without the file)
+    if lang == "uk" or not SEMANTICS_CSV.is_file():
         return [], "none", None
 
     l3_name = SLUG_TO_L3.get(slug)
@@ -563,17 +563,17 @@ def list_all_categories(lang: str = "ru"):
 
     # Print table
     print(
-        f"{'Slug':<25} {'Keywords':>8} {'Volume':>7} {'Depth':<10} {'Format':<12} {'Words':<10} {'Cluster'}"
+        f"{'Slug':<25} {'Name':<30} {'Keywords':>8} {'Volume':>7} {'Depth':<10} {'Format':<12} {'Words':<10} {'Cluster'}"
     )
-    print("-" * 90)
+    print("-" * 121)
 
     for r in results:
         cluster = "YES" if r["clustering"] else "no"
         print(
-            f"{r['slug']:<25} {r['count']:>8} {r['volume']:>7} {r['depth']:<10} {r['format']:<12} {r['words']:<10} {cluster}"
+            f"{r['slug']:<25} {r['name']:<30} {r['count']:>8} {r['volume']:>7} {r['depth']:<10} {r['format']:<12} {r['words']:<10} {cluster}"
         )
 
-    print("-" * 90)
+    print("-" * 121)
     print(f"Total: {len(results)} categories")
     print()
     print("Semantic Depth:")

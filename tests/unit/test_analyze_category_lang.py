@@ -107,6 +107,29 @@ def test_list_ru_without_csv_lists_clean_json_categories(project, monkeypatch, c
     assert "Total: 1 categories" in out
 
 
+def test_list_ru_without_csv_skips_empty_dirs_and_names_mapped_slug(project, monkeypatch, capsys):
+    monkeypatch.setattr(category, "SEMANTICS_CSV", project / "missing.csv")
+    (project / "categories" / "aktivnaya-pena").mkdir(parents=True)  # mapped, no data
+    data_dir = project / "categories" / "antibitum" / "data"
+    data_dir.mkdir(parents=True)
+    payload = {"keywords": {"primary": [{"keyword": "антибитум", "volume": 100}]}}
+    (data_dir / "antibitum_clean.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    code = run_main(monkeypatch, "--list")
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert category.SLUG_TO_L3["antibitum"] in out
+    assert "aktivnaya-pena" not in out
+    assert "Total: 1 categories" in out
+
+
+def test_ru_slug_without_data_or_csv_returns_no_keywords(project, monkeypatch):
+    monkeypatch.setattr(category, "SEMANTICS_CSV", project / "missing.csv")
+
+    assert category.load_keywords_for_slug("antibitum", "ru") == ([], "none", None)
+
+
 def test_missing_slug_is_a_usage_error(project, monkeypatch, capsys):
     assert run_main(monkeypatch) == 2
 

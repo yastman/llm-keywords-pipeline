@@ -6,6 +6,7 @@ Generate SQL for plural meta update.
 import json
 from pathlib import Path
 
+from llm_keywords_pipeline.core.project import load_project
 from llm_keywords_pipeline.generate.sql import escape_sql
 
 
@@ -23,6 +24,9 @@ def generate_plural_sql(
     with open("data/generated/plural_manual_ru.json") as f:
         plural_ru = json.load(f)
 
+    # Paths here are relative to the data root (cwd), so is project.toml.
+    brand = load_project(Path.cwd()).brand
+    suffix = f" | {brand}" if brand else ""
     sql_lines = []
 
     # UK (language_id=1) - from local meta files
@@ -36,7 +40,7 @@ def generate_plural_sql(
             meta = json.load(f)
 
         h1 = escape_sql(meta.get("h1", ""))
-        # Nested {"meta": {"title"}} or top-level {"title"} (prompts/produce.md).
+        # Nested {"meta": {"title"}} (prompts/produce.md) or top-level {"title"} (older files).
         meta_block = meta["meta"] if isinstance(meta.get("meta"), dict) else meta
         title = escape_sql(meta_block.get("title", ""))
 
@@ -51,7 +55,7 @@ def generate_plural_sql(
             continue
 
         h1_escaped = escape_sql(new_h1)
-        title = escape_sql(f"{new_h1} — купить, цены | Ultimate")
+        title = escape_sql(f"{new_h1} — купить, цены{suffix}")
 
         sql_lines.append(
             f"UPDATE oc_category_description SET meta_h1='{h1_escaped}', meta_title='{title}' WHERE category_id={int(cat_id)} AND language_id=3;"

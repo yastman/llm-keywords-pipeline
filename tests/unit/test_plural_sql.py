@@ -38,7 +38,7 @@ def test_uk_values_escaped_with_escape_sql(tmp_path, monkeypatch):
     "meta",
     [
         {"h1": "H", "meta": {"title": "T"}},  # nested shape
-        {"h1": "H", "title": "T", "description": "D"},  # top-level shape (prompts/produce.md)
+        {"h1": "H", "title": "T", "description": "D"},  # top-level shape (older files)
     ],
 )
 def test_uk_title_read_from_both_meta_shapes(tmp_path, monkeypatch, meta):
@@ -54,7 +54,17 @@ def test_ru_values_escaped_with_escape_sql(tmp_path, monkeypatch):
     lines = generate_plural_sql()
     assert lines == [
         "UPDATE oc_category_description SET meta_h1='abc\\\\', "
-        "meta_title='abc\\\\ — купить, цены | Ultimate' WHERE category_id=5 AND language_id=3;"
+        "meta_title='abc\\\\ — купить, цены' WHERE category_id=5 AND language_id=3;"
+    ]
+
+
+def test_ru_title_brand_from_project_toml(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch, {"s": 5}, plural_ru={"s": "Конфеты"})
+    (tmp_path / "project.toml").write_text('[project]\nbrand = "Genesis"\n', encoding="utf-8")
+
+    assert generate_plural_sql() == [
+        "UPDATE oc_category_description SET meta_h1='Конфеты', "
+        "meta_title='Конфеты — купить, цены | Genesis' WHERE category_id=5 AND language_id=3;"
     ]
 
 
