@@ -86,6 +86,12 @@ class MorphAnalyzer:
             message += f" The fallback is RU-only, so {lang!r} lemmas will be wrong."
         warnings.warn(message, RuntimeWarning, stacklevel=3)
 
+    # Forms whose first pymorphy3 parse is the wrong word. The uk dictionary has no parse
+    # scores, so a rule like "prefer the verb parse" also flips душу/чаю/подію (437 uk words).
+    _LEMMA_OVERRIDE: dict[str, dict[str, str]] = {
+        "uk": {"куплю": "купити"},  # not the noun купля: buy keys «куплю X» match «купити X»
+    }
+
     @lru_cache(maxsize=10000)  # noqa: B019 - singleton, no memory leak
     def get_lemma(self, word: str) -> str:
         """
@@ -97,6 +103,10 @@ class MorphAnalyzer:
         губка → губка (not губко - surname)
         """
         word_lower = word.lower()
+
+        override = self._LEMMA_OVERRIDE.get(self.lang, {}).get(word_lower)
+        if override:
+            return override
 
         if self._use_pymorphy and self._morph:
             parses = self._morph.parse(word_lower)
