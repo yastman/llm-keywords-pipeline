@@ -10,6 +10,7 @@ from llm_keywords_pipeline.core.config import PROJECT_ROOT
 BASE_DIR = PROJECT_ROOT
 REGISTRY_FILE = BASE_DIR / "data/reports/KEYWORD_MIGRATION_REGISTRY.md"
 CSV_FILE = BASE_DIR / "Структура _Ultimate.csv"
+BACKUP_DIR = BASE_DIR / "data/backups"
 
 
 def parse_registry(file_path):
@@ -130,11 +131,12 @@ def migrate_keywords():
         print("CSV file not found!")
         return
 
-    backup_csv = CSV_FILE.with_name(
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    backup_csv = BACKUP_DIR / (
         f"{CSV_FILE.stem}_backup_{datetime.now():%Y%m%d_%H%M%S_%f}{CSV_FILE.suffix}"
     )
     shutil.copy2(CSV_FILE, backup_csv)
-    print(f"Backup created at {backup_csv.name}")
+    print(f"Backup created at {backup_csv}")
 
     category_map = load_csv(CSV_FILE)
 

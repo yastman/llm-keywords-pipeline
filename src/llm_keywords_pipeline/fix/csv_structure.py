@@ -2,7 +2,9 @@ import csv
 import shutil
 from datetime import datetime
 
-from llm_keywords_pipeline.core.config import SEMANTICS_CSV
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, SEMANTICS_CSV
+
+BACKUP_DIR = PROJECT_ROOT / "data/backups"
 
 # import config
 
@@ -92,10 +94,11 @@ def fix_csv():
         for c in changes:
             print(f"  {c}")
 
-        backup_csv = SEMANTICS_CSV.with_name(
+        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        backup_csv = BACKUP_DIR / (
             f"{SEMANTICS_CSV.stem}_backup_{datetime.now():%Y%m%d_%H%M%S_%f}{SEMANTICS_CSV.suffix}"
         )
-        print(f"\n💾 Бэкап: {backup_csv.name}")
+        print(f"\n💾 Бэкап: {backup_csv}")
         shutil.copy2(SEMANTICS_CSV, backup_csv)
 
         print(f"✅ Сохраняем: {SEMANTICS_CSV.name} ({len(changes)} строк исправлено)")

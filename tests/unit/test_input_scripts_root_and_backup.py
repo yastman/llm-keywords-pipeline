@@ -106,36 +106,77 @@ def test_match_cats_reads_dump_under_config_root(tmp_path, monkeypatch, capsys):
     )
 
 
-def _backups(csv_file: Path) -> list[Path]:
-    return sorted(csv_file.parent.glob(f"{csv_file.stem}_backup*{csv_file.suffix}"))
+def _project(tmp_path: Path) -> Path:
+    """Temp project root: a git repo with this repo's .gitignore."""
+    root = tmp_path / "project"
+    root.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    (root / ".gitignore").write_text(
+        (REPO_ROOT / ".gitignore").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    return root
 
 
-def test_migrate_keywords_keeps_every_backup(tmp_path, monkeypatch):
+def _untracked(root: Path) -> list[str]:
+    result = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=all"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return sorted(result.stdout.splitlines())
+
+
+def _backups(backup_dir: Path, csv_file: Path) -> list[Path]:
+    return sorted(backup_dir.glob(f"{csv_file.stem}_backup*{csv_file.suffix}"))
+
+
+def test_migrate_keywords_backs_up_into_ignored_backup_dir(tmp_path, monkeypatch):
     from llm_keywords_pipeline.sync import migrate_keywords
 
-    csv_file = tmp_path / "structure.csv"
+    root = _project(tmp_path)
+    csv_file = root / "structure.csv"
     csv_file.write_text("L1: Cat,,\nkey,10,\n", encoding="utf-8")
-    registry = tmp_path / "registry.md"
+    registry = root / "registry.md"
     registry.write_text("", encoding="utf-8")
+    backup_dir = root / "data" / "backups"
     monkeypatch.setattr(migrate_keywords, "CSV_FILE", csv_file)
     monkeypatch.setattr(migrate_keywords, "REGISTRY_FILE", registry)
+    monkeypatch.setattr(migrate_keywords, "BACKUP_DIR", backup_dir)
+    before = _untracked(root)
 
     migrate_keywords.migrate_keywords()
     migrate_keywords.migrate_keywords()
 
-    assert len(_backups(csv_file)) == 2
+    assert len(_backups(backup_dir, csv_file)) == 2
+    assert _untracked(root) == before
 
 
-def test_csv_structure_keeps_every_backup(tmp_path, monkeypatch):
+def test_csv_structure_backs_up_into_ignored_backup_dir(tmp_path, monkeypatch):
     from llm_keywords_pipeline.fix import csv_structure
 
-    csv_file = tmp_path / "structure.csv"
+    root = _project(tmp_path)
+    csv_file = root / "structure.csv"
+    backup_dir = root / "data" / "backups"
     monkeypatch.setattr(csv_structure, "SEMANTICS_CSV", csv_file)
+    monkeypatch.setattr(csv_structure, "BACKUP_DIR", backup_dir)
 
     csv_file.write_text("key one,2,\n", encoding="utf-8")
+    before = _untracked(root)
     csv_structure.fix_csv()
     csv_file.write_text("key two,3,\n", encoding="utf-8")
     csv_structure.fix_csv()
 
-    backups = _backups(csv_file)
+    backups = _backups(backup_dir, csv_file)
     assert [b.read_text(encoding="utf-8") for b in backups] == ["key one,2,\n", "key two,3,\n"]
+    assert _untracked(root) == before
+
+
+def test_backup_dirs_default_to_project_root_data_backups():
+    from llm_keywords_pipeline.fix import csv_structure
+    from llm_keywords_pipeline.sync import migrate_keywords
+
+    expected = config.PROJECT_ROOT / "data" / "backups"
+    assert migrate_keywords.BACKUP_DIR == expected
+    assert csv_structure.BACKUP_DIR == expected
