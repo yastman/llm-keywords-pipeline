@@ -170,17 +170,6 @@ def get_commercial_keywords(keywords_data: dict[str, Any]) -> list[str]:
     return keywords
 
 
-def get_word_stem(word: str) -> str:
-    """
-    Backward-compatible wrapper using MorphAnalyzer.
-
-    Extract stem from a single word for fuzzy matching.
-    Handles singular/plural forms in Russian/Ukrainian.
-    """
-    morph = MorphAnalyzer("ru")
-    return morph.get_lemma(word)
-
-
 def keyword_matches(keyword: str, text: str, lang: str = "ru") -> bool:
     """
     Backward-compatible wrapper using keyword_utils.

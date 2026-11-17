@@ -9,15 +9,19 @@ Version: v8.5 (Google 2025 Approach)
 Updated: 2025-12-15
 """
 
+import os
 from pathlib import Path
 
 # =============================================================================
 # Project Paths
 # =============================================================================
 
-# Support installed src layout and direct module execution.
+# LLM_KEYWORDS_PROJECT_ROOT wins; otherwise walk up from this file.
 _FILE_DIR = Path(__file__).parent.resolve()
-if _FILE_DIR.name == "core" and _FILE_DIR.parent.name == "llm_keywords_pipeline":
+_ENV_ROOT = os.environ.get("LLM_KEYWORDS_PROJECT_ROOT")
+if _ENV_ROOT:
+    PROJECT_ROOT = Path(_ENV_ROOT).resolve()
+elif _FILE_DIR.name == "core" and _FILE_DIR.parent.name == "llm_keywords_pipeline":
     # src/llm_keywords_pipeline/core/ → go up 3 levels to project root
     # core → llm_keywords_pipeline → src → llm-keywords-pipeline (project root)
     PROJECT_ROOT = _FILE_DIR.parent.parent.parent
@@ -192,7 +196,6 @@ CONTENT_STANDARDS = {
 # =============================================================================
 
 NLP_CONFIG = {
-    "advego_multiplier": 2.4,  # Калибровочный коэффициент для water%
     "cache_enabled": True,  # Кэшировать NLP объекты
 }
 

@@ -49,12 +49,17 @@ class TestUpdateCleanJson:
 
     def test_creates_clean_json(self, tmp_path, monkeypatch):
         """Should create _clean.json file with grouped keywords."""
-        # Monkeypatch to use tmp_path
-        monkeypatch.chdir(tmp_path)
+        from llm_keywords_pipeline.sync import update_uk_clean
+
+        monkeypatch.setattr(update_uk_clean, "PROJECT_ROOT", tmp_path)
 
         keywords = [{"keyword": "тест", "volume": 600}]
         result_path = update_clean_json("test-slug", keywords, 600)
 
+        assert (
+            result_path
+            == tmp_path / "uk" / "categories" / "test-slug" / "data" / "test-slug_clean.json"
+        )
         assert result_path.exists()
 
         import json

@@ -1,11 +1,10 @@
 import csv
 import shutil
+from datetime import datetime
 
 from llm_keywords_pipeline.core.config import SEMANTICS_CSV
 
 # import config
-
-BACKUP_CSV = SEMANTICS_CSV.parent / f"{SEMANTICS_CSV.stem}_backup{SEMANTICS_CSV.suffix}"
 
 
 def is_explicit_marker(col1: str, col2: str) -> bool:
@@ -93,8 +92,11 @@ def fix_csv():
         for c in changes:
             print(f"  {c}")
 
-        print(f"\n💾 Бэкап: {BACKUP_CSV.name}")
-        shutil.copy2(SEMANTICS_CSV, BACKUP_CSV)
+        backup_csv = SEMANTICS_CSV.with_name(
+            f"{SEMANTICS_CSV.stem}_backup_{datetime.now():%Y%m%d_%H%M%S_%f}{SEMANTICS_CSV.suffix}"
+        )
+        print(f"\n💾 Бэкап: {backup_csv.name}")
+        shutil.copy2(SEMANTICS_CSV, backup_csv)
 
         print(f"✅ Сохраняем: {SEMANTICS_CSV.name} ({len(changes)} строк исправлено)")
         # Calculate newlines logic if needed, but csv module handles it with newline=''

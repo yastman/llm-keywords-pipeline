@@ -1,8 +1,7 @@
 import json
-import os
-from pathlib import Path
 
-PROJECT_ROOT = Path(os.environ.get("LLM_KEYWORDS_PROJECT_ROOT", ".")).resolve()
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
 CATALOG_STRUCTURE_PATH = PROJECT_ROOT / "data" / "catalog_structure.json"
 MANUAL_SHAMPOO_PATH = (
     PROJECT_ROOT
