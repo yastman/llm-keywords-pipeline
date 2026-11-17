@@ -10,13 +10,8 @@ def test_critical_constants():
     assert isinstance(config.PROJECT_ROOT, Path)
     assert isinstance(config.CATEGORIES_DIR, Path)
     assert isinstance(config.QUALITY_THRESHOLDS, dict)
-    assert isinstance(config.L3_TO_SLUG, dict)
-    assert isinstance(config.SLUG_TO_L3, dict)
-
-    # Verify bidirectional mapping integrity
-    assert len(config.L3_TO_SLUG) == len(config.SLUG_TO_L3)
-    for l3, slug in config.L3_TO_SLUG.items():
-        assert config.SLUG_TO_L3[slug] == l3
+    # Category slug maps are client data ([slugs] of project.toml), not code constants.
+    assert not hasattr(config, "L3_TO_SLUG")
 
 
 @pytest.mark.parametrize(

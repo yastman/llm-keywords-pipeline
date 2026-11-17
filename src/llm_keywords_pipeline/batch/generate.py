@@ -31,7 +31,7 @@ import sys
 from datetime import UTC, datetime
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT, semantics_csv_path
-from llm_keywords_pipeline.core.seo import L3_TO_SLUG, slugify
+from llm_keywords_pipeline.core.seo import slug_for
 
 # =============================================================================
 # Configuration
@@ -116,7 +116,7 @@ def get_all_categories() -> list[dict]:
             if phrase.startswith("L3:"):
                 # Save previous category
                 if current_l3 and current_keywords:
-                    slug = L3_TO_SLUG.get(current_l3) or slugify(current_l3)
+                    slug = slug_for(current_l3)
                     categories.append(
                         {
                             "slug": slug,
@@ -133,7 +133,7 @@ def get_all_categories() -> list[dict]:
             # Skip L1, L2 headers
             if phrase.startswith("L1:") or phrase.startswith("L2:"):
                 if current_l3 and current_keywords:
-                    slug = L3_TO_SLUG.get(current_l3) or slugify(current_l3)
+                    slug = slug_for(current_l3)
                     categories.append(
                         {
                             "slug": slug,
@@ -154,7 +154,7 @@ def get_all_categories() -> list[dict]:
 
     # Don't forget the last category
     if current_l3 and current_keywords:
-        slug = L3_TO_SLUG.get(current_l3) or slugify(current_l3)
+        slug = slug_for(current_l3)
         categories.append(
             {
                 "slug": slug,

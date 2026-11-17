@@ -34,9 +34,9 @@ def _read_text(path: Path) -> str:
 
 
 def _slugify_l3(l3_name: str) -> str:
-    from llm_keywords_pipeline.core.seo import L3_TO_SLUG, slugify
+    from llm_keywords_pipeline.core.seo import slug_for
 
-    return L3_TO_SLUG.get(l3_name) or slugify(l3_name)
+    return slug_for(l3_name)
 
 
 def iter_slugs_from_semantics_csv(csv_path: Path) -> Iterable[str]:

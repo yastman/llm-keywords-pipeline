@@ -41,11 +41,11 @@ from llm_keywords_pipeline.core.config import (
     SEMANTICS_CSV,
     get_guidelines_coverage_target,
 )
+from llm_keywords_pipeline.core.project import get_project
 from llm_keywords_pipeline.core.seo import (
-    L3_TO_SLUG,
-    SLUG_TO_L3,
     get_commercial_modifiers,
     get_mappings_for_lang,
+    slug_for,
 )
 
 # =============================================================================
@@ -53,6 +53,7 @@ from llm_keywords_pipeline.core.seo import (
 # =============================================================================
 
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
+DEFAULT_EDITORIAL_TONE = "эксперт-консультант магазина"
 
 
 # Language-specific paths
@@ -141,12 +142,8 @@ def load_keywords_for_slug(slug: str, lang: str = "ru") -> tuple[list[dict], str
     if lang == "uk" or not SEMANTICS_CSV.is_file():
         return [], "none", None
 
-    l3_name = SLUG_TO_L3.get(slug)
-    if not l3_name:
-        return [], "csv", None
-
     categories = read_semantics_csv(str(SEMANTICS_CSV))
-    keywords = categories.get(l3_name, [])
+    keywords = next((kws for name, kws in categories.items() if slug_for(name) == slug), [])
 
     return keywords, "csv", None
 
@@ -342,6 +339,11 @@ def analyze_keywords(keywords: list[dict], lang: str = "ru") -> dict:
     }
 
 
+def editorial_tone() -> str:
+    """Tone of the brief: [niche] tone of project.toml, else neutral."""
+    return get_project().tone or DEFAULT_EDITORIAL_TONE
+
+
 def generate_content_guidelines(analysis: dict) -> dict:
     """
     Генерирует рекомендации для контента на основе анализа.
@@ -409,7 +411,7 @@ def generate_content_guidelines(analysis: dict) -> dict:
         "nausea_classic": {"max": 3.5},
         "blacklist_phrases": 0,
         "unique_content": True,
-        "editorial_tone": "эксперт авто-детейлинга",
+        "editorial_tone": editorial_tone(),
     }
 
     return {
@@ -492,7 +494,7 @@ def analyze_category(slug: str, lang: str = "ru") -> dict:
         "llm_prompt_hints": {
             "page_type": "категория интернет-магазина",
             "content_type": "buying guide (не SEO-текст)",
-            "tone": "эксперт авто-детейлинга",
+            "tone": editorial_tone(),
             "goal": "помочь выбрать товар",
             "avoid": ["вода ради объёма", "универсальные фразы", "история категории", "AI-fluff"],
         },
@@ -522,9 +524,7 @@ def list_all_categories(lang: str = "ru"):
 
     if lang == "uk" or not SEMANTICS_CSV.is_file():
         # No structure CSV (uk never has one): list categories from <categories>/*/data JSON
-        from llm_keywords_pipeline.core.seo import SLUG_TO_L3_UK
-
-        slug_to_name = SLUG_TO_L3_UK if lang == "uk" else SLUG_TO_L3
+        _, slug_to_name = get_mappings_for_lang(lang)
         entries = []
         categories_dir = get_categories_dir(lang)
         slug_dirs = sorted(categories_dir.iterdir()) if categories_dir.is_dir() else []
@@ -537,8 +537,7 @@ def list_all_categories(lang: str = "ru"):
     else:
         categories = read_semantics_csv(str(SEMANTICS_CSV))
         entries = [
-            (L3_TO_SLUG.get(l3_name, "???"), l3_name, keywords)
-            for l3_name, keywords in categories.items()
+            (slug_for(l3_name), l3_name, keywords) for l3_name, keywords in categories.items()
         ]
 
     # Analyze all

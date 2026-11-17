@@ -42,11 +42,12 @@ from llm_keywords_pipeline.audit.ner_brands import check_blacklist
 from llm_keywords_pipeline.audit.water import (
     calculate_metrics_from_text as calculate_water_and_nausea,
 )
-from llm_keywords_pipeline.core.config import CONTENT_STANDARDS, QUALITY_THRESHOLDS
+from llm_keywords_pipeline.core.config import QUALITY_THRESHOLDS
 from llm_keywords_pipeline.core.keywords import (
     CoverageChecker,
     KeywordMatcher,
 )
+from llm_keywords_pipeline.core.project import get_project
 from llm_keywords_pipeline.core.seo import get_adaptive_requirements
 from llm_keywords_pipeline.core.text import (
     clean_markdown,
@@ -575,6 +576,9 @@ def check_content_standards(text: str, lang: str = "ru") -> dict:
     """
     Check content against CONTENT_GUIDE.md requirements.
 
+    Each check is required only when [content_standards] of <data root>/project.toml
+    switches it on (safety_block, howto_steps, evergreen_math, warnings); none by default.
+
     Checks (in quality mode):
     - Safety block: ## Safety или test spot упоминание
     - How-to steps: нумерованные списки (1. 2. 3.)
@@ -652,18 +656,18 @@ def check_content_standards(text: str, lang: str = "ru") -> dict:
     # Fallback to RU if lang not found
     lang_patterns = patterns.get(lang, patterns["ru"])
 
-    required = CONTENT_STANDARDS.get("required", {})
+    required = get_project().content_standards
 
     # 1. Safety block
     if any(re.search(p, text_lower) for p in lang_patterns["safety"]) or "test spot" in text_lower:
         results["safety_block"] = True
-    elif required.get("safety_block", True):
+    elif required["safety_block"]:
         results["issues"].append("Нет блока про безопасность/ошибки (Safety/Важливо)")
 
     # 2. How-to steps: нумерованные списки (Language independent)
     if re.search(r"^\d+\.\s+", text, re.MULTILINE):
         results["howto_steps"] = True
-    elif required.get("howto_steps", True):
+    elif required["howto_steps"]:
         results["issues"].append("Нет нумерованных шагов (How-to)")
 
     # 3. Evergreen Math
@@ -671,7 +675,7 @@ def check_content_standards(text: str, lang: str = "ru") -> dict:
         if re.search(pattern, text_lower):
             results["evergreen_math"] = True
             break
-    if not results["evergreen_math"] and required.get("evergreen_math", True):
+    if not results["evergreen_math"] and required["evergreen_math"]:
         results["issues"].append("Нет Evergreen Math (расход/разведение/витрата)")
 
     # 4. "Так не делайте": предупреждения
@@ -679,7 +683,7 @@ def check_content_standards(text: str, lang: str = "ru") -> dict:
         if re.search(pattern, text_lower):
             results["warnings_present"] = True
             break
-    if not results["warnings_present"] and required.get("warnings", True):
+    if not results["warnings_present"] and required["warnings"]:
         results["issues"].append("Нет предупреждений ('так не делайте/не можна')")
 
     # 5. Cross-links
@@ -687,7 +691,7 @@ def check_content_standards(text: str, lang: str = "ru") -> dict:
     results["crosslinks_count"] = len(crosslinks)
 
     # Determine overall status
-    critical_missing = required.get("safety_block", True) and not results["safety_block"]
+    critical_missing = required["safety_block"] and not results["safety_block"]
     warnings_count = len(results["issues"])
 
     if critical_missing or warnings_count >= 3:
@@ -868,7 +872,7 @@ def validate_content(
         except TypeError:
             length = check_length(text)
 
-    # FIX v8.5: Check CONTENT_STANDARDS_2025 requirements (quality mode only)
+    # Content standards ([content_standards] of project.toml), quality mode only
     if mode == "quality":
         try:
             content_standards = check_content_standards(text, lang=lang)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Анализ дублей ключевых слов в keywords.
-Находит семантически идентичные ключи (авто/автомобиля, машины/авто и т.д.)
+Находит семантически идентичные ключи по заменам [synonyms] map из project.toml.
 """
 
 import json
@@ -11,24 +11,13 @@ from pathlib import Path
 
 from llm_keywords_pipeline.core.clean_json import keyword_entries
 from llm_keywords_pipeline.core.coverage import keyword_key
-
-# Словарь синонимов для нормализации
-SYNONYM_MAP = {
-    "автомобиля": "авто",
-    "автомобиль": "авто",
-    "машины": "авто",
-    "машину": "авто",
-    "машина": "авто",
-    "автомобилей": "авто",
-    "автомобили": "авто",
-    "машин": "авто",
-}
+from llm_keywords_pipeline.core.project import get_project
 
 
 def normalize_keyword(keyword: str) -> str:
-    """Нормализует ключ для сравнения."""
+    """Нормализует ключ для сравнения: замены [synonyms] map из project.toml (подстроки)."""
     normalized = keyword_key(keyword)
-    for old, new in SYNONYM_MAP.items():
+    for old, new in get_project().synonym_map.items():
         normalized = normalized.replace(old, new)
     return normalized
 
@@ -95,12 +84,12 @@ def main():
     print()
     print("## Проблема")
     print()
-    print("Семантически идентичные ключи (авто/автомобиля, машины/авто) в массиве `keywords`")
+    print("Семантически идентичные ключи ([synonyms] map из project.toml) в массиве `keywords`")
     print("создают переспам и занимают место, которое лучше использовать для LSI-расширения.")
     print()
     print("## Правило исправления")
     print()
-    print("1. Оставить в `keywords` **короткий** вариант (обычно с «авто»)")
+    print("1. Оставить в `keywords` **короткий** вариант")
     print("2. Перенести длинный вариант в `synonyms`")
     print("3. При равной длине — оставить вариант с большим volume")
     print()

@@ -32,15 +32,14 @@ import yaml
 # Config imports
 from llm_keywords_pipeline.core.config import (
     COMMERCIAL_MODIFIERS,
-    L3_TO_SLUG,
     QUALITY_THRESHOLDS,
-    SLUG_TO_L3,
 )
 
 # Keyword utilities (SSOT) - import from keyword_utils
 from llm_keywords_pipeline.core.keywords import (
     get_adaptive_coverage_target as _get_adaptive_coverage_target,
 )
+from llm_keywords_pipeline.core.project import get_project
 
 
 def get_adaptive_coverage_target(keywords_count: int) -> int:
@@ -54,27 +53,6 @@ def get_adaptive_coverage_target(keywords_count: int) -> int:
 
 # QUALITY_THRESHOLDS is imported from llm_keywords_pipeline.core.config.
 
-
-# ============================================================================
-# L3 Category Mapping (SSOT - avoid duplication)
-# ============================================================================
-
-# RU mappings are imported from llm_keywords_pipeline.core.config.
-
-# UK mappings
-L3_TO_SLUG_UK = {
-    "Активна піна": "aktivnaya-pena",
-    "Для ручного миття": "dlya-ruchnoy-moyki",
-    "Очисники скла": "ochistiteli-stekol",
-    "Глина і автоскраби": "glina-i-avtoskraby",
-    "Антикомаха": "antimoshka",
-    "Антибітум": "antibitum",
-    "Чорніння шин": "cherniteli-shin",
-    "Очисники дисків": "ochistiteli-diskov",
-    "Очисники шин": "ochistiteli-shin",
-}
-
-SLUG_TO_L3_UK = {v: k for k, v in L3_TO_SLUG_UK.items()}
 
 # Commercial modifiers by language
 # RU modifiers are imported from llm_keywords_pipeline.core.config.
@@ -94,18 +72,23 @@ COMMERCIAL_MODIFIERS_UK = [
 ]
 
 
+# Category name -> slug: [slugs.<lang>] of <data root>/project.toml, else slugify().
 def get_mappings_for_lang(lang: str = "ru") -> tuple[dict[str, str], dict[str, str]]:
-    """Get L3_TO_SLUG and SLUG_TO_L3 mappings for specified language."""
-    if lang == "uk":
-        return L3_TO_SLUG_UK, SLUG_TO_L3_UK
-    return L3_TO_SLUG, SLUG_TO_L3
+    """Category name -> slug and slug -> name from [slugs.<lang>] of project.toml."""
+    names = get_project().slugs.get(lang, {})
+    return dict(names), {slug: name for name, slug in names.items()}
+
+
+def slug_for(name: str, lang: str = "ru") -> str:
+    """Slug of a category name: [slugs.<lang>] of project.toml, else slugify(name)."""
+    return get_project().slugs.get(lang, {}).get(name) or slugify(name)
 
 
 def get_commercial_modifiers(lang: str = "ru") -> list[str]:
-    """Get commercial modifiers for specified language."""
-    if lang == "uk":
-        return COMMERCIAL_MODIFIERS_UK
-    return COMMERCIAL_MODIFIERS
+    """Generic commercial words of lang plus [markers] commercial.<lang> of project.toml."""
+    generic = COMMERCIAL_MODIFIERS_UK if lang == "uk" else COMMERCIAL_MODIFIERS
+    extra = get_project().commercial_markers.get(lang, ())
+    return generic + [m for m in extra if m not in generic]
 
 
 # ============================================================================
@@ -165,16 +148,16 @@ def slugify(text: str) -> str:
     - Lowercase
 
     Args:
-        text: Input text (e.g., "Активная пена")
+        text: Input text (e.g., "Садовые качели")
 
     Returns:
-        URL-safe slug (e.g., "aktivnaya-pena")
+        URL-safe slug (e.g., "sadovye-kacheli")
 
     Example:
-        >>> slugify("Активная пена")
-        'aktivnaya-pena'
-        >>> slugify("Очистители стёкол")
-        'ochistiteli-stekol'
+        >>> slugify("Садовые качели")
+        'sadovye-kacheli'
+        >>> slugify("Чайные сервизы")
+        'chaynye-servizy'
     """
     text = text.lower().strip()
 

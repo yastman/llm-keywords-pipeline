@@ -2,19 +2,7 @@ import json
 import re
 
 from llm_keywords_pipeline.core.config import CATEGORIES_DIR
-
-# Patterns that SHOULD NOT be in L2 categories
-L2_FORBIDDEN_PATTERNS = {
-    "avtoshampuni": [r"ручн.*мойк", r"активн.*пен"],
-    "sredstva-dlya-kozhi": [r"крем", r"полирол", r"лосьон"],
-    "mikrofibra-i-tryapki": [r"стекл", r"полиров"],
-    "voski": [r"тверд", r"жидк", r"горяч", r"быстр"],
-    "sredstva-dlya-stekol": [r"очистител"],
-    "sredstva-dlya-diskov-i-shin": [r"очистител", r"чернител"],
-    "polirovalnye-pasty": [
-        r"паст"
-    ],  # Wait, this IS the category for pastes, but maybe check for machine/pads?
-}
+from llm_keywords_pipeline.core.project import get_project
 
 
 def check_category(slug: str) -> dict:
@@ -37,12 +25,13 @@ def check_category(slug: str) -> dict:
 
     issues = []
 
-    # Check 1: L2 forbidding logic
-    if cat_type == "L2" and slug in L2_FORBIDDEN_PATTERNS:
-        for kw in keywords:
-            for pattern in L2_FORBIDDEN_PATTERNS[slug]:
-                if re.search(pattern, kw.lower()):
-                    issues.append(f"L2 Forbidden: '{kw}' matches '{pattern}'")
+    # Check 1: patterns that should not be in an L2 category,
+    # [structure.l2_forbidden] <slug> = [regex] of <data root>/project.toml; none by default
+    forbidden = get_project().l2_forbidden.get(slug, ()) if cat_type == "L2" else ()
+    for kw in keywords:
+        for pattern in forbidden:
+            if re.search(pattern, kw.lower()):
+                issues.append(f"L2 Forbidden: '{kw}' matches '{pattern}'")
 
     # Check 2: Empty categories
     if not keywords and cat_type != "Hub":  # Some hubs might be empty?

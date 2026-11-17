@@ -3,7 +3,7 @@
 NER Brand/City Checker using Natasha
 
 Автоматически находит и предупреждает о:
-- ORG (организации) → бренды: Koch Chemie, Grass, Karcher, Sonax
+- бренды из [blacklist] brands в <data root>/project.toml; ORG (организации) из NER
 - LOC (локации) → города: Киев, Харьков, Одесса
 - PER (персоны) → имена: нежелательны в SEO текстах
 
@@ -30,6 +30,7 @@ from llm_keywords_pipeline.core.config import (
     STRICT_BLACKLIST_PHRASES,
 )
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
+from llm_keywords_pipeline.core.project import get_project
 from llm_keywords_pipeline.core.text import clean_markdown
 from llm_keywords_pipeline.validate.seo import detect_language
 
@@ -46,70 +47,9 @@ except ImportError:
         print("❌ Natasha не установлена: uv sync --group nlp")
         NATASHA_FULL = False
 
-# Blacklist брендов (явные упоминания)
-BRAND_BLACKLIST = {
-    # Химия
-    "koch chemie",
-    "koch",
-    "grass",
-    "грасс",
-    "karcher",
-    "керхер",
-    "kärcher",
-    "sonax",
-    "сонакс",
-    "meguiars",
-    "мегуарс",
-    "chemical guys",
-    "turtle wax",
-    "тёртл вакс",
-    "hi-gear",
-    "хай-гир",
-    "lavr",
-    "лавр",
-    "liqui moly",
-    "ликви моли",
-    "mannol",
-    "маннол",
-    "felix",
-    "феликс",
-    "aim-one",
-    "аим-ван",
-    "runway",
-    "ранвей",
-    "abro",
-    "абро",
-    "doctor wax",
-    "доктор вакс",
-    "soft99",
-    "софт99",
-    # Оборудование
-    "bosch",
-    "бош",
-    "makita",
-    "макита",
-    "dewalt",
-    "девольт",
-    "stihl",
-    "штиль",
-    "husqvarna",
-    "хускварна",
-    # Авто
-    "toyota",
-    "тойота",
-    "bmw",
-    "бмв",
-    "mercedes",
-    "мерседес",
-    "volkswagen",
-    "фольксваген",
-    "audi",
-    "ауди",
-    "ford",
-    "форд",
-}
+# Бренды (явные упоминания): [blacklist] brands из project.toml, по умолчанию нет.
 
-# Blacklist городов
+# Blacklist городов; [blacklist] cities = false в project.toml отключает проверку
 CITY_BLACKLIST = {
     # Украина
     "київ",
@@ -270,6 +210,7 @@ def _city_parse(word: str) -> tuple[str, bool] | None:
 def check_blacklist(text: str, lang: str = "ru") -> dict:
     """Проверяет текст на наличие запрещённых слов; strict и AI-fluff — списки языка lang (ru/uk)."""
     text_lower = text.lower()
+    project = get_project()
 
     found_brands = []
     found_cities = []
@@ -277,7 +218,7 @@ def check_blacklist(text: str, lang: str = "ru") -> dict:
     found_strict = []
 
     # Проверка брендов
-    for brand in BRAND_BLACKLIST:
+    for brand in project.blacklist_brands:
         if brand in text_lower:
             # Только целое слово: "ауди" не ловится внутри "аудиосистемы"
             for match in re.finditer(rf"(?<!\w){re.escape(brand)}(?!\w)", text_lower):
@@ -289,8 +230,8 @@ def check_blacklist(text: str, lang: str = "ru") -> dict:
                 )
 
     # Слова с городским разбором (Києві, Рівному, Львові) проверяются по разбору ниже,
-    # а не по основе-подстроке ("львов" внутри "львові")
-    words = list(re.finditer(r"\w+", text_lower))
+    # а не по основе-подстроке ("львов" внутри "львові"); cities = false — без городов
+    words = list(re.finditer(r"\w+", text_lower)) if project.blacklist_cities else []
     parses = [_city_parse(m.group()) for m in words]
     city_words = [(m, parsed) for m, parsed in zip(words, parses, strict=True) if parsed]
 
@@ -329,7 +270,7 @@ def check_blacklist(text: str, lang: str = "ru") -> dict:
             after_preposition[k] = True
 
     # Проверка городов (с фильтрацией false positives)
-    for city in CITY_BLACKLIST:
+    for city in CITY_BLACKLIST if project.blacklist_cities else ():
         if city in text_lower:
             for match in re.finditer(re.escape(city), text_lower):
                 if any(m.start() <= match.start() < m.end() for m, _ in city_words):
@@ -368,7 +309,7 @@ def check_blacklist(text: str, lang: str = "ru") -> dict:
 
     # Проверка Strict Phrases (FAIL)
     for phrase in STRICT_BLACKLIST_PHRASES[lang]:
-        if phrase in text_lower:
+        if phrase in text_lower and phrase not in project.phrases_allow:
             for match in re.finditer(re.escape(phrase), text_lower):
                 start = max(0, match.start() - 30)
                 end = min(len(text), match.end() + 30)

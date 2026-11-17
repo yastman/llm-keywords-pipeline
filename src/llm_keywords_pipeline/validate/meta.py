@@ -12,6 +12,7 @@ validate_meta.py — Meta Tags Validation (v17.0)
 - Description довжина 100-160 chars (core/config.py)
 - Description містить фрази [meta] required_phrases з <data root>/project.toml
   (немає файлу або мови = фраза не потрібна)
+- Description містить фрази [meta] recommended_phrases (немає = WARNING, не FAIL)
 
 Usage:
     uv run python -m llm_keywords_pipeline.validate.meta <meta.json>
@@ -245,7 +246,8 @@ def validate_description(
     Checks:
     - Length DESC_MIN_LENGTH-DESC_MAX_LENGTH chars
     - Contains primary keyword
-    - Contains each [meta] required_phrases regex of project.toml for lang
+    - Contains each [meta] required_phrases regex of project.toml for lang (FAIL if missing)
+    - Contains each [meta] recommended_phrases regex of project.toml for lang (WARNING)
     - No marketing fluff
 
     Args:
@@ -257,6 +259,7 @@ def validate_description(
         "length": {"passed": False, "message": ""},
         "primary_keyword": {"passed": False, "message": ""},
         "required_phrases": {"passed": False, "message": ""},
+        "recommended_phrases": {"passed": False, "message": ""},
         "no_fluff": {"passed": False, "message": ""},
     }
     results: dict[str, Any] = {
@@ -319,6 +322,18 @@ def validate_description(
         results["checks"]["required_phrases"]["message"] = (
             "OK (required phrases found)" if required else "OK (no required phrases configured)"
         )
+
+    # 3b. Recommended phrases from project.toml [meta] recommended_phrases: WARNING only
+    recommended = get_project().recommended_phrases.get(lang, ())
+    missing = [p for p in recommended if not re.search(p, description, re.IGNORECASE)]
+    checks["recommended_phrases"]["passed"] = not missing
+    if missing:
+        message = "Missing recommended phrases: " + ", ".join(missing)
+    elif recommended:
+        message = "OK (recommended phrases found)"
+    else:
+        message = "OK (no recommended phrases configured)"
+    checks["recommended_phrases"]["message"] = message
 
     # 4. No marketing fluff
     fluff_found = [p for p in MARKETING_FLUFF if re.search(p, desc_lower)]

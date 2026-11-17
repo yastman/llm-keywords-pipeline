@@ -1,0 +1,89 @@
+# Car-care rules that lived in code before lkp-qml.3, as a project.toml.
+# Tests use it to pin the configured behaviour; a car-care data root can copy it.
+
+[slugs.ru]
+"Активная пена" = "aktivnaya-pena"
+"Для ручной мойки" = "dlya-ruchnoy-moyki"
+"Очистители стекол" = "ochistiteli-stekol"
+"Глина и автоскрабы" = "glina-i-avtoskraby"
+"Антимошка" = "antimoshka"
+"Антибитум" = "antibitum"
+"Чернители шин" = "cherniteli-shin"
+"Очистители дисков" = "ochistiteli-diskov"
+"Очистители шин" = "ochistiteli-shin"
+"Аппараты Tornador" = "apparaty-tornador"
+"Меховые" = "mekhovye"
+"Поролоновые" = "porolonovye"
+"Наборы для мойки" = "nabory-dlya-moyki"
+"Наборы для полировки" = "nabory-dlya-polirovki"
+"Наборы для ухода за кожей" = "nabory-dlya-ukhoda-za-kozhey"
+"Наборы для химчистки" = "nabory-dlya-khimchistki"
+"Подарочные наборы" = "podarochnye-nabory"
+
+[slugs.uk]
+"Активна піна" = "aktivnaya-pena"
+"Для ручного миття" = "dlya-ruchnoy-moyki"
+"Очисники скла" = "ochistiteli-stekol"
+"Глина і автоскраби" = "glina-i-avtoskraby"
+"Антикомаха" = "antimoshka"
+"Антибітум" = "antibitum"
+"Чорніння шин" = "cherniteli-shin"
+"Очисники дисків" = "ochistiteli-diskov"
+"Очисники шин" = "ochistiteli-shin"
+
+[meta]
+type_skip_brands = ["menzerna", "koch", "rupes", "sonax", "gyeon", "shiny", "carpro"]
+
+[synonyms]
+commercial_markers = ["киев", "украина"]
+strip_terms = ["авто", "автомобиля", "машины", "машина", "автомобиль", "в авто", "для авто"]
+stems = { "полиров" = "полир", "полирал" = "полир", "очистит" = "очист", "кузов" = "кузов" }
+
+[synonyms.map]
+"автомобиля" = "авто"
+"автомобиль" = "авто"
+"машины" = "авто"
+"машину" = "авто"
+"машина" = "авто"
+"автомобилей" = "авто"
+"автомобили" = "авто"
+"машин" = "авто"
+
+[blacklist]
+brands = [
+    # chemistry
+    "koch chemie", "koch", "grass", "грасс", "karcher", "керхер", "kärcher", "sonax", "сонакс",
+    "meguiars", "мегуарс", "chemical guys", "turtle wax", "тёртл вакс", "hi-gear", "хай-гир",
+    "lavr", "лавр", "liqui moly", "ликви моли", "mannol", "маннол", "felix", "феликс",
+    "aim-one", "аим-ван", "runway", "ранвей", "abro", "абро", "doctor wax", "доктор вакс",
+    "soft99", "софт99",
+    # equipment
+    "bosch", "бош", "makita", "макита", "dewalt", "девольт", "stihl", "штиль",
+    "husqvarna", "хускварна",
+    # cars
+    "toyota", "тойота", "bmw", "бмв", "mercedes", "мерседес", "volkswagen", "фольксваген",
+    "audi", "ауди", "ford", "форд",
+]
+
+[density.category_substrings.ru]
+aktivnaya-pena = { primary = ["пен", "активн"], anti = ["ручн", "шампун"] }
+shampuni-dlya-ruchnoy-moyki = { primary = ["ручн", "шампун"], anti = ["пен"] }
+avtoshampuni = { primary = ["автошампун", "шампун"], anti = [] }
+
+[structure.l2_forbidden]
+avtoshampuni = ["ручн.*мойк", "активн.*пен"]
+sredstva-dlya-kozhi = ["крем", "полирол", "лосьон"]
+mikrofibra-i-tryapki = ["стекл", "полиров"]
+voski = ["тверд", "жидк", "горяч", "быстр"]
+sredstva-dlya-stekol = ["очистител"]
+sredstva-dlya-diskov-i-shin = ["очистител", "чернител"]
+polirovalnye-pasty = ["паст"]
+
+[content_standards]
+safety_block = true
+howto_steps = true
+evergreen_math = true
+warnings = true
+
+[niche]
+tone = "эксперт авто-детейлинга"

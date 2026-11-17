@@ -75,8 +75,9 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
    steps are in `prompts/prepare.md` and `prompts/deliver.md`. The meta has the shape
    above; a client phrase is required only when `project.toml` in the data root lists it
    under `[meta] required_phrases` for the language (regexes, e.g.
-   `required_phrases = { uk = ["опт\\b"], ru = [] }`); `[project] brand` is the title
-   suffix ` | {brand}` of the meta generators.
+   `required_phrases = { uk = ["опт\\b"], ru = [] }`); `[meta] recommended_phrases`
+   gives a WARNING when missing; `[project] brand` is the title suffix ` | {brand}` of
+   the meta generators.
 5. **Validate and fix.** Run every validator below on the file; fix the text and rerun
    until each exits 0; a WARNING you leave in place is named, with the reason, in the hand-over.
 6. **Hand over** the files under the data root. Nothing from steps 1-5 is committed.
@@ -90,7 +91,7 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
 | `uv run llm-keywords-audit-brands <file.md>` | Brands, cities, strict phrases, AI fluff | from the path |
 | `uv run llm-keywords-audit-water <file.md>` | Water, classic and academic nausea | `--lang ru\|uk`, default ru |
 | `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>" --with-analysis <slug>` | H1/H2 structure, keyword in H1 and intro, core and commercial coverage, water, blacklist, length, markdown lint, FAQ | `--lang ru\|uk`, default ru; also picks the RU or UK `_clean.json` for `<slug>` |
-| `uv run python -m llm_keywords_pipeline.validate.meta <meta.json> --keywords <_clean.json>` | Title and description length, primary keyword, `[meta] required_phrases` of `project.toml` | `--lang ru\|uk` if given, else the meta's `"language"` key, else the path as check-seo, else ru (also under `--all`) |
+| `uv run python -m llm_keywords_pipeline.validate.meta <meta.json> --keywords <_clean.json>` | Title and description length, primary keyword, `[meta] required_phrases` (FAIL) and `recommended_phrases` (WARNING) of `project.toml` | `--lang ru\|uk` if given, else the meta's `"language"` key, else the path as check-seo, else ru (also under `--all`) |
 
 Pass the keyword source every time: without `--with-analysis` validate.content has no
 category keywords and reports coverage PASS on zero keywords; without `--keywords`
@@ -100,6 +101,16 @@ Exit codes: 0 PASS, 1 WARNING, 2 FAIL, except audit-brands (1 for any hit, WARNI
 FAIL) and audit-water (0 PASS or WARNING, 1 BLOCKER). `validate.meta --all` scans
 `./categories` and `./uk/categories` of the current directory, so run it from the data
 root (`uv run --project <repo> ...`).
+
+Niche rules come only from `project.toml` in the data root: category slugs (else
+slugify), synonyms, extra commercial words (one key for the brief's intent split, another
+for `core.synonyms`), the audit brand blacklist, brands all_meta skips as product types,
+city check on/off, allowed strict phrases, density substrings, L2-forbidden patterns,
+content standards (Safety block, расход, warnings: off unless switched on) and the
+brief's editorial tone. Each module reads its own key. No file means none of them
+applies; the generic UA/RU city check stays on. Keys and examples: the docstring of
+`src/llm_keywords_pipeline/core/project.py`; `tests/fixtures/project_ultimate.toml` is a
+full car-care example.
 
 Thresholds (water, nausea, title/description length, keyword frequency, word counts) live
 in `QUALITY_THRESHOLDS` in `src/llm_keywords_pipeline/core/config.py`; read them there,
