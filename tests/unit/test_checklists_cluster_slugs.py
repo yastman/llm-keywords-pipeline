@@ -1,4 +1,4 @@
-"""Cluster slugs in generate/checklists are prefixed with their L3 slug (audit B20)."""
+"""Cluster and Filter slugs in generate/checklists are prefixed with their L3 slug (audit B20)."""
 
 from __future__ import annotations
 
@@ -73,6 +73,57 @@ def test_reset_writes_task_per_cluster_and_reads_prefixed_category_dir(tmp_path,
     # Init column: the cluster's category dir is categories/{l3}-{cluster}.
     assert shampoo_red.split("|")[8].strip() == "✅"
     assert wax_red.split("|")[8].strip() == "⬜"
+    pipeline = (tmp_path / "PIPELINE.md").read_text(encoding="utf-8")
+    assert "- shampoo-red (Meta)" in pipeline
+    assert "- wax-red (Meta)" in pipeline
+
+
+FILTER_STRUCTURE = """\
+##### \U0001f3f7️ L3: Shampoo (Vol: 100)
+###### ⚡ Filter: Red (Vol: 10)
+| red shampoo | 10 |
+##### \U0001f3f7️ L3: Wax (Vol: 50)
+###### ⚡ Filter: Red (Vol: 5)
+| red wax | 5 |
+"""
+
+FILTER_STRUCTURE_NO_L3 = """\
+###### ⚡ Filter: Red (Vol: 10)
+"""
+
+
+def test_same_name_filters_under_different_l3_get_distinct_slugs(tmp_path, monkeypatch):
+    structure_file, _ = _setup(tmp_path, monkeypatch, FILTER_STRUCTURE)
+
+    nodes = checklists.parse_structure(structure_file)
+
+    filters = [(n["slug"], n["parent"]) for n in nodes if n["type"] == "Filter"]
+    assert filters == [("shampoo-red", "shampoo"), ("wax-red", "wax")]
+
+
+def test_filter_without_l3_keeps_plain_slug(tmp_path, monkeypatch):
+    structure_file, _ = _setup(tmp_path, monkeypatch, FILTER_STRUCTURE_NO_L3)
+
+    nodes = checklists.parse_structure(structure_file)
+
+    assert [n["slug"] for n in nodes if n["type"] == "Filter"] == ["red"]
+
+
+def test_reset_writes_task_and_status_row_per_filter(tmp_path, monkeypatch):
+    _, tasks = _setup(tmp_path, monkeypatch, FILTER_STRUCTURE)
+    monkeypatch.setattr(sys, "argv", ["checklists", "--reset"])
+
+    checklists.main()
+
+    assert sorted(p.name for p in tasks.glob("*.md")) == [
+        "shampoo-red.md",
+        "shampoo.md",
+        "wax-red.md",
+        "wax.md",
+    ]
+    master = (tmp_path / "MASTER.md").read_text(encoding="utf-8")
+    assert "| `shampoo-red` | Red | Filter |" in master
+    assert "| `wax-red` | Red | Filter |" in master
     pipeline = (tmp_path / "PIPELINE.md").read_text(encoding="utf-8")
     assert "- shampoo-red (Meta)" in pipeline
     assert "- wax-red (Meta)" in pipeline

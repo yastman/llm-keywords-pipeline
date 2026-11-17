@@ -210,6 +210,9 @@ def parse_structure(file_path):
         if m_filter:
             name, vol = m_filter.groups()
             slug = slugify(name)
+            if current_l3:
+                # Same-name filters under different L3 must not share a slug.
+                slug = f"{current_l3['slug']}-{slug}"
             parent = current_l3["slug"] if current_l3 else "root"
             node = {
                 "type": "Filter",
