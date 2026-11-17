@@ -3,10 +3,11 @@ import re
 import shutil
 from collections import OrderedDict
 from datetime import datetime
-from pathlib import Path
+
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 # Paths
-BASE_DIR = Path(__file__).resolve().parents[3]
+BASE_DIR = PROJECT_ROOT
 REGISTRY_FILE = BASE_DIR / "data/reports/KEYWORD_MIGRATION_REGISTRY.md"
 CSV_FILE = BASE_DIR / "Структура _Ultimate.csv"
 

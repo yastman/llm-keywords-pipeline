@@ -5,11 +5,12 @@ Creates mapping: slug -> [keywords with volumes]
 """
 
 import json
-from pathlib import Path
+
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 
 def extract_ru_keywords():
-    categories_dir = Path("categories")
+    categories_dir = PROJECT_ROOT / "categories"
     mapping = {}
 
     for clean_file in categories_dir.rglob("*_clean.json"):
@@ -48,7 +49,7 @@ def extract_ru_keywords():
 def main():
     mapping = extract_ru_keywords()
 
-    output_path = Path("data/generated/ru_keywords_mapping.json")
+    output_path = PROJECT_ROOT / "data" / "generated" / "ru_keywords_mapping.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_path, "w", encoding="utf-8") as f:

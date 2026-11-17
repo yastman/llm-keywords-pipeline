@@ -5,11 +5,12 @@
 """
 
 import json
-from pathlib import Path
+
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 
 def load_uk_keywords():
-    with open("uk/data/uk_keywords.json", encoding="utf-8") as f:
+    with open(PROJECT_ROOT / "uk" / "data" / "uk_keywords.json", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -23,7 +24,7 @@ def group_keywords(keywords: list) -> dict:
 
 def update_clean_json(slug: str, keywords: list, total_volume: int):
     """Создает/обновляет _clean.json для категории"""
-    uk_cat_dir = Path(f"uk/categories/{slug}")
+    uk_cat_dir = PROJECT_ROOT / "uk" / "categories" / slug
     data_dir = uk_cat_dir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
 

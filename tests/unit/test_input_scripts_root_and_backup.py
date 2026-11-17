@@ -1,5 +1,6 @@
 """Input scripts: project root from core.config (audit A11), timestamped CSV backups (A14)."""
 
+import json
 import os
 import subprocess
 import sys
@@ -9,32 +10,76 @@ from llm_keywords_pipeline.core import config
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ROOT_MODULES = [
-    "llm_keywords_pipeline.fix.missing_keywords",
-    "llm_keywords_pipeline.fix.structure_legacy",
-    "llm_keywords_pipeline.fix.structure_orphans",
+    "llm_keywords_pipeline.fix.missing_keywords:PROJECT_ROOT",
+    "llm_keywords_pipeline.fix.structure_legacy:PROJECT_ROOT",
+    "llm_keywords_pipeline.fix.structure_orphans:PROJECT_ROOT",
+    "llm_keywords_pipeline.sync.migrate_keywords:BASE_DIR",
 ]
 PROBE = (
     "import importlib, sys\n"
     "from llm_keywords_pipeline.core import config\n"
     "print(config.PROJECT_ROOT)\n"
-    "for name in sys.argv[1:]:\n"
-    "    print(importlib.import_module(name).PROJECT_ROOT)\n"
+    "for spec in sys.argv[1:]:\n"
+    "    name, attr = spec.split(':')\n"
+    "    print(getattr(importlib.import_module(name), attr))\n"
 )
 
 
-def _roots(cwd: Path, env_root: str | None) -> list[str]:
+def _run(
+    code: str, args: list[str], cwd: Path, env_root: str | None, check: bool = True
+) -> list[str]:
     env = {k: v for k, v in os.environ.items() if k != "LLM_KEYWORDS_PROJECT_ROOT"}
     if env_root is not None:
         env["LLM_KEYWORDS_PROJECT_ROOT"] = env_root
     result = subprocess.run(
-        [sys.executable, "-c", PROBE, *ROOT_MODULES],
+        [sys.executable, "-c", code, *args],
         cwd=cwd,
         env=env,
         capture_output=True,
         text=True,
-        check=True,
+        check=check,
     )
     return result.stdout.splitlines()
+
+
+def _roots(cwd: Path, env_root: str | None) -> list[str]:
+    return _run(PROBE, ROOT_MODULES, cwd, env_root)
+
+
+def test_ru_keywords_mapping_reads_and_writes_under_env_root(tmp_path):
+    root = tmp_path / "root"
+    data_dir = root / "categories" / "cat" / "data"
+    data_dir.mkdir(parents=True)
+    (data_dir / "cat_clean.json").write_text(
+        json.dumps({"id": "cat", "keywords": [{"keyword": "k", "volume": 1}]}), encoding="utf-8"
+    )
+    cwd = tmp_path / "elsewhere"
+    cwd.mkdir()
+
+    code = "from llm_keywords_pipeline.extract import ru_keywords_mapping as m; m.main()"
+    _run(code, [], cwd, str(root), check=False)
+
+    out = root / "data" / "generated" / "ru_keywords_mapping.json"
+    assert out.is_file()
+    assert list(json.loads(out.read_text(encoding="utf-8"))) == ["cat"]
+
+
+def test_update_uk_clean_reads_and_writes_under_env_root(tmp_path):
+    root = tmp_path / "root"
+    (root / "uk" / "data").mkdir(parents=True)
+    source = {
+        "categories": {"cat": {"keywords": [{"keyword": "k", "volume": 600}], "total_volume": 600}}
+    }
+    (root / "uk" / "data" / "uk_keywords.json").write_text(json.dumps(source), encoding="utf-8")
+    cwd = tmp_path / "elsewhere"
+    cwd.mkdir()
+
+    code = "from llm_keywords_pipeline.sync import update_uk_clean as m; m.main()"
+    _run(code, [], cwd, str(root), check=False)
+
+    clean = root / "uk" / "categories" / "cat" / "data" / "cat_clean.json"
+    assert clean.is_file()
+    assert json.loads(clean.read_text(encoding="utf-8"))["total_volume"] == 600
 
 
 def test_scripts_default_root_is_config_root_not_cwd(tmp_path):
