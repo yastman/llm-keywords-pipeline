@@ -40,7 +40,7 @@ confirm it where it is ambiguous. Each answer decides keywords or text:
 | Regions served, warehouses, pickup points, delivery carriers? | City keys only where a warehouse or pickup point is confirmed; «доставка по Україні» only if confirmed |
 | Min order, payment methods, deferral, prices shown to guests? | Keys with «мінімальне замовлення», «відтермінування», «ціна»; any number in the text |
 | Assortment: which categories and brands are sold; which competitor brands are never named? | Trademark keys only for brands the shop sells; `[blacklist] brands` |
-| Phrases the owner bans or requires? | `[meta] required_phrases`, `recommended_phrases`; `[blacklist] phrases_allow` |
+| Phrases the owner bans or requires? | Required: `[meta] required_phrases`, `recommended_phrases`. Banned: listed in `brief.md` only, no key checks them |
 | Languages, and which is primary? | `[project] languages`; which texts come first |
 | Tone and audience of the texts? | `[niche] tone` |
 
@@ -74,7 +74,8 @@ Site: <url>. Collected: <date>.
 - `[meta] required_phrases`, `recommended_phrases` from required phrases and the
   wholesale/retail answer
 - `[blacklist] brands` from the competitor brands, `cities` (false only when the texts
-  will name a confirmed warehouse or pickup city), `phrases_allow`
+  will name a confirmed warehouse or pickup city), `phrases_allow` (required phrases the
+  strict-phrase audit would flag; it turns their check off)
 - `[niche] tone`
 
 ## 4. Excluding keywords
@@ -91,4 +92,6 @@ the UK file gets only the `excluded` entry):
 ```
 
 Sync keeps top-level keys it does not own, and no command reads `excluded`, so the list
-stays as written.
+stays as written. `sync.merge_master --excel f.xlsx` adds every Excel keyword missing from
+the `_clean.json` files back to the master CSV as an `uncategorized` row (sync skips such
+rows): delete the rows of excluded keys, so none is given a category again.

@@ -15,6 +15,7 @@ tmp/
 /data/*.csv
 /data/*.xlsx
 /key_all.csv
+/brief.md
 /Структура _Ultimate.csv
 
 # SQL Dumps & Backups

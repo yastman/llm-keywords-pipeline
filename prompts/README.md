@@ -1,7 +1,7 @@
 # Prompts — Workflow Templates
 
-Prompt templates for the 3-stage LLM-driven content workflow. Most templates are in
-Russian because the primary target content is in Russian.
+Prompt templates for the LLM-driven content workflow: a client intake, then 3 stages.
+Most templates are in Russian because the primary target content is in Russian.
 
 **Note:** These prompts depend on external infrastructure (an LLM orchestrator, seed
 data sources, and a `categories/` data directory). They are preserved as public
@@ -14,6 +14,7 @@ are not required for running the public test suite.
 
 | File                          | Stage     | Description                         |
 | ----------------------------- | --------- | ----------------------------------- |
+| **[intake.md](intake.md)**     | INTAKE    | Client brief: brief.md + project.toml |
 | **[prepare.md](prepare.md)**   | PREPARE   | Category init: folders, keywords     |
 | **[produce.md](produce.md)**   | PRODUCE   | Content generation (RU) + meta       |
 | **[deliver.md](deliver.md)**   | DELIVER   | Validation + packaging               |
@@ -22,6 +23,7 @@ are not required for running the public test suite.
 
 ```
 Orchestrator
+    ├──→ INTAKE   → brief.md + project.toml
     ├──→ PREPARE  → Folders + JSON
     ├──→ PRODUCE  → Content + Meta
     └──→ DELIVER  → Validation + Deliverables

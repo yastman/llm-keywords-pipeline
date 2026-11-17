@@ -14,7 +14,7 @@ A text is done when the validators pass, not when it reads well.
 
 The repository is public. Real keyword exports, `_clean.json` files, client texts and meta
 never go into a commit. `.gitignore` covers `categories/`, `uk/`, `data/*.csv`,
-`data/*.xlsx`, `key_all.csv` and `Структура _Ultimate.csv` at the repo root; tests use
+`data/*.xlsx`, `key_all.csv`, `brief.md` and `Структура _Ultimate.csv` at the repo root; tests use
 `tests/fixtures/` only. Before a commit, `git status` lists no data file.
 
 ## Where data lives
@@ -26,7 +26,7 @@ export LLM_KEYWORDS_PROJECT_ROOT=/path/to/project-data
 ```
 
 Unset, the root is the repo itself (`src/llm_keywords_pipeline/core/config.py`). Layout
-the code reads under that root (`{slug}` is the category slug):
+under that root (`{slug}` is the category slug):
 
 ```text
 categories/{slug}/data/{slug}_clean.json     clustered keywords (RU)
@@ -36,7 +36,7 @@ uk/categories/{slug}/...                     same for UK; text is content/{slug}
 data/ru_semantics_master.csv                 master CSV: keyword,volume,category,type,use_in
 key_all.csv                                  volume export: columns "Ключевое слово","Показов в месяц"
 project.toml                                 client rules, see New client below
-brief.md                                     sourced client facts, from prompts/intake.md
+brief.md                                     client facts (prompts/intake.md); only the agent reads it
 <[paths] semantics_csv>                      structure CSV (L1:/L2:/L3: rows), see New client
 ```
 
