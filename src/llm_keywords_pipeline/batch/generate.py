@@ -31,6 +31,7 @@ import sys
 from datetime import UTC, datetime
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.seo import L3_TO_SLUG, slugify
 
 # =============================================================================
 # Configuration
@@ -40,13 +41,6 @@ CATEGORIES_DIR = PROJECT_ROOT / "categories"
 TASKS_DIR = PROJECT_ROOT / "data" / "tasks"
 BATCH_LOG = TASKS_DIR / "batch_log.json"
 SEMANTICS_CSV = PROJECT_ROOT / "data" / "Структура  Ultimate финал - Лист2.csv"
-
-try:
-    from llm_keywords_pipeline.core.seo import L3_TO_SLUG, SLUG_TO_L3, slugify
-except ImportError:
-    print("Warning: SEO utilities not found, using fallback")
-    L3_TO_SLUG = {}
-    SLUG_TO_L3 = {}
 
 # =============================================================================
 # Batch Log Management
