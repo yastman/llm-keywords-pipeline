@@ -4,6 +4,7 @@ The bug: main() tries int(argv[1]) before stripping --lang,
 causing ValueError when --lang appears right after the filename.
 Fix: use argparse (as done in validate/density.py).
 """
+
 import pytest
 
 from llm_keywords_pipeline.audit.water import main

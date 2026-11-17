@@ -4,6 +4,7 @@ Stages: prepare → produce → validate → deliver → done
 Implements the produce→validate→revise closed loop (issue #20).
 State is persisted atomically after each stage.
 """
+
 from __future__ import annotations
 
 import json
@@ -35,7 +36,9 @@ class CategoryRunState:
     state: str = CategoryState.pending.value
     stages: list[StageRecord] = field(default_factory=list)
     content: str = ""
-    total_usage: dict = field(default_factory=lambda: {"prompt_tokens": 0, "completion_tokens": 0, "cost_usd": 0.0})
+    total_usage: dict = field(
+        default_factory=lambda: {"prompt_tokens": 0, "completion_tokens": 0, "cost_usd": 0.0}
+    )
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -68,28 +71,34 @@ def _load_state(state_path: Path) -> CategoryRunState | None:
 
 
 def _save_state(state: CategoryRunState, state_path: Path) -> None:
-    state_path.write_text(json.dumps(state.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+    state_path.write_text(
+        json.dumps(state.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 def _validate_content(content: str, category: Category) -> ValidationReport:
     """Run water audit as the primary validation gate."""
     try:
         from llm_keywords_pipeline.audit.water import calculate_metrics_from_text
+
         metrics = calculate_metrics_from_text(content, category.lang)
         return ValidationReport.from_water_metrics(metrics, slug=category.slug, lang=category.lang)
     except Exception as exc:
         from llm_keywords_pipeline.automation.report import CheckResult, CheckStatus
+
         return ValidationReport(
             validator="water",
             slug=category.slug,
             lang=category.lang,
             status=ReportStatus.FAIL,
-            checks=[CheckResult(
-                id="validator_error",
-                status=CheckStatus.fail,
-                severity="high",
-                message=f"Validation error: {exc}",
-            )],
+            checks=[
+                CheckResult(
+                    id="validator_error",
+                    status=CheckStatus.fail,
+                    severity="high",
+                    message=f"Validation error: {exc}",
+                )
+            ],
         )
 
 
@@ -124,7 +133,9 @@ def run_category(
         state.state = CategoryState.produce.value
         _save_state(state, state_path)
 
-        effective_brief = brief or f"Напиши SEO-текст для категории «{category.name or category.slug}»."
+        effective_brief = (
+            brief or f"Напиши SEO-текст для категории «{category.name or category.slug}»."
+        )
         draft_response = llm.produce(effective_brief)
         content = draft_response.text
         usage = asdict(draft_response.usage)
@@ -143,13 +154,15 @@ def run_category(
 
         final_status = "done" if report and report.status != ReportStatus.FAIL else "needs_human"
         state.content = content
-        state.record_stage(StageRecord(
-            stage="produce",
-            status=final_status,
-            attempts=attempt,
-            report=report.model_dump() if report else None,
-            usage=usage,
-        ))
+        state.record_stage(
+            StageRecord(
+                stage="produce",
+                status=final_status,
+                attempts=attempt,
+                report=report.model_dump() if report else None,
+                usage=usage,
+            )
+        )
         _save_state(state, state_path)
 
         if final_status == "needs_human":

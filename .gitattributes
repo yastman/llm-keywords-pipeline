@@ -1,0 +1,17 @@
+# Normalize every text file to LF in the index and the working tree.
+* text=auto eol=lf
+
+# Binary files: no EOL conversion, no text diff.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.xlsx binary
+*.docx binary
+*.db binary
+*.sqlite binary

@@ -75,12 +75,14 @@ class TestFullValidationPipeline:
 
         # 2. Validate meta
         from llm_keywords_pipeline.validate.meta import validate_meta_file
+
         meta_result = validate_meta_file(str(meta_path), lang="ru")
         assert meta_result is not None
         assert "overall" in meta_result
 
         # 3. Validate content
         from llm_keywords_pipeline.validate.content import validate_content
+
         content_result = validate_content(
             str(content_path),
             primary_keyword=primary_keyword,
@@ -92,6 +94,7 @@ class TestFullValidationPipeline:
 
         # 4. Check density
         from llm_keywords_pipeline.validate.density import analyze_text
+
         text = content_path.read_text(encoding="utf-8")
         density_result = analyze_text(text, lang="ru")
         assert density_result["total_words"] > 0
@@ -122,12 +125,14 @@ class TestFullValidationPipeline:
 
         # 2. Validate meta
         from llm_keywords_pipeline.validate.meta import validate_meta_file
+
         meta_result = validate_meta_file(str(meta_path), lang="uk")
         assert meta_result is not None
         assert "overall" in meta_result
 
         # 3. Validate content
         from llm_keywords_pipeline.validate.content import validate_content
+
         content_result = validate_content(
             str(content_path),
             primary_keyword=primary_keyword,
@@ -161,6 +166,7 @@ class TestCrossValidation:
 
         # Extract content H1
         from llm_keywords_pipeline.core.text import extract_h1
+
         content_text = content_path.read_text(encoding="utf-8")
         content_h1 = extract_h1(content_text)
 
@@ -178,7 +184,9 @@ class TestCrossValidation:
 
         # Should have at least one common word
         common = meta_words & content_words
-        assert len(common) > 0, f"No common words between meta H1 '{meta_h1}' and content H1 '{content_h1}'"
+        assert len(common) > 0, (
+            f"No common words between meta H1 '{meta_h1}' and content H1 '{content_h1}'"
+        )
 
     def test_keywords_in_content(self):
         """Keywords from clean.json appear in content."""

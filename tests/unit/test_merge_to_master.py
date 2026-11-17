@@ -53,7 +53,13 @@ class TestCollectFromCleanJson:
         rows = collect_from_clean_json(clean_file)
 
         assert len(rows) == 4
-        assert rows[0] == {"keyword": "ключ1", "volume": 100, "category": "test-cat", "type": "keyword", "use_in": ""}
+        assert rows[0] == {
+            "keyword": "ключ1",
+            "volume": 100,
+            "category": "test-cat",
+            "type": "keyword",
+            "use_in": "",
+        }
         assert rows[3] == {
             "keyword": "meta",
             "volume": 20,
@@ -155,9 +161,21 @@ class TestMergeKeywords:
     def test_dedup_treats_null_volume_as_zero(self):
         """A null volume on a duplicate should lose to a real volume, no crash."""
         existing = [
-            {"keyword": "ключ", "volume": None, "category": "cat1", "type": "keyword", "use_in": ""},
+            {
+                "keyword": "ключ",
+                "volume": None,
+                "category": "cat1",
+                "type": "keyword",
+                "use_in": "",
+            },
             {"keyword": "ключ", "volume": 10, "category": "cat1", "type": "keyword", "use_in": ""},
-            {"keyword": "ключ", "volume": None, "category": "cat1", "type": "keyword", "use_in": ""},
+            {
+                "keyword": "ключ",
+                "volume": None,
+                "category": "cat1",
+                "type": "keyword",
+                "use_in": "",
+            },
         ]
 
         result = merge_keywords(existing, {})

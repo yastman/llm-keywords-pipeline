@@ -112,3 +112,6 @@ qdrant_storage/
 
 # Server info
 data/server_recon*.md
+
+# Local MCP client config
+.mcp.json

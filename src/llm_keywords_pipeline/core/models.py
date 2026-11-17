@@ -3,6 +3,7 @@
 Single source of truth for all keyword/category data structures.
 Supports V1 (keywords_detailed), V2 (keywords dict), V3 (keywords list) → canonical.
 """
+
 from __future__ import annotations
 
 from enum import StrEnum
@@ -73,22 +74,26 @@ class Category(BaseModel):
                 elif isinstance(item, dict):
                     if "phrase" in item and "keyword" not in item:
                         # V1 keywords_detailed format
-                        normalized.append({
-                            "keyword": item["phrase"],
-                            "volume": item.get("volume", 0),
-                            "group": item.get("group", "supporting"),
-                        })
+                        normalized.append(
+                            {
+                                "keyword": item["phrase"],
+                                "volume": item.get("volume", 0),
+                                "group": item.get("group", "supporting"),
+                            }
+                        )
                     else:
                         normalized.append(item)
             # Also handle V1 top-level keywords_detailed
             if not normalized and "keywords_detailed" in data:
                 for item in data["keywords_detailed"]:
                     if isinstance(item, dict):
-                        normalized.append({
-                            "keyword": item.get("phrase", item.get("keyword", "")),
-                            "volume": item.get("volume", 0),
-                            "group": item.get("group", "supporting"),
-                        })
+                        normalized.append(
+                            {
+                                "keyword": item.get("phrase", item.get("keyword", "")),
+                                "volume": item.get("volume", 0),
+                                "group": item.get("group", "supporting"),
+                            }
+                        )
             data = {**data, "keywords": normalized}
         return data
 

@@ -25,14 +25,17 @@ class TestNormalizeKeyword:
 
     def test_lowercase(self):
         from llm_keywords_pipeline.analyze.duplicates import normalize_keyword
+
         assert normalize_keyword("Привет Мир") == "привет мир"
 
     def test_empty_string(self):
         from llm_keywords_pipeline.analyze.duplicates import normalize_keyword
+
         assert normalize_keyword("") == ""
 
     def test_returns_string(self):
         from llm_keywords_pipeline.analyze.duplicates import normalize_keyword
+
         result = normalize_keyword("  купить авто  ")
         assert isinstance(result, str)
 
@@ -42,11 +45,13 @@ class TestFindDuplicatesInKeywords:
 
     def test_returns_list(self):
         from llm_keywords_pipeline.analyze.duplicates import find_duplicates_in_keywords
+
         kws = [{"keyword": "авто", "volume": 100}, {"keyword": "машина", "volume": 50}]
         result = find_duplicates_in_keywords(kws)
         assert isinstance(result, list)
 
     def test_empty_input(self):
         from llm_keywords_pipeline.analyze.duplicates import find_duplicates_in_keywords
+
         result = find_duplicates_in_keywords([])
         assert result == []

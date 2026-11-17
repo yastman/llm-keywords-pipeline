@@ -30,7 +30,9 @@ def extract_categories(sql_file: Path) -> dict[int, str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Extract category names from an OpenCart SQL dump.")
+    parser = argparse.ArgumentParser(
+        description="Extract category names from an OpenCart SQL dump."
+    )
     parser.add_argument("sql_file", type=Path, help="Path to SQL dump")
     args = parser.parse_args(argv)
 

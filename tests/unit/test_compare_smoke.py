@@ -25,17 +25,21 @@ class TestParseDensityPercent:
 
     def test_float_passthrough(self):
         from llm_keywords_pipeline.compare.keyword_distribution import _parse_density_percent
+
         assert _parse_density_percent(1.5) == 1.5
 
     def test_string_with_percent(self):
         from llm_keywords_pipeline.compare.keyword_distribution import _parse_density_percent
+
         assert _parse_density_percent("2.3%") == 2.3
 
     def test_zero(self):
         from llm_keywords_pipeline.compare.keyword_distribution import _parse_density_percent
+
         assert _parse_density_percent(0) == 0.0
 
     def test_invalid_returns_zero(self):
         from llm_keywords_pipeline.compare.keyword_distribution import _parse_density_percent
+
         result = _parse_density_percent("n/a")
         assert isinstance(result, float)

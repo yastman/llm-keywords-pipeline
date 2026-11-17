@@ -19,12 +19,14 @@ class TestGetCategoryStatus:
 
     def test_unknown_slug_returns_dict(self):
         from llm_keywords_pipeline.batch.generate import get_category_status
+
         log = {}
         result = get_category_status("__nonexistent__", log)
         assert isinstance(result, dict)
 
     def test_returns_stage_or_status_key(self):
         from llm_keywords_pipeline.batch.generate import get_category_status
+
         log = {}
         result = get_category_status("__test__", log)
         # Function returns either 'status' or 'stage' key
@@ -36,11 +38,13 @@ class TestExtractIssuesFromValidation:
 
     def test_empty_validation(self):
         from llm_keywords_pipeline.batch.generate import extract_issues_from_validation
+
         result = extract_issues_from_validation({})
         assert isinstance(result, list)
 
     def test_with_failed_checks(self):
         from llm_keywords_pipeline.batch.generate import extract_issues_from_validation
+
         validation = {
             "checks": {
                 "water": {"passed": False, "message": "Water too high: 75%"},

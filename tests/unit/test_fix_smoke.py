@@ -25,12 +25,14 @@ class TestIsExplicitMarker:
 
     def test_level_marker(self):
         from llm_keywords_pipeline.fix.csv_structure import is_explicit_marker
+
         # Typical structural markers in CSV
         result = is_explicit_marker("Level1", "Level2")
         assert isinstance(result, bool)
 
     def test_empty_values(self):
         from llm_keywords_pipeline.fix.csv_structure import is_explicit_marker
+
         result = is_explicit_marker("", "")
         assert isinstance(result, bool)
 
@@ -42,6 +44,7 @@ class TestFixCategoryKeywordsOrder:
         import json
 
         from llm_keywords_pipeline.fix.keywords_order import fix_category
+
         data = {
             "slug": "test",
             "keywords": [

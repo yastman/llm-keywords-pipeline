@@ -22,6 +22,7 @@ class TestExtractCategories:
 
     def test_returns_dict(self, tmp_path):
         from llm_keywords_pipeline.extract.categories import extract_categories
+
         # Create a minimal SQL file without INSERT INTO categories
         sql_file = tmp_path / "test.sql"
         sql_file.write_text("SELECT 1;", encoding="utf-8")
@@ -30,6 +31,7 @@ class TestExtractCategories:
 
     def test_parses_insert_statement(self, tmp_path):
         from llm_keywords_pipeline.extract.categories import extract_categories
+
         sql_file = tmp_path / "test.sql"
         sql_file.write_text(
             "INSERT INTO oc_category_description (category_id, name) VALUES (42, 'Авто');",
