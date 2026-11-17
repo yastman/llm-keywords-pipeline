@@ -1,5 +1,7 @@
 """UK apostrophe words (м'який, п’ять, обʼєм) stay whole in the lemma tokenizers."""
 
+import pytest
+
 from llm_keywords_pipeline.core.coverage import PreparedText, check_keyword
 from llm_keywords_pipeline.core.keywords import KeywordMatcher, MorphAnalyzer
 from llm_keywords_pipeline.validate.density import check_keyword_density
@@ -43,6 +45,13 @@ def test_density_counts_inflected_apostrophe_forms_only():
 def test_keyword_matcher_single_word_apostrophe():
     assert KeywordMatcher("uk").match_lemma("м'який", "Візьміть м’якого воску") == (True, "м'якого")
     assert KeywordMatcher("uk").match_lemma("м'який", "Якого кольору віск?") == (False, None)
+
+
+@pytest.mark.parametrize("apostrophe", ["’", "ʼ"])
+def test_keyword_matcher_normalises_keyword_apostrophe(apostrophe):
+    matcher = KeywordMatcher("uk")
+    assert matcher.match_lemma(f"м{apostrophe}який віск", "Беріть м’якого воску трохи.")[0]
+    assert matcher.match_lemma(f"м{apostrophe}який", "Візьміть м'якого воску") == (True, "м'якого")
 
 
 def test_coverage_lemma_match_apostrophe_keyword():
