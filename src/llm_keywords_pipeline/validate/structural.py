@@ -1,8 +1,7 @@
 import json
 import re
-from pathlib import Path
 
-CATEGORIES_DIR = Path(__file__).parent.parent / "categories"
+from llm_keywords_pipeline.core.config import CATEGORIES_DIR
 
 # Patterns that SHOULD NOT be in L2 categories
 L2_FORBIDDEN_PATTERNS = {

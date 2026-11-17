@@ -4,7 +4,9 @@
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
+ROOT = PROJECT_ROOT
 CATEGORIES_DIR = ROOT / "categories"
 
 

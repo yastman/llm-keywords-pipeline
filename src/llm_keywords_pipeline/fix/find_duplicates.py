@@ -16,10 +16,11 @@ import argparse
 import json
 import sys
 from collections import defaultdict
-from pathlib import Path
+
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 # Корневая директория проекта
-ROOT_DIR = Path(__file__).parent.parent
+ROOT_DIR = PROJECT_ROOT
 CATEGORIES_DIR = ROOT_DIR / "categories"
 
 # Паттерны для определения неправильных категорий

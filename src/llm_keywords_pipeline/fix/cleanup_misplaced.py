@@ -9,9 +9,8 @@ import argparse
 import json
 import re
 from collections import defaultdict
-from pathlib import Path
 
-CATEGORIES_DIR = Path(__file__).parent.parent / "categories"
+from llm_keywords_pipeline.core.config import CATEGORIES_DIR
 
 # Правила что куда должно идти (строгие)
 STRICT_RULES = [

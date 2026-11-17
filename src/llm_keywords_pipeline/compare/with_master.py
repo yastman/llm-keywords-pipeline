@@ -5,7 +5,9 @@ import csv
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
+ROOT = PROJECT_ROOT
 CATEGORIES_CSV = ROOT / "data" / "generated" / "all_from_categories.csv"
 MASTER_CSV = ROOT / "data" / "ru_semantics_master.csv"
 OUTPUT_FILE = ROOT / "data" / "generated" / "comparison_report.md"

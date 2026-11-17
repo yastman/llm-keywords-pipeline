@@ -6,7 +6,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
+ROOT = PROJECT_ROOT
 DEFAULT_CSV = ROOT / "data" / "ru_semantics_master.csv"
 CATEGORIES_DIR = ROOT / "categories"
 

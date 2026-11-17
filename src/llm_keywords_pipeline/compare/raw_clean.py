@@ -14,11 +14,10 @@ Usage:
 import argparse
 import csv
 import json
-from pathlib import Path
+
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 # Paths
-SCRIPT_DIR = Path(__file__).parent
-PROJECT_ROOT = SCRIPT_DIR.parent
 SEMANTICS_CSV = PROJECT_ROOT / "Структура _Ultimate.csv"
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 

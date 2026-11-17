@@ -18,11 +18,12 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
 # =============================================================================
 # Configuration
 # =============================================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 REPORT_FILE = PROJECT_ROOT / "tasks" / "synonym_cleanup_report.md"
 

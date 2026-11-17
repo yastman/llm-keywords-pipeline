@@ -8,6 +8,8 @@ import json
 import re
 from pathlib import Path
 
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
 # Словарь перевода RU → UK
 TRANSLATION_DICT = {
     # Автохимия (базовые термины)
@@ -288,7 +290,7 @@ def extract_keywords_from_file(filepath: Path) -> set:
 
 
 def main():
-    categories_dir = Path(__file__).parent.parent / "categories"
+    categories_dir = PROJECT_ROOT / "categories"
 
     # Собираем все _clean.json файлы
     clean_files = list(categories_dir.glob("**/*_clean.json"))
@@ -314,9 +316,7 @@ def main():
     sorted_keywords = sorted(all_uk_keywords)
 
     # Записываем в файл
-    output_path = (
-        Path(__file__).parent.parent / "data" / "generated" / "UK_KEYWORDS_FOR_FREQUENCY.md"
-    )
+    output_path = PROJECT_ROOT / "data" / "generated" / "UK_KEYWORDS_FOR_FREQUENCY.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_path, "w", encoding="utf-8") as f:
