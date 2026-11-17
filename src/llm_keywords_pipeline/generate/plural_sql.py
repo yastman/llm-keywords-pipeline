@@ -36,7 +36,9 @@ def generate_plural_sql(
             meta = json.load(f)
 
         h1 = escape_sql(meta.get("h1", ""))
-        title = escape_sql(meta.get("meta", {}).get("title", ""))
+        # Nested {"meta": {"title"}} or top-level {"title"} (prompts/produce.md).
+        meta_block = meta["meta"] if isinstance(meta.get("meta"), dict) else meta
+        title = escape_sql(meta_block.get("title", ""))
 
         sql_lines.append(
             f"UPDATE oc_category_description SET meta_h1='{h1}', meta_title='{title}' WHERE category_id={int(cat_id)} AND language_id=1;"

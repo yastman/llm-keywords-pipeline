@@ -57,7 +57,11 @@ def get_primary_keyword(data: dict) -> str:
 
 def get_types_from_entities(data: dict) -> list[str]:
     """Extract product types from entities (max 3, skip brands)."""
-    entities = data.get("entities", [])
+    # entity_dictionary: {group: [terms]}; old files keep a flat "entities" list.
+    entity_dictionary = data.get("entity_dictionary") or {}
+    entities = [term for terms in entity_dictionary.values() for term in terms] or data.get(
+        "entities", []
+    )
     types = []
     brand_markers = ["menzerna", "koch", "rupes", "sonax", "gyeon", "shiny", "carpro"]
     for entity in entities:
