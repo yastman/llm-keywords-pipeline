@@ -43,6 +43,7 @@ nlp = [
     "pymorphy3-dicts-uk>=2.4",
     "natasha>=1.6",
     "snowballstemmer>=2.2",
+    "pymarkdownlnt>=0.9",
 ]
 dev = [
     "ruff>=0.14",

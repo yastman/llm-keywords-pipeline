@@ -87,7 +87,7 @@ def contains_keyword(text: str, keyword: str, lang: str = "ru") -> bool:
     return bool(keyword_tokens) and keyword_tokens <= set(get_token_lemmas(text, lang))
 
 
-def count_keyword_occurrences(text: str, keyword: str, lang: str = "ru") -> int:
+def count_keyword_lemma_ngrams(text: str, keyword: str, lang: str = "ru") -> int:
     """Вхождения подряд идущих токенов keyword в тексте (падежи допустимы, как в contains_keyword)."""
     keyword_tokens = get_token_lemmas(keyword, lang)
     text_tokens = get_token_lemmas(text, lang)
@@ -250,7 +250,7 @@ def check_keyword_frequency(text: str, keyword: str, lang: str = "ru") -> dict:
     Returns:
         Dict с результатами
     """
-    count = count_keyword_occurrences(text, keyword, lang)
+    count = count_keyword_lemma_ngrams(text, keyword, lang)
 
     # Оптимальный диапазон
     min_freq = 3

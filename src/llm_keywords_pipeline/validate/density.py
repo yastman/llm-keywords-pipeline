@@ -36,7 +36,7 @@ from typing import Any
 from llm_keywords_pipeline.core.config import get_data_path
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 from llm_keywords_pipeline.core.text import clean_markdown, get_stopwords, tokenize
-from llm_keywords_pipeline.validate.seo import count_keyword_occurrences, get_token_lemmas
+from llm_keywords_pipeline.validate.seo import count_keyword_lemma_ngrams, get_token_lemmas
 
 # Snowball Stemmer для группировки русских словоформ по корню.
 # Snowball не знает украинский: украинские словоформы группируются по лемме (MorphAnalyzer).
@@ -190,7 +190,7 @@ def check_keyword_density(text: str, keyword: str, lang: str = "ru") -> dict[str
     total_words = len(words)
 
     # Exact: consecutive keyword lemmas in the text (inflected forms count, longer words do not)
-    exact_count = count_keyword_occurrences(clean_text, keyword, lang)
+    exact_count = count_keyword_lemma_ngrams(clean_text, keyword, lang)
     # Partial: text tokens whose lemma is one of the keyword's lemmas
     keyword_lemmas = set(get_token_lemmas(keyword, lang))
     partial_count = sum(1 for t in get_token_lemmas(clean_text, lang) if t in keyword_lemmas)
@@ -536,7 +536,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.with_keywords:
         keywords = load_keywords_from_json(args.with_keywords)
         if keywords:
-            keywords_check = [check_keyword_density(text, kw) for kw in keywords]
+            keywords_check = [check_keyword_density(text, kw, lang=args.lang) for kw in keywords]
 
     # Output
     if args.json:

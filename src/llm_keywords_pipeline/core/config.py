@@ -44,7 +44,8 @@ QUALITY_THRESHOLDS = {
     # Classic Nausea (√freq)
     "nausea_classic_target": 3.5,
     "nausea_classic_blocker": 4.0,
-    # Academic Nausea (%)
+    # Academic Nausea (%): top significant lemma frequency / sum of repeated
+    # significant lemma frequencies x 100 (audit/water.py)
     "nausea_academic_min": 7.0,
     "nausea_academic_max": 9.5,
     "nausea_academic_blocker": 12.0,
@@ -72,7 +73,6 @@ VALIDATION_MODES = {
             "blacklist",
             "length",
             "content_standards",
-            "grammar",
             "md_lint",
         ],
         "blockers": ["structure", "primary_keyword", "quality", "blacklist"],

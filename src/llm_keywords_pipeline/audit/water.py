@@ -4,10 +4,11 @@ Stage 8.1: Water and Nausea Calculator using NATASHA
 
 SEO 2025 v7.3 (Shop Mode - Buying Guides)
 
-Рассчитывает метрики качества текста по формулам Адвего:
+Рассчитывает метрики качества текста:
 - Вода (%) = (стоп-слова / всего слов) × 100 | Target: 40-60% (Tier A/B), 40-65% (Tier C)
 - Классическая тошнота = √(max_lemma_frequency) | Target: ≤3.5 (BLOCKER >4.0)
-- Академическая тошнота = (max_freq / total_significant) × 100 | Target: 7-9.5%
+- Академическая тошнота (доля топ-леммы) = (max_freq / total_significant) × 100,
+  где total_significant — сумма частот значимых лемм (не стоп-слова, freq>1) | Target: 7-9.5%
 
 Usage:
     uv run python -m llm_keywords_pipeline.audit.water <file.md> [target_min] [target_max]
@@ -199,7 +200,7 @@ def calculate_metrics_from_text(text: str, lang: str = "ru") -> dict | None:
 
     classic_nausea = math.sqrt(max_frequency)
 
-    # 4. АКАДЕМИЧЕСКАЯ ТОШНОТА (Advego-like)
+    # 4. АКАДЕМИЧЕСКАЯ ТОШНОТА (доля топ-леммы среди повторяющихся значимых лемм)
     significant_lemmas = {
         lemma: count
         for lemma, count in lemma_counts.items()
@@ -311,7 +312,7 @@ def check_water(
     ACADEMIC_MIN = 7.0
     ACADEMIC_MAX = 9.5
 
-    print(f"📚 АКАДЕМИЧЕСКАЯ ТОШНОТА (Advego-like): {metrics['academic_nausea']:.1f}%")
+    print(f"📚 АКАДЕМИЧЕСКАЯ ТОШНОТА (доля топ-леммы): {metrics['academic_nausea']:.1f}%")
     if metrics["most_common_significant"]:
         print(
             f"   Самое частое значимое слово: '{metrics['most_common_significant']}' ({metrics['max_freq_significant']} раз)"
@@ -320,10 +321,10 @@ def check_water(
     else:
         print("   Нет повторяющихся значимых слов")
 
-    print(f"   Цель: {ACADEMIC_MIN}-{ACADEMIC_MAX}% (Адвего оптимум)")
+    print(f"   Цель: {ACADEMIC_MIN}-{ACADEMIC_MAX}%")
 
     if ACADEMIC_MIN <= metrics["academic_nausea"] <= ACADEMIC_MAX:
-        print("   ✅ PASS (Адвего оптимум)")
+        print("   ✅ PASS")
     elif metrics["academic_nausea"] < ACADEMIC_MIN:
         print(f'   🟦 INFO: Текст "сухой" ({metrics["academic_nausea"]:.1f}% < {ACADEMIC_MIN}%)')
     elif ACADEMIC_MAX < metrics["academic_nausea"] <= 12.0:
