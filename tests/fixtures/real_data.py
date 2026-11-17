@@ -1,12 +1,7 @@
 # tests/fixtures/real_data.py
-"""Real data fixtures for smoke and integration tests."""
+"""Hand-written fixtures and samples for smoke, integration and unit tests."""
 
 from pathlib import Path
-
-# Paths to real category data
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-CATEGORIES_DIR = PROJECT_ROOT / "categories"
-UK_CATEGORIES_DIR = PROJECT_ROOT / "uk" / "categories"
 
 # Hand-written UK fixture used when real UK data is absent
 UK_FIXTURE_SLUG = "aktivnaya-pena"
@@ -14,45 +9,6 @@ UK_FIXTURE_DIR = Path(__file__).parent / "uk"
 UK_FIXTURE_CONTENT = UK_FIXTURE_DIR / f"{UK_FIXTURE_SLUG}_uk.md"
 UK_FIXTURE_META = UK_FIXTURE_DIR / f"{UK_FIXTURE_SLUG}_meta.json"
 UK_FIXTURE_CLEAN = UK_FIXTURE_DIR / f"{UK_FIXTURE_SLUG}_clean.json"
-
-# Sample RU categories for testing
-SAMPLE_RU_CATEGORIES = [
-    "aktivnaya-pena",
-    "polirovalnye-pasty",
-    "ochistiteli-stekol",
-]
-
-# Sample UK categories for testing
-SAMPLE_UK_CATEGORIES = [
-    "aktivnaya-pena",
-    "cherniteli-shin",
-]
-
-
-def get_ru_content_path(slug: str) -> Path:
-    """Get path to RU content file."""
-    return CATEGORIES_DIR / slug / "content" / f"{slug}_ru.md"
-
-
-def get_uk_content_path(slug: str) -> Path:
-    """Get path to UK content file."""
-    return UK_CATEGORIES_DIR / slug / "content" / f"{slug}_uk.md"
-
-
-def get_ru_meta_path(slug: str) -> Path:
-    """Get path to RU meta file."""
-    return CATEGORIES_DIR / slug / "meta" / f"{slug}_meta.json"
-
-
-def get_uk_meta_path(slug: str) -> Path:
-    """Get path to UK meta file."""
-    return UK_CATEGORIES_DIR / slug / "meta" / f"{slug}_meta.json"
-
-
-def get_ru_clean_path(slug: str) -> Path:
-    """Get path to RU clean JSON file."""
-    return CATEGORIES_DIR / slug / "data" / f"{slug}_clean.json"
-
 
 # Real content samples for unit tests
 SAMPLE_RU_MARKDOWN = """---

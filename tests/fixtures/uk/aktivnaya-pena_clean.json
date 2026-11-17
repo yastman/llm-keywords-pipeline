@@ -3,7 +3,7 @@
   "name": "Активна піна",
   "keywords": {
     "primary": [
-      {"keyword": "активна піна", "volume": 100, "cluster": "main", "intent": "commercial"}
+      {"keyword": "активна піна для авто", "volume": 100, "cluster": "main", "intent": "commercial"}
     ],
     "secondary": [
       {"keyword": "піна для безконтактної мийки", "volume": 50, "cluster": "main"}
