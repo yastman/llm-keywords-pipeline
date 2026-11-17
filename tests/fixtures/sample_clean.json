@@ -2,12 +2,23 @@
   "id": "test-category",
   "name": "Тестовая категория",
   "parent_id": "parent-slug",
-  "keywords": [
-    {"keyword": "тестовый ключ", "volume": 1000},
-    {"keyword": "второй ключ", "volume": 500}
-  ],
+  "keywords": {
+    "primary": [
+      {"keyword": "тестовый ключ", "volume": 1000, "cluster": "main", "intent": "commercial"}
+    ],
+    "secondary": [
+      {"keyword": "второй ключ", "volume": 500, "cluster": "related", "intent": "info"},
+      {"keyword": "третий ключ", "volume": 50, "cluster": "related"}
+    ],
+    "supporting": [],
+    "commercial": [
+      {"keyword": "купить тест", "volume": 20, "cluster": "commercial", "use_in": "meta_only"}
+    ]
+  },
   "synonyms": [
-    {"keyword": "синоним", "volume": 100, "use_in": "content"}
+    {"keyword": "синоним", "volume": 100, "use_in": "content", "note": "keep"}
   ],
-  "micro_intents": ["как выбрать", "какой лучше"]
+  "micro_intents": ["как выбрать", "какой лучше"],
+  "meta": {"title": "Тестовый заголовок", "description": "Тестовое описание"},
+  "stats": {"before": 4, "after": 4, "total_volume": 1570}
 }

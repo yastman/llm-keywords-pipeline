@@ -4,6 +4,7 @@
 import json
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 from llm_keywords_pipeline.core.coverage import keyword_key
 
@@ -26,22 +27,13 @@ def extract_keywords_from_file(filepath: Path) -> dict[str, str]:
         print(f"⚠️  {filepath.name}: {e}")
         return keywords
 
-    keywords_data = data.get("keywords", [])
     synonyms_data = data.get("synonyms", [])
     variations_data = data.get("variations", [])
 
-    # Handle legacy format: keywords is dict with groups
-    if isinstance(keywords_data, dict):
-        for group_items in keywords_data.values():
-            if isinstance(group_items, list):
-                for item in group_items:
-                    if "keyword" in item:
-                        keywords.setdefault(keyword_key(item["keyword"]), item["keyword"].strip())
-    else:
-        # New format: keywords is list
-        for item in keywords_data:
-            if "keyword" in item:
-                keywords.setdefault(keyword_key(item["keyword"]), item["keyword"].strip())
+    # Keywords: dict of groups or flat list
+    for item in keyword_entries(data):
+        if "keyword" in item:
+            keywords.setdefault(keyword_key(item["keyword"]), item["keyword"].strip())
 
     # Synonyms
     if isinstance(synonyms_data, list):

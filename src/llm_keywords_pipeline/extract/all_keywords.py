@@ -5,6 +5,7 @@ import csv
 import json
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import FLAT_GROUP, keyword_groups
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 ROOT = PROJECT_ROOT
@@ -19,45 +20,24 @@ def extract_from_file(clean_file: Path) -> list[dict]:
         data = json.loads(clean_file.read_text(encoding="utf-8"))
         category = data.get("id", clean_file.stem.replace("_clean", ""))
 
-        keywords_data = data.get("keywords", [])
         synonyms_data = data.get("synonyms", [])
 
-        # Handle legacy format: keywords is dict with groups
-        if isinstance(keywords_data, dict):
-            # Legacy format: {"primary": [...], "synonyms_base": [...], ...}
-            for group_name, items in keywords_data.items():
-                if not isinstance(items, list):
-                    continue
-                for kw in items:
-                    # Determine type based on group name
-                    if group_name == "primary":
-                        source_type = "keyword"
-                    elif "commercial" in group_name:
-                        source_type = "synonym"  # commercial = meta_only synonyms
-                    else:
-                        source_type = "synonym"  # all other groups are synonyms
+        # Keywords: dict of groups {"primary": [...], "synonyms_base": [...], ...} or flat list
+        for group_name, items in keyword_groups(data).items():
+            for kw in items:
+                # primary and a flat list are keywords; every other group is synonyms
+                source_type = "keyword" if group_name in ("primary", FLAT_GROUP) else "synonym"
 
-                    rows.append(
-                        {
-                            "keyword": kw["keyword"],
-                            "volume": kw.get("volume", 0),
-                            "category": category,
-                            "source_type": source_type,
-                        }
-                    )
-        else:
-            # New format: keywords is list
-            for kw in keywords_data:
                 rows.append(
                     {
                         "keyword": kw["keyword"],
                         "volume": kw.get("volume", 0),
                         "category": category,
-                        "source_type": "keyword",
+                        "source_type": source_type,
                     }
                 )
 
-        # Synonyms (new format only, legacy has synonyms inside keywords dict)
+        # Synonyms (a dict of groups may also keep synonyms inside keywords)
         if isinstance(synonyms_data, list):
             for syn in synonyms_data:
                 rows.append(

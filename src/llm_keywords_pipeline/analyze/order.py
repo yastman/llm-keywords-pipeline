@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries, keyword_groups
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 ROOT = PROJECT_ROOT
@@ -30,14 +31,12 @@ def analyze_category(clean_file: Path) -> dict:
     }
 
     # Проверяем keywords
-    keywords = data.get("keywords", [])
-    if keywords:
-        volumes = [k.get("volume", 0) for k in keywords]
-        # Проверка на 0
-        for kw in keywords:
-            if kw.get("volume", 0) == 0:
-                result["keywords_zero"].append(kw["keyword"])
-        # Проверка порядка (должен быть по убыванию)
+    for kw in keyword_entries(data):
+        if kw.get("volume", 0) == 0:
+            result["keywords_zero"].append(kw["keyword"])
+    # Проверка порядка: по убыванию внутри каждой группы (плоский список - одна группа)
+    for items in keyword_groups(data).values():
+        volumes = [k.get("volume", 0) for k in items]
         if volumes != sorted(volumes, reverse=True):
             result["keywords_order_wrong"] = True
 

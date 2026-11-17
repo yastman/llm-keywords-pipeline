@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 ROOT = PROJECT_ROOT
@@ -27,7 +28,7 @@ def analyze_category(clean_file: Path) -> dict:
     slug = data.get("id", clean_file.stem.replace("_clean", ""))
     name = data.get("name", slug)
 
-    keywords = data.get("keywords", [])
+    keywords = keyword_entries(data)
     synonyms = data.get("synonyms", [])
     entity_dictionary = data.get("entity_dictionary") or {}
     entities = [term for terms in entity_dictionary.values() for term in terms]

@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries
+
 
 def load_json(file_path: Path) -> dict[str, Any]:
     """Загрузить JSON файл"""
@@ -175,11 +177,12 @@ def regenerate_meta(meta_file: Path) -> bool:
         clean_data = load_json(clean_file)
 
         # ЖЕЛЕЗНОЕ ПРАВИЛО: keywords[0] ДОСЛОВНО!
-        if not clean_data.get("keywords") or len(clean_data["keywords"]) == 0:
+        keywords = keyword_entries(clean_data)
+        if not keywords:
             print(f"❌ {slug}: нет keywords в _clean.json")
             return False
 
-        primary_keyword = clean_data["keywords"][0]["keyword"]
+        primary_keyword = keywords[0]["keyword"]
 
         # Генерировать мета по формулам
         new_title = generate_title(primary_keyword)
@@ -195,9 +198,7 @@ def regenerate_meta(meta_file: Path) -> bool:
         if "keywords_in_content" not in meta_data:
             meta_data["keywords_in_content"] = {}
 
-        meta_data["keywords_in_content"]["primary"] = [
-            kw["keyword"] for kw in clean_data["keywords"][:3]
-        ]
+        meta_data["keywords_in_content"]["primary"] = [kw["keyword"] for kw in keywords[:3]]
 
         # Сохранить
         save_json(meta_file, meta_data)

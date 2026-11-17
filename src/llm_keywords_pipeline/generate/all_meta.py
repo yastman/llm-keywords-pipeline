@@ -17,6 +17,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 
@@ -48,8 +49,8 @@ def save_json(filepath: Path, data: dict) -> bool:
 
 
 def get_primary_keyword(data: dict) -> str:
-    """Get highest volume keyword from _clean.json."""
-    keywords = data.get("keywords", [])
+    """Get highest volume keyword from _clean.json (first of primary in a dict of groups)."""
+    keywords = keyword_entries(data)
     if not keywords:
         return data.get("name", "Unknown")
     return keywords[0].get("keyword", data.get("name", "Unknown"))

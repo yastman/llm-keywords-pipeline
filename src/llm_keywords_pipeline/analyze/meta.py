@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 ROOT = PROJECT_ROOT
@@ -31,12 +32,12 @@ def analyze_category(slug_dir: Path) -> dict | None:
 
     slug = clean_data.get("id", "")
     name = clean_data.get("name", slug)
-    keywords = clean_data.get("keywords", [])
+    keywords = keyword_entries(clean_data)
 
     if not keywords:
         return None
 
-    # Главный ключ - первый (с наибольшим volume)
+    # Главный ключ - первый (с наибольшим volume; в dict групп - первый в primary)
     main_kw = keywords[0]["keyword"]
     main_volume = keywords[0].get("volume", 0)
 

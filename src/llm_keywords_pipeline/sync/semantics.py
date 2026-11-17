@@ -6,22 +6,21 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import (
+    FLAT_GROUP,
+    keyword_entries,
+    keyword_groups,
+    set_keyword_groups,
+)
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.coverage import keyword_key
 
 ROOT = PROJECT_ROOT
 DEFAULT_CSV = ROOT / "data" / "ru_semantics_master.csv"
 CATEGORIES_DIR = ROOT / "categories"
 
-PRESERVED_FIELDS = [
-    "id",
-    "name",
-    "type",
-    "parent_id",
-    "entities",
-    "micro_intents",
-    "variations",
-    "source",
-]
+# Group of a keyword the CSV adds to a dict-of-groups file
+NEW_KEYWORD_GROUP = "supporting"
 
 
 def load_master_csv(csv_path: Path) -> list[dict]:
@@ -83,16 +82,58 @@ def build_synonyms_list(rows: list[dict]) -> list[dict]:
     return sorted(synonyms, key=lambda x: x["volume"], reverse=True)
 
 
+def merge_entries(
+    old_groups: dict[str, list[dict]], csv_entries: list[dict], new_group: str
+) -> dict[str, list[dict]]:
+    """Applies CSV entries to the file's groups by keyword_key.
+
+    A matched entry stays in its group with its other fields (intent, ...); keyword,
+    volume and use_in come from the CSV. An entry the CSV lacks is dropped; a CSV entry
+    the file lacks goes to new_group. Each group is sorted by volume DESC.
+    A key the file holds in two groups matches only its first entry; the copy in the
+    second group is dropped on sync.
+    """
+    positions: dict[str, tuple[str, int]] = {}
+    for group, items in old_groups.items():
+        for i, entry in enumerate(items):
+            positions.setdefault(keyword_key(entry["keyword"]), (group, i))
+
+    matched: dict[tuple[str, int], dict] = {}
+    added = []
+    for row in csv_entries:
+        pos = positions.pop(keyword_key(row["keyword"]), None)
+        if pos is None:
+            added.append(row)
+            continue
+        old = old_groups[pos[0]][pos[1]]
+        matched[pos] = {**{k: v for k, v in old.items() if k != "use_in"}, **row}
+
+    result = {
+        group: [matched[(group, i)] for i in range(len(items)) if (group, i) in matched]
+        for group, items in old_groups.items()
+    }
+    if added:
+        result.setdefault(new_group, []).extend(added)
+    return {
+        group: sorted(items, key=lambda x: x.get("volume", 0), reverse=True)
+        for group, items in result.items()
+    }
+
+
 def sync_category(
     category: str, rows: list[dict], categories_dir: Path, dry_run: bool = True
 ) -> dict:
-    """Синхронизирует одну категорию. Возвращает статистику."""
+    """Синхронизирует одну категорию. Возвращает статистику.
+
+    CSV задаёт состав ключей и синонимов и их volume/use_in; всё прочее в файле
+    (группы keywords, поля ключей вроде intent, meta и др.) сохраняется.
+    """
     clean_path = find_clean_json_path(category, categories_dir)
 
     if not clean_path:
-        # Create new file
+        # Create new file: keywords as a dict of groups
         clean_path = categories_dir / category / "data" / f"{category}_clean.json"
-        existing = {"id": category, "name": category}
+        existing: dict = {"id": category, "name": category}
     else:
         existing = json.loads(clean_path.read_text(encoding="utf-8"))
 
@@ -101,22 +142,23 @@ def sync_category(
     new_synonyms = build_synonyms_list(rows)
 
     # Stats
-    old_kw_count = len(existing.get("keywords", []))
+    old_kw_count = len(keyword_entries(existing))
     old_syn_count = len(existing.get("synonyms", []))
 
-    # Update
-    updated = {}
-    for field in PRESERVED_FIELDS:
-        if field in existing:
-            updated[field] = existing[field]
-
-    updated["keywords"] = new_keywords
-    updated["synonyms"] = new_synonyms
+    # Update in place of the file's own shape: dict of groups stays dict, flat stays flat
+    old_groups = keyword_groups(existing)
+    new_group = FLAT_GROUP if FLAT_GROUP in old_groups else NEW_KEYWORD_GROUP
+    updated = dict(existing)
+    set_keyword_groups(updated, merge_entries(old_groups, new_keywords, new_group))
+    if new_synonyms or "synonyms" in existing:
+        updated["synonyms"] = merge_entries(
+            {FLAT_GROUP: existing.get("synonyms", [])}, new_synonyms, FLAT_GROUP
+        ).get(FLAT_GROUP, [])
 
     stats = {
         "category": category,
         "keywords_before": old_kw_count,
-        "keywords_after": len(new_keywords),
+        "keywords_after": len(keyword_entries(updated)),
         "synonyms_before": old_syn_count,
         "synonyms_after": len(new_synonyms),
     }

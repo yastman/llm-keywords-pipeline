@@ -8,6 +8,7 @@ import json
 import re
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 from llm_keywords_pipeline.core.coverage import keyword_key
 
@@ -276,8 +277,8 @@ def extract_keywords_from_file(filepath: Path) -> dict[str, str]:
         print(f"Ошибка чтения {filepath}: {e}")
         return keywords
 
-    # Извлекаем keywords
-    for item in data.get("keywords", []):
+    # Извлекаем keywords: dict групп или плоский список
+    for item in keyword_entries(data):
         if "keyword" in item:
             keywords.setdefault(keyword_key(item["keyword"]), item["keyword"].strip())
 

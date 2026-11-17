@@ -5,6 +5,7 @@ import csv
 import json
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 from llm_keywords_pipeline.core.coverage import keyword_key
 
@@ -13,29 +14,41 @@ CSV_FILE = ROOT / "key_all.csv"
 CATEGORIES_DIR = ROOT / "categories"
 
 
-def load_csv_volumes() -> dict:
-    """Загружает keyword -> volume из CSV."""
-    volumes = {}
+def load_csv_volumes() -> dict[str, int]:
+    """Загружает keyword_key -> volume из CSV.
+
+    Два написания одного ключа: берётся последнее по CSV; при разных volume печатается
+    предупреждение с обоими написаниями.
+    """
+    volumes: dict[str, int] = {}
+    spellings: dict[str, str] = {}
     with open(CSV_FILE, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
             keyword = row["Ключевое слово"].strip().strip('"')
             volume = int(row["Показов в месяц"])
-            volumes[keyword] = volume
+            key = keyword_key(keyword)
+            if key in volumes and volumes[key] != volume:
+                print(
+                    f"⚠️  Один ключ, разные volume: {spellings[key]!r} ({volumes[key]}) "
+                    f"и {keyword!r} ({volume}); берётся {volume}"
+                )
+            volumes[key] = volume
+            spellings[key] = keyword
     return volumes
 
 
-def update_category(clean_file: Path, volumes: dict) -> tuple[int, int]:
-    """Обновляет volume в _clean.json. Возвращает (обновлено, всего)."""
+def update_category(clean_file: Path, volumes: dict[str, int]) -> tuple[int, int]:
+    """Обновляет volume в _clean.json. Возвращает (обновлено, всего).
+
+    volumes: {keyword_key: volume}, как возвращает load_csv_volumes.
+    """
     data = json.loads(clean_file.read_text(encoding="utf-8"))
-    volumes = {keyword_key(k): v for k, v in volumes.items()}
     updated = 0
     total = 0
 
-    # Обновляем keywords: плоский список или dict групп (primary/secondary/...)
-    keywords = data.get("keywords", [])
-    if isinstance(keywords, dict):
-        keywords = [kw for group in keywords.values() for kw in group]
+    # Обновляем keywords: dict групп (primary/secondary/...) или плоский список
+    keywords = keyword_entries(data)
     for kw in keywords:
         total += 1
         keyword = keyword_key(kw["keyword"])

@@ -4,6 +4,7 @@
 import json
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import keyword_groups, set_keyword_groups
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 ROOT = PROJECT_ROOT
@@ -25,23 +26,23 @@ def fix_category(clean_file: Path) -> dict:
 
     changed = False
 
-    # Исправляем keywords
-    keywords = data.get("keywords", [])
-    if keywords:
+    # Исправляем keywords: каждая группа отдельно (плоский список - одна группа)
+    groups = keyword_groups(data)
+    for group, keywords in groups.items():
         # Удаляем с volume=0
         original_len = len(keywords)
         keywords = [k for k in keywords if k.get("volume", 0) > 0]
-        stats["keywords_removed"] = original_len - len(keywords)
+        stats["keywords_removed"] += original_len - len(keywords)
 
         # Сортируем по volume desc
         sorted_kw = sorted(keywords, key=lambda x: x.get("volume", 0), reverse=True)
         if keywords != sorted_kw:
             stats["keywords_sorted"] = True
-            keywords = sorted_kw
+        groups[group] = sorted_kw
 
-        if stats["keywords_removed"] > 0 or stats["keywords_sorted"]:
-            data["keywords"] = keywords
-            changed = True
+    if stats["keywords_removed"] > 0 or stats["keywords_sorted"]:
+        set_keyword_groups(data, groups)
+        changed = True
 
     # Исправляем synonyms
     synonyms = data.get("synonyms", [])
