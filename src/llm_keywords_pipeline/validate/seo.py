@@ -87,6 +87,16 @@ def contains_keyword(text: str, keyword: str, lang: str = "ru") -> bool:
     return bool(keyword_tokens) and keyword_tokens <= set(get_token_lemmas(text, lang))
 
 
+def count_keyword_occurrences(text: str, keyword: str, lang: str = "ru") -> int:
+    """Вхождения подряд идущих токенов keyword в тексте (падежи допустимы, как в contains_keyword)."""
+    keyword_tokens = get_token_lemmas(keyword, lang)
+    text_tokens = get_token_lemmas(text, lang)
+    n = len(keyword_tokens)
+    if not n:
+        return 0
+    return sum(text_tokens[i : i + n] == keyword_tokens for i in range(len(text_tokens) - n + 1))
+
+
 def check_keyword_in_intro(text: str, keyword: str, limit: int = 150, lang: str = "ru") -> dict:
     """
     Проверка 1: Main keyword в первых N символах (INTRO)
@@ -240,15 +250,7 @@ def check_keyword_frequency(text: str, keyword: str, lang: str = "ru") -> dict:
     Returns:
         Dict с результатами
     """
-    # Считаем вхождения подряд идущих токенов keyword (падежи допустимы, как в contains_keyword)
-    keyword_tokens = get_token_lemmas(keyword, lang)
-    text_tokens = get_token_lemmas(text, lang)
-    n = len(keyword_tokens)
-    count = (
-        sum(text_tokens[i : i + n] == keyword_tokens for i in range(len(text_tokens) - n + 1))
-        if n
-        else 0
-    )
+    count = count_keyword_occurrences(text, keyword, lang)
 
     # Оптимальный диапазон
     min_freq = 3
