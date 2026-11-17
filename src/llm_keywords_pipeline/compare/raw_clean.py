@@ -359,7 +359,9 @@ def fix_clean_json(
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="Compare CSV semantics with _clean.json files.")
+    parser = argparse.ArgumentParser(
+        description="Compare CSV semantics with _clean.json files.", allow_abbrev=False
+    )
     parser.add_argument("slug", nargs="?", help="check only this category slug")
     parser.add_argument("--fix", action="store_true", help="write fixes to _clean.json")
     return parser.parse_args(argv)

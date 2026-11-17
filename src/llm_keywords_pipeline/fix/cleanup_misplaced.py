@@ -141,7 +141,9 @@ def remove_keywords_from_category(slug: str, keywords_to_remove: list[str]) -> i
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="Remove misplaced keywords from categories.")
+    parser = argparse.ArgumentParser(
+        description="Remove misplaced keywords from categories.", allow_abbrev=False
+    )
     parser.add_argument("--fix", action="store_true", help="remove misplaced keywords")
     return parser.parse_args(argv)
 

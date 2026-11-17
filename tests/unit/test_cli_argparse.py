@@ -15,6 +15,21 @@ def test_unknown_flag_exits_2(parse_args):
     assert exc.value.code == 2
 
 
+@pytest.mark.parametrize(
+    ("parse_args", "flag"),
+    [
+        (raw_clean.parse_args, "--fi"),
+        (cleanup_misplaced.parse_args, "--fi"),
+        (find_orphan_keywords.parse_args, "--appl"),
+        (find_orphan_keywords.parse_args, "--distrib"),
+    ],
+)
+def test_abbreviated_flag_exits_2(parse_args, flag):
+    with pytest.raises(SystemExit) as exc:
+        parse_args([flag])
+    assert exc.value.code == 2
+
+
 @pytest.mark.parametrize("parse_args", PARSERS)
 def test_help_exits_0(parse_args):
     with pytest.raises(SystemExit) as exc:
@@ -53,6 +68,17 @@ def test_find_orphan_flags():
     assert (args.distribute, args.apply) == (True, True)
 
 
+@pytest.mark.parametrize("flag", ["--aply", "--appl"])
+def test_find_orphan_main_rejects_bad_flag_before_reading(monkeypatch, flag):
+    def fail():
+        raise AssertionError("CSV read before argument check")
+
+    monkeypatch.setattr(find_orphan_keywords, "parse_all_csv_keywords", fail)
+    with pytest.raises(SystemExit) as exc:
+        find_orphan_keywords.main([flag])
+    assert exc.value.code == 2
+
+
 def test_cleanup_misplaced_flags():
     assert cleanup_misplaced.parse_args([]).fix is False
     assert cleanup_misplaced.parse_args(["--fix"]).fix is True
@@ -65,4 +91,26 @@ def test_cleanup_misplaced_main_rejects_unknown_flag_before_reading(monkeypatch)
     monkeypatch.setattr(cleanup_misplaced, "analyze_category", fail)
     with pytest.raises(SystemExit) as exc:
         cleanup_misplaced.main(["--aply"])
+    assert exc.value.code == 2
+
+
+class _NoReadDir:
+    def iterdir(self):
+        raise AssertionError("categories dir read before argument check")
+
+
+def test_raw_clean_main_rejects_abbreviated_flag_before_reading(monkeypatch):
+    def fail():
+        raise AssertionError("CSV read before argument check")
+
+    monkeypatch.setattr(raw_clean, "parse_csv_keywords", fail)
+    with pytest.raises(SystemExit) as exc:
+        raw_clean.main(["--fi"])
+    assert exc.value.code == 2
+
+
+def test_cleanup_misplaced_main_rejects_abbreviated_flag_before_reading(monkeypatch):
+    monkeypatch.setattr(cleanup_misplaced, "CATEGORIES_DIR", _NoReadDir())
+    with pytest.raises(SystemExit) as exc:
+        cleanup_misplaced.main(["--fi"])
     assert exc.value.code == 2
