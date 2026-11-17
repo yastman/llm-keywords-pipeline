@@ -147,10 +147,10 @@ CATEGORY_NAMES = {
 
 
 def translate_keyword(text: str) -> str:
-    """Translate RU keyword to UK."""
+    """Translate RU keyword to UK, replacing whole words only."""
     result = text
     for ru, uk in sorted(TRANSLATIONS.items(), key=lambda x: -len(x[0])):
-        result = re.sub(re.escape(ru), uk, result, flags=re.IGNORECASE)
+        result = re.sub(rf"(?<!\w){re.escape(ru)}(?!\w)", uk, result, flags=re.IGNORECASE)
     return result
 
 
