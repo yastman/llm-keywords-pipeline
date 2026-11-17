@@ -124,7 +124,7 @@ content rules и optional research, затем подготовить или п�
 | `uv run llm-keywords-density <file.md>` | Плотность ключей, stem-группы, category substrings, spam/warning thresholds. | `--lang ru\|uk`, по умолчанию ru. |
 | `uv run llm-keywords-audit-brands <file.md>` | Blacklist брендов, упоминания городов, NER-сущности, AI fluff. Strict-фразы дают FAIL; любое попадание бренда, города, AI fluff или strict-фразы даёт exit 1; NER-сущности только информативны (без exit 1). Списки strict и AI fluff — по языку файла (из пути). | По пути, как check-seo. |
 | `uv run llm-keywords-audit-water <file.md>` | Вода, классическая и академическая тошнота. | `--lang ru\|uk`, по умолчанию ru. |
-| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>"` | Структура H1/H2, primary keyword в H1 и intro, core и commercial coverage, вода/тошнота, blacklist, длина, content standards, markdown lint, FAQ. | `--lang ru\|uk`, по умолчанию ru; blacklist проверяется на том же языке. |
+| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>" --with-analysis <slug>` | Структура H1/H2, primary keyword в H1 и intro, core и commercial coverage (ключи из `--with-analysis`; без него coverage проходит на нуле ключей), вода/тошнота, blacklist, длина, content standards, markdown lint, FAQ. | `--lang ru\|uk`, по умолчанию ru; blacklist проверяется на том же языке. |
 
 Morphology-aware для русского и украинского (леммы pymorphy3): matching ключей в
 check-seo, подсчёт ключей в density (ключи считаются по n-граммам лемм) и core coverage
@@ -252,6 +252,7 @@ deployment recipe.
 
 | Документ | Что внутри |
 | --- | --- |
+| [AGENTS.md](AGENTS.md) | Как LLM-агент ведёт workflow: раскладка данных, команды, валидаторы. |
 | [Architecture](docs/architecture.md) | Package map, workflow boundaries и supported public surface. |
 | [Testing](docs/testing.md) | Test tiers, default commands, local git hooks, data-required skips. |
 | [Research Workflow](docs/research-workflow.md) | Как clustered keywords превращались в `RESEARCH_PROMPT.md`, `RESEARCH_DATA.md` и content brief. |

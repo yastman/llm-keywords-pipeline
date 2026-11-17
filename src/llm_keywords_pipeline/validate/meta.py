@@ -34,6 +34,7 @@ from typing import Any
 
 from llm_keywords_pipeline.core.config import QUALITY_THRESHOLDS
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer, keyword_matches_text
+from llm_keywords_pipeline.validate.seo import detect_language
 
 # Fix Windows encoding is moved to main() block to avoid pytest conflicts
 
@@ -476,7 +477,7 @@ def validate_h1(h1: str, primary_keyword: str, lang: str = "ru") -> dict[str, An
 
 
 def validate_meta_file(
-    meta_path: str, keywords_path: str | None = None, lang: str = "ru"
+    meta_path: str, keywords_path: str | None = None, lang: str | None = None
 ) -> dict[str, Any]:
     """
     Full validation of meta JSON file.
@@ -484,11 +485,14 @@ def validate_meta_file(
     Args:
         meta_path: Path to meta JSON file
         keywords_path: Optional path to keywords JSON file
-        lang: 'ru' (default) or 'uk' for language-specific validation
+        lang: 'ru' or 'uk' for language-specific validation. Precedence: this argument
+            (CLI --lang) > the meta JSON "language" key > the path (detect_language) > 'ru'
 
     Returns:
         Validation results dict
     """
+    explicit_lang = lang is not None
+    lang = lang or detect_language(meta_path)
     results: dict[str, Any] = {
         "file": meta_path,
         "keywords_file": keywords_path,
@@ -514,9 +518,9 @@ def validate_meta_file(
 
     results["h1"] = {"value": h1}
 
-    # Auto-detect language from meta file if not specified
-    if meta.get("language") == "uk":
-        lang = "uk"
+    # The meta JSON "language" key wins over the path, not over an explicit lang
+    if not explicit_lang and meta.get("language") in ("ru", "uk"):
+        lang = meta["language"]
         results["lang"] = lang
 
     # Load keywords if provided
@@ -734,8 +738,9 @@ def main():
     output_json = "--json" in sys.argv
     validate_all = "--all" in sys.argv
 
-    # Parse --lang argument
-    lang = "ru"
+    # Parse --lang argument; precedence --lang > meta JSON "language" > path > ru
+    # is applied in validate_meta_file (lang=None when --lang is absent)
+    lang: str | None = None
     if "--lang" in sys.argv:
         idx = sys.argv.index("--lang")
         if idx + 1 < len(sys.argv):
@@ -754,9 +759,7 @@ def main():
 
         all_results = []
         for meta_path, keywords_path in meta_files:
-            # Auto-detect language from path
-            file_lang = "uk" if "/uk/" in meta_path or "\\uk\\" in meta_path else lang
-            results = validate_meta_file(meta_path, keywords_path, lang=file_lang)
+            results = validate_meta_file(meta_path, keywords_path, lang=lang)
             all_results.append(results)
 
             if not output_json:
@@ -789,10 +792,6 @@ def main():
             idx = sys.argv.index("--keywords")
             if idx + 1 < len(sys.argv):
                 keywords_path = sys.argv[idx + 1]
-
-        # Auto-detect language from path if not explicitly set
-        if "--lang" not in sys.argv and ("/uk/" in meta_path or "\\uk\\" in meta_path):
-            lang = "uk"
 
         results = validate_meta_file(meta_path, keywords_path, lang=lang)
 
