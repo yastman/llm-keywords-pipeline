@@ -16,10 +16,9 @@ import csv
 import json
 
 from llm_keywords_pipeline.core.clean_json import refresh_stats_totals
-from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, SEMANTICS_CSV
 
 # Paths
-SEMANTICS_CSV = PROJECT_ROOT / "Структура _Ultimate.csv"
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 
 # Маппинг названий из CSV → slug категории

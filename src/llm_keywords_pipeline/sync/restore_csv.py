@@ -8,9 +8,8 @@ restore_from_csv.py — Восстанавливает _clean.json из CSV се
 import csv
 import json
 
-from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, SEMANTICS_CSV
 
-SEMANTICS_CSV = PROJECT_ROOT / "Структура _Ultimate.csv"
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 
 # Mapping slug → CSV block name

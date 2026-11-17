@@ -92,6 +92,21 @@ def test_list_ru_lists_csv_categories(project, monkeypatch, capsys):
     assert "antibitum" in out
 
 
+def test_list_ru_without_csv_lists_clean_json_categories(project, monkeypatch, capsys):
+    monkeypatch.setattr(category, "SEMANTICS_CSV", project / "missing.csv")
+    data_dir = project / "categories" / "ru-only-slug" / "data"
+    data_dir.mkdir(parents=True)
+    payload = {"keywords": {"primary": [{"keyword": "антибитум", "volume": 100}]}}
+    (data_dir / "ru-only-slug_clean.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    code = run_main(monkeypatch, "--list")
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "ru-only-slug" in out
+    assert "Total: 1 categories" in out
+
+
 def test_missing_slug_is_a_usage_error(project, monkeypatch, capsys):
     assert run_main(monkeypatch) == 2
 

@@ -14,9 +14,8 @@ import re
 from collections import defaultdict
 
 from llm_keywords_pipeline.core.clean_json import refresh_stats_totals
-from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, SEMANTICS_CSV
 
-SEMANTICS_CSV = PROJECT_ROOT / "Структура _Ultimate.csv"
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 
 # Правила распределения ключей по содержимому
