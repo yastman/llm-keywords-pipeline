@@ -5,6 +5,7 @@ import csv
 import json
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 from llm_keywords_pipeline.core.coverage import keyword_key
 
@@ -40,32 +41,17 @@ def collect_from_clean_json(clean_file: Path) -> list[dict]:
     category = extract_category_slug(clean_file)
     rows = []
 
-    # Keywords
-    keywords = data.get("keywords", [])
-    if isinstance(keywords, list):
-        for kw in keywords:
-            rows.append(
-                {
-                    "keyword": kw["keyword"],
-                    "volume": kw.get("volume", 0),
-                    "category": category,
-                    "type": "keyword",
-                    "use_in": kw.get("use_in", ""),
-                }
-            )
-    elif isinstance(keywords, dict):
-        # Legacy dict format
-        for group in keywords.values():
-            for kw in group:
-                rows.append(
-                    {
-                        "keyword": kw["keyword"],
-                        "volume": kw.get("volume", 0),
-                        "category": category,
-                        "type": "keyword",
-                        "use_in": kw.get("use_in", ""),
-                    }
-                )
+    # Keywords: dict of groups or flat list
+    for kw in keyword_entries(data):
+        rows.append(
+            {
+                "keyword": kw["keyword"],
+                "volume": kw.get("volume", 0),
+                "category": category,
+                "type": "keyword",
+                "use_in": kw.get("use_in", ""),
+            }
+        )
 
     # Synonyms
     for syn in data.get("synonyms", []):
@@ -182,21 +168,26 @@ def main():
 
     print(f"   Collected {len(all_rows)} keywords")
 
-    # Load Excel if provided
-    excel_volumes = {}
+    # Load Excel if provided. Sources combine by keyword_key: the last source's
+    # volume wins whatever its spelling; a new keyword keeps the first spelling seen.
+    excel_volumes: dict[str, int] = {}
+    spellings: dict[str, str] = {}
     if args.excel:
         for excel_file in args.excel:
             print(f"\nLoading {excel_file.name}...")
             try:
                 vols = load_excel_keywords(excel_file)
-                excel_volumes.update(vols)
+                for kw, vol in vols.items():
+                    key = keyword_key(kw)
+                    spellings.setdefault(key, kw)
+                    excel_volumes[key] = vol
                 print(f"   Loaded {len(vols)} keywords")
             except Exception as e:
                 print(f"   Warning: Error: {e}")
 
     # Merge
     print("\nMerging...")
-    merged = merge_keywords(all_rows, excel_volumes)
+    merged = merge_keywords(all_rows, {spellings[key]: vol for key, vol in excel_volumes.items()})
     print(f"   Result: {len(merged)} unique keywords")
 
     # Count uncategorized

@@ -9,6 +9,7 @@ from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import keyword_entries
 from llm_keywords_pipeline.core.coverage import keyword_key
 
 # Словарь синонимов для нормализации
@@ -55,7 +56,7 @@ def analyze_category(json_path: Path) -> dict | None:
     with open(json_path, encoding="utf-8") as f:
         data = json.load(f)
 
-    keywords = data.get("keywords", [])
+    keywords = keyword_entries(data)
     if not keywords:
         return None
 
