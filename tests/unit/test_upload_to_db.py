@@ -89,7 +89,34 @@ class TestConnect:
 
 
 class TestExecuteSqlFile:
-    """execute_sql_file splits SQL by semicolons and executes each statement."""
+    """execute_sql_file splits SQL on semicolons outside literals and executes each statement."""
+
+    def test_semicolons_and_escaped_quotes_inside_literals(self, tmp_path):
+        first = "INSERT INTO t (body) VALUES ('<p>Шампунь; для авто</p>')"
+        second = "UPDATE t SET a='it\\'s; ok' WHERE id=1"
+        sql_path = tmp_path / "test.sql"
+        sql_path.write_text(f"{first};\n{second};\n", encoding="utf-8")
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        count = upload_to_db.execute_sql_file(mock_conn, sql_path)
+
+        assert [c.args[0] for c in mock_cursor.execute.call_args_list] == [first, second]
+        assert count == 2
+
+    @pytest.mark.parametrize(
+        ("sql", "expected"),
+        [
+            ("SELECT 'a'';b'; SELECT 2", ["SELECT 'a'';b'", "SELECT 2"]),
+            ('SELECT "a;b"; SELECT 2', ['SELECT "a;b"', "SELECT 2"]),
+            ("SELECT `a;b`; SELECT 2", ["SELECT `a;b`", "SELECT 2"]),
+            ("SELECT 'a\\\\'; SELECT 2", ["SELECT 'a\\\\'", "SELECT 2"]),
+        ],
+    )
+    def test_split_statements_quote_forms(self, sql, expected):
+        assert upload_to_db.split_statements(sql) == expected
 
     def test_returns_statement_count(self, tmp_path):
         sql_path = tmp_path / "test.sql"
@@ -134,4 +161,20 @@ class TestMain:
             result = upload_to_db.main([str(sql_path)])
 
         assert result == 0
+        mock_conn.close.assert_called_once()
+        mock_conn.rollback.assert_not_called()
+
+    def test_failing_statement_rolls_back_and_closes(self, tmp_path):
+        sql_path = tmp_path / "test.sql"
+        sql_path.write_text("SELECT 1; SELECT broken;", encoding="utf-8")
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value.execute.side_effect = [None, RuntimeError("syntax error")]
+
+        with patch.object(upload_to_db, "connect", return_value=mock_conn):
+            with pytest.raises(RuntimeError, match="syntax error"):
+                upload_to_db.main([str(sql_path)])
+
+        mock_conn.commit.assert_not_called()
+        mock_conn.rollback.assert_called_once()
         mock_conn.close.assert_called_once()

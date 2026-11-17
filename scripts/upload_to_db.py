@@ -37,10 +37,37 @@ def connect(config: dict):
     return mysql.connector.connect(**config)
 
 
+def split_statements(sql: str) -> list[str]:
+    """Split SQL on ';' outside quoted literals ('...', "...", `...`).
+
+    Inside a literal, a backslash escapes the next char (MySQL style) and a
+    doubled quote ('') closes and reopens it, so both keep the literal intact.
+    """
+    statements = []
+    start = 0
+    quote = None
+    i = 0
+    while i < len(sql):
+        ch = sql[i]
+        if quote:
+            if ch == "\\":
+                i += 1
+            elif ch == quote:
+                quote = None
+        elif ch in "'\"`":
+            quote = ch
+        elif ch == ";":
+            statements.append(sql[start:i])
+            start = i + 1
+        i += 1
+    statements.append(sql[start:])
+    return [s.strip() for s in statements if s.strip()]
+
+
 def execute_sql_file(conn, sql_path: Path) -> int:
     """Execute SQL statements from a file. Returns count of executed statements."""
     sql = sql_path.read_text(encoding="utf-8")
-    statements = [s.strip() for s in sql.split(";") if s.strip()]
+    statements = split_statements(sql)
     cursor = conn.cursor()
     for stmt in statements:
         cursor.execute(stmt)
@@ -67,8 +94,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"❌ {exc}")
         return 1
 
-    count = execute_sql_file(conn, sql_path)
-    conn.close()
+    try:
+        count = execute_sql_file(conn, sql_path)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
     print(f"✅ Executed {count} statement(s) from {sql_path}")
     return 0
 
