@@ -372,7 +372,7 @@ class KeywordMatcher:
             return (True, keyword)
 
         # 2. Single word keyword
-        kw_words = keyword.lower().split()
+        kw_words = keyword.lower().translate(_APOSTROPHES).split()
         if len(kw_words) == 1:
             return self._match_single_word(kw_words[0], text)
 
