@@ -129,3 +129,41 @@ def test_render_prompt_template_braces(tmp_path):
         render_prompt_template(tmpl, {"slug": "abc", "tier": 2})
         == "slug: abc, tier: 2, other: {unknown}"
     )
+
+
+# ── lkp-l2o: resume keeps needs_human unless rerun_needs_human ──────────────
+
+FAIL_TEXT = "no cyrillic content here at all"
+GOOD_TEXT = "# Заголовок\n\nТестовый текст для проверки водности."
+
+
+def _leave_needs_human(tmp_path):
+    state = run_category(Category(slug="nh"), MockLlmClient(FAIL_TEXT), state_dir=tmp_path)
+    assert state.state == "needs_human"
+
+
+def test_resume_keeps_needs_human_without_llm_call(tmp_path):
+    _leave_needs_human(tmp_path)
+    llm = MockLlmClient(GOOD_TEXT)
+    state = run_category(Category(slug="nh"), llm, state_dir=tmp_path)
+    assert llm.calls == []
+    assert state.state == "needs_human"
+    assert state.content == FAIL_TEXT
+
+
+def test_resume_reruns_needs_human_with_flag(tmp_path):
+    _leave_needs_human(tmp_path)
+    llm = MockLlmClient(GOOD_TEXT)
+    state = run_category(Category(slug="nh"), llm, state_dir=tmp_path, rerun_needs_human=True)
+    assert len(llm.calls) == 1
+    assert state.state == "done"
+    assert state.content == GOOD_TEXT
+
+
+@pytest.mark.parametrize(("flag", "calls", "needs_human"), [(False, 0, 1), (True, 1, 0)])
+def test_run_batch_passes_rerun_needs_human(tmp_path, flag, calls, needs_human):
+    _leave_needs_human(tmp_path)
+    llm = MockLlmClient(GOOD_TEXT)
+    report = run_batch([Category(slug="nh")], llm, state_dir=tmp_path, rerun_needs_human=flag)
+    assert len(llm.calls) == calls
+    assert report.needs_human == needs_human
