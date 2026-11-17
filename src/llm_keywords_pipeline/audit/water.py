@@ -41,11 +41,24 @@ except ImportError:
 _NLP_CACHE: dict = {}
 
 
+def _make_morph_vocab():
+    """MorphVocab с явным путём к словарю.
+
+    MorphVocab() ищет словарь pymorphy2 через pkg_resources, которого нет в setuptools>=81.
+    """
+    import pymorphy2_dicts_ru
+    from natasha.morph.vocab import MorphForm, PymorphyAnalyzer
+
+    vocab = MorphVocab.__new__(MorphVocab)
+    PymorphyAnalyzer.__init__(vocab, path=pymorphy2_dicts_ru.get_path(), result_type=MorphForm)
+    return vocab
+
+
 def get_nlp_pipeline():
     """Singleton для NLP объектов Natasha."""
     if "initialized" not in _NLP_CACHE:
         _NLP_CACHE["segmenter"] = Segmenter()
-        _NLP_CACHE["morph_vocab"] = MorphVocab()
+        _NLP_CACHE["morph_vocab"] = _make_morph_vocab()
         if NATASHA_FULL:
             emb = NewsEmbedding()
             _NLP_CACHE["morph_tagger"] = NewsMorphTagger(emb)
