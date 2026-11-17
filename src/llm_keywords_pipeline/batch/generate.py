@@ -30,7 +30,7 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 
-from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, semantics_csv_path
 from llm_keywords_pipeline.core.seo import L3_TO_SLUG, slugify
 
 # =============================================================================
@@ -40,7 +40,7 @@ from llm_keywords_pipeline.core.seo import L3_TO_SLUG, slugify
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 TASKS_DIR = PROJECT_ROOT / "data" / "tasks"
 BATCH_LOG = TASKS_DIR / "batch_log.json"
-SEMANTICS_CSV = PROJECT_ROOT / "data" / "Структура  Ultimate финал - Лист2.csv"
+SEMANTICS_CSV = semantics_csv_path("data/Структура  Ultimate финал - Лист2.csv")
 
 # =============================================================================
 # Batch Log Management

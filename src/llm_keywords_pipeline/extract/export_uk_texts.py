@@ -18,10 +18,10 @@ import json
 from collections.abc import Iterable
 from pathlib import Path
 
-from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, semantics_csv_path
 
 ROOT = PROJECT_ROOT
-SEMANTICS_CSV = ROOT / "data" / "Структура  Ultimate финал - Лист2.csv"
+SEMANTICS_CSV = semantics_csv_path("data/Структура  Ultimate финал - Лист2.csv")
 UK_CATEGORIES_DIR = ROOT / "uk" / "categories"
 
 

@@ -36,7 +36,11 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from llm_keywords_pipeline.core.config import PROJECT_ROOT, get_guidelines_coverage_target
+from llm_keywords_pipeline.core.config import (
+    PROJECT_ROOT,
+    SEMANTICS_CSV,
+    get_guidelines_coverage_target,
+)
 from llm_keywords_pipeline.core.seo import (
     L3_TO_SLUG,
     SLUG_TO_L3,
@@ -48,7 +52,6 @@ from llm_keywords_pipeline.core.seo import (
 # Configuration
 # =============================================================================
 
-SEMANTICS_CSV = PROJECT_ROOT / "Структура _Ultimate.csv"
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 
 
@@ -517,10 +520,11 @@ def list_all_categories(lang: str = "ru"):
     print("=" * 70)
     print()
 
-    if lang == "uk":
-        # uk has no semantics CSV: list categories from uk/categories/*/data JSON
+    if lang == "uk" or not SEMANTICS_CSV.is_file():
+        # No structure CSV (uk never has one): list categories from <categories>/*/data JSON
         from llm_keywords_pipeline.core.seo import SLUG_TO_L3_UK
 
+        slug_to_name = SLUG_TO_L3_UK if lang == "uk" else SLUG_TO_L3
         entries = []
         categories_dir = get_categories_dir(lang)
         slug_dirs = sorted(categories_dir.iterdir()) if categories_dir.is_dir() else []
@@ -528,7 +532,7 @@ def list_all_categories(lang: str = "ru"):
             keywords, _, _ = load_keywords_for_slug(slug_dir.name, lang)
             if keywords:
                 entries.append(
-                    (slug_dir.name, SLUG_TO_L3_UK.get(slug_dir.name, slug_dir.name), keywords)
+                    (slug_dir.name, slug_to_name.get(slug_dir.name, slug_dir.name), keywords)
                 )
     else:
         categories = read_semantics_csv(str(SEMANTICS_CSV))

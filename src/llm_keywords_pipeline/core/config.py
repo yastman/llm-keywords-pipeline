@@ -12,6 +12,8 @@ Updated: 2025-12-15
 import os
 from pathlib import Path
 
+from llm_keywords_pipeline.core.project import load_project
+
 # =============================================================================
 # Project Paths
 # =============================================================================
@@ -32,7 +34,15 @@ else:
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 DATA_DIR = PROJECT_ROOT / "data"
 TASKS_DIR = DATA_DIR / "tasks"
-SEMANTICS_CSV = PROJECT_ROOT / "Структура _Ultimate.csv"
+LEGACY_SEMANTICS_CSV = "Структура _Ultimate.csv"
+
+
+def semantics_csv_path(legacy: str = LEGACY_SEMANTICS_CSV) -> Path:
+    """Structure CSV: [paths] semantics_csv of project.toml, else the legacy name."""
+    return PROJECT_ROOT / (load_project(PROJECT_ROOT).semantics_csv or legacy)
+
+
+SEMANTICS_CSV = semantics_csv_path()
 
 # =============================================================================
 # Quality Thresholds (SEO 2025 v8.5)
