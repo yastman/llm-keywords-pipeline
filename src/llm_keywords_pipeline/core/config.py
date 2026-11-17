@@ -204,19 +204,6 @@ FALSE_POSITIVE_CITIES: list[str] = [
 ]
 
 # =============================================================================
-# Content Standards Requirements (CONTENT_GUIDE.md)
-# =============================================================================
-
-CONTENT_STANDARDS = {
-    # "required" switches (safety block, how-to steps, расход/концентрация, warnings) come
-    # from [content_standards] of <data root>/project.toml; none is required by default.
-    "recommended": {
-        "crosslinks_min": 0,  # SSOT: перелинковка отдельным этапом
-        "faq_min": 2,  # FAQ вопросов
-    },
-}
-
-# =============================================================================
 # Version Info
 # =============================================================================
 

@@ -872,7 +872,7 @@ def validate_content(
         except TypeError:
             length = check_length(text)
 
-    # FIX v8.5: Check CONTENT_STANDARDS_2025 requirements (quality mode only)
+    # Content standards ([content_standards] of project.toml), quality mode only
     if mode == "quality":
         try:
             content_standards = check_content_standards(text, lang=lang)

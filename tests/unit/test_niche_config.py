@@ -39,6 +39,8 @@ def test_empty_config_has_no_niche_rules(data_root):
 
     assert project.slugs == {}
     assert project.commercial_markers == {}
+    assert project.synonym_commercial_markers == ()
+    assert project.meta_type_skip_brands == ()
     assert project.synonym_strip_terms == ()
     assert project.synonym_map == {}
     assert project.synonym_stems == {}
@@ -75,6 +77,8 @@ def test_ultimate_fixture_parses(ultimate_root):
         '[synonyms]\nstrip_terms = "авто"\n',
         "[synonyms]\nmap = { a = 1 }\n",
         "[blacklist]\nbrands = [1]\n",
+        '[synonyms]\ncommercial_markers = "киев"\n',
+        '[meta]\ntype_skip_brands = "rupes"\n',
         '[blacklist]\ncities = "off"\n',
         '[blacklist]\nphrases_allow = "x"\n',
         '[density.category_substrings.ru]\nx = ["a"]\n',
@@ -132,7 +136,7 @@ def test_core_synonyms_geo_marker_only_from_config(data_root):
     assert is_commercial("купить пену")
     assert not is_commercial("пена киев")
 
-    _toml(data_root, '[markers]\ncommercial = { ru = ["киев"] }\n')
+    _toml(data_root, '[synonyms]\ncommercial_markers = ["киев"]\n')
 
     assert is_commercial("пена киев")
 
@@ -338,3 +342,34 @@ def test_tone_from_config(data_root, monkeypatch):
 
     assert brief["llm_prompt_hints"]["tone"] == "эксперт по сладостям"
     assert brief["content"]["quality"]["editorial_tone"] == "эксперт по сладостям"
+
+
+# --- parity with the old per-consumer lists (car-care project.toml) ----------------------
+
+
+def test_ultimate_geo_marker_is_synonyms_only(ultimate_root):
+    from llm_keywords_pipeline.analyze.category import is_commercial_keyword
+    from llm_keywords_pipeline.core.synonyms import is_commercial
+
+    assert is_commercial("активная пена киев")
+    assert not is_commercial_keyword("активная пена киев")
+    assert seo.get_commercial_modifiers("ru") == seo.COMMERCIAL_MODIFIERS
+
+
+def test_ultimate_audit_skips_all_meta_only_brands(ultimate_root):
+    from llm_keywords_pipeline.audit.ner_brands import check_blacklist
+
+    result = check_blacklist("Паста Menzerna, полироль Shiny и Koch Chemie.", "ru")
+
+    assert sorted(b["entity"] for b in result["brands"]) == ["koch", "koch chemie"]
+
+
+def test_ultimate_all_meta_skips_only_its_old_markers(ultimate_root, monkeypatch):
+    from llm_keywords_pipeline.generate import all_meta
+
+    monkeypatch.setattr(all_meta, "PROJECT_ROOT", ultimate_root)
+    entities = ["Аудиосистемы", "Пена Grass", "Лаврушка", "Паста Menzerna", "Круг Rupes"]
+
+    types = all_meta.get_types_from_entities({"entities": entities})
+
+    assert types == ["Аудиосистемы", "Пена Grass", "Лаврушка"]

@@ -4,7 +4,7 @@ Batch generate meta tags for all categories.
 Formula: {ВЧ Ключ} — купить, цены | {brand}; brand from <data root>/project.toml
 [project] brand, none = no suffix. Description: [meta] description_template.<lang>
 of project.toml ({keyword}, {name}, {types}, {brand}), else "{name}. {types}." plus a
-neutral filler up to 100 chars. Types skip [blacklist] brands of project.toml.
+neutral filler up to 100 chars. Types skip [meta] type_skip_brands of project.toml.
 
 Usage:
     uv run python -m llm_keywords_pipeline.generate.all_meta [--dry-run] [--force] [--lang ru|uk]
@@ -83,7 +83,7 @@ def get_types_from_entities(data: dict) -> list[str]:
         "entities", []
     )
     types = []
-    brands = load_project(PROJECT_ROOT).blacklist_brands
+    brands = load_project(PROJECT_ROOT).meta_type_skip_brands
     for entity in entities:
         if any(brand in entity.lower() for brand in brands):
             continue

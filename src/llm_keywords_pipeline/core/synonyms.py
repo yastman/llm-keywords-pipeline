@@ -35,7 +35,7 @@ REPORT_FILE = TASKS_DIR / "synonym_cleanup_report.md"
 STOP_WORDS = {"для", "в", "на", "под", "с", "от"}
 
 # Commercial intent markers (to separate commercial keys from informational);
-# [markers] commercial.ru of project.toml adds to them.
+# [synonyms] commercial_markers of project.toml adds to them.
 COMMERCIAL_MARKERS = ["купить", "цена", "отзывы", "заказать", "стоимость"]
 
 # =============================================================================
@@ -83,7 +83,7 @@ def normalize_keyword(keyword: str) -> str:
 
 def is_commercial(keyword: str) -> bool:
     """Checks if keyword has commercial intent."""
-    markers = [*COMMERCIAL_MARKERS, *get_project().commercial_markers.get("ru", ())]
+    markers = [*COMMERCIAL_MARKERS, *get_project().synonym_commercial_markers]
     return any(marker in keyword_key(keyword) for marker in markers)
 
 

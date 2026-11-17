@@ -3,7 +3,6 @@
 from llm_keywords_pipeline.core.config import (
     CATEGORIES_DIR,
     COMMERCIAL_MODIFIERS,
-    CONTENT_STANDARDS,
     PROJECT_ROOT,
     QUALITY_THRESHOLDS,
 )
@@ -40,7 +39,6 @@ __all__ = [
     "PROJECT_ROOT",
     "CATEGORIES_DIR",
     "QUALITY_THRESHOLDS",
-    "CONTENT_STANDARDS",
     "COMMERCIAL_MODIFIERS",
     # Keywords
     "KeywordMatcher",

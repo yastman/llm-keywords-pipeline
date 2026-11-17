@@ -9,16 +9,18 @@ config: no client rule applies; generic defaults stay in code.
     required_phrases = { uk = ["опт\\b"], ru = [] }        # regexes per language, FAIL if missing
     recommended_phrases = { uk = ["роздріб"] }              # regexes per language, WARNING if missing
     description_template = { uk = "{name} оптом від {brand}. {types}." }  # all_meta; else filler
+    type_skip_brands = ["rupes"]  # all_meta: entities containing one are not product types
     [slugs.ru]                    # category name -> slug; a name not listed = slugify(name)
     "Активная пена" = "aktivnaya-pena"
     [markers]
-    commercial = { ru = ["киев"] }                          # added to the generic commercial words
+    commercial = { uk = ["оптом"] }  # core.seo / analyze.category: added to generic words
     [synonyms]
     strip_terms = ["авто"]        # core.synonyms: dropped from a keyword before comparing
     stems = { "полиров" = "полир" }                         # core.synonyms: word prefix -> stem
     map = { "машина" = "авто" }   # analyze.duplicates: substring -> replacement
+    commercial_markers = ["киев"] # core.synonyms (RU): added to its generic commercial markers
     [blacklist]
-    brands = ["koch"]             # audit.ner_brands findings; all_meta skips them as types
+    brands = ["koch"]             # audit.ner_brands findings
     cities = true                 # city check of audit.ner_brands; false = off
     phrases_allow = ["широкий асортимент"]                  # strict phrases not checked
     [density.category_substrings.ru]
@@ -66,6 +68,8 @@ class ProjectConfig:
     synonym_strip_terms: tuple[str, ...] = ()
     synonym_stems: dict[str, str] = field(default_factory=dict)
     synonym_map: dict[str, str] = field(default_factory=dict)
+    synonym_commercial_markers: tuple[str, ...] = ()
+    meta_type_skip_brands: tuple[str, ...] = ()
     blacklist_brands: tuple[str, ...] = ()
     blacklist_cities: bool = True
     phrases_allow: tuple[str, ...] = ()
@@ -230,6 +234,13 @@ def load_project(root: Path) -> ProjectConfig:
         ),
         synonym_stems=_str_map(synonyms.get("stems", {}), "synonyms.stems", path),
         synonym_map=_str_map(synonyms.get("map", {}), "synonyms.map", path),
+        synonym_commercial_markers=_str_list(
+            synonyms.get("commercial_markers", []), "synonyms.commercial_markers", path
+        ),
+        meta_type_skip_brands=tuple(
+            b.lower()
+            for b in _str_list(meta.get("type_skip_brands", []), "meta.type_skip_brands", path)
+        ),
         blacklist_brands=tuple(
             b.lower() for b in _str_list(blacklist.get("brands", []), "blacklist.brands", path)
         ),

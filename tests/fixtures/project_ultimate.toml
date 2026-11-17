@@ -31,10 +31,11 @@
 "Очисники дисків" = "ochistiteli-diskov"
 "Очисники шин" = "ochistiteli-shin"
 
-[markers]
-commercial = { ru = ["киев", "украина"] }
+[meta]
+type_skip_brands = ["menzerna", "koch", "rupes", "sonax", "gyeon", "shiny", "carpro"]
 
 [synonyms]
+commercial_markers = ["киев", "украина"]
 strip_terms = ["авто", "автомобиля", "машины", "машина", "автомобиль", "в авто", "для авто"]
 stems = { "полиров" = "полир", "полирал" = "полир", "очистит" = "очист", "кузов" = "кузов" }
 
@@ -62,8 +63,6 @@ brands = [
     # cars
     "toyota", "тойота", "bmw", "бмв", "mercedes", "мерседес", "volkswagen", "фольксваген",
     "audi", "ауди", "ford", "форд",
-    # all_meta brand markers
-    "menzerna", "rupes", "gyeon", "shiny", "carpro",
 ]
 
 [density.category_substrings.ru]

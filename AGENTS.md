@@ -103,10 +103,12 @@ FAIL) and audit-water (0 PASS or WARNING, 1 BLOCKER). `validate.meta --all` scan
 root (`uv run --project <repo> ...`).
 
 Niche rules come only from `project.toml` in the data root: category slugs (else
-slugify), synonyms, extra commercial markers, brand blacklist, city check on/off,
-allowed strict phrases, density substrings, L2-forbidden patterns, content standards
-(Safety block, расход, warnings: off unless switched on) and the brief's editorial tone.
-No file means none of them applies; the generic UA/RU city check stays on. Keys and examples: the docstring of
+slugify), synonyms, extra commercial words (one key for the brief's intent split, another
+for `core.synonyms`), the audit brand blacklist, brands all_meta skips as product types,
+city check on/off, allowed strict phrases, density substrings, L2-forbidden patterns,
+content standards (Safety block, расход, warnings: off unless switched on) and the
+brief's editorial tone. Each module reads its own key. No file means none of them
+applies; the generic UA/RU city check stays on. Keys and examples: the docstring of
 `src/llm_keywords_pipeline/core/project.py`; `tests/fixtures/project_ultimate.toml` is a
 full car-care example.
 
