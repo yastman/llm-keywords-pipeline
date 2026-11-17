@@ -75,15 +75,14 @@ class TestValidateDescription:
         result = validate_description(desc, keywords)
 
         assert result["overall"] == "PASS"
-        assert result["checks"]["producer"]["passed"]
-        assert result["checks"]["wholesale"]["passed"]
+        assert result["checks"]["required_phrases"]["passed"]
 
-    def test_missing_producer(self):
+    def test_no_producer_phrase_required_without_config(self):
         desc = (
             "Хороший шампунь для машины, купить можно у нас в магазине с доставкой." + "а" * 50
         )  # length ok
         result = validate_description(desc)
-        assert not result["checks"]["producer"]["passed"]
+        assert result["checks"]["required_phrases"]["passed"]
 
 
 class TestValidateMetaFile:
@@ -180,8 +179,8 @@ class TestValidateMetaUK:
         assert result is not None
         assert result["overall"] in ["PASS", "WARNING"]
 
-    def test_validate_meta_uk_detects_missing_producer(self, tmp_path):
-        """UK validation detects missing 'від виробника' pattern."""
+    def test_validate_meta_uk_requires_no_producer_without_config(self, tmp_path):
+        """No project.toml [meta]: a UK description without 'від виробника' passes the check."""
         meta_file = tmp_path / "test_meta.json"
 
         desc = (
@@ -202,32 +201,7 @@ class TestValidateMetaUK:
         meta_file.write_text(json.dumps(content, ensure_ascii=False), encoding="utf-8")
 
         result = validate_meta_file(str(meta_file), lang="uk")
-        # Should fail because missing 'від виробника'
-        assert not result["description"]["checks"]["producer"]["passed"]
-
-    def test_validate_meta_uk_wholesale_pattern(self, tmp_path):
-        """UK validation detects 'опт і роздріб' pattern."""
-        meta_file = tmp_path / "test_meta.json"
-
-        desc = (
-            "Активна піна для безконтактної мийки від виробника Ultimate. "
-            "Опт і роздріб, доставка по Україні. Ефективне видалення бруду."
-        )
-
-        content = {
-            "slug": "test",
-            "language": "uk",
-            "meta": {
-                "title": "Активна піна для безконтактної мийки - купити в Україні | Ultimate",
-                "description": desc,
-            },
-            "h1": "Активна піна для безконтактної мийки",
-            "keywords_in_content": {"primary": ["активна піна"]},
-        }
-        meta_file.write_text(json.dumps(content, ensure_ascii=False), encoding="utf-8")
-
-        result = validate_meta_file(str(meta_file), lang="uk")
-        assert result["description"]["checks"]["wholesale"]["passed"]
+        assert result["description"]["checks"]["required_phrases"]["passed"]
 
 
 class TestValidateH1:

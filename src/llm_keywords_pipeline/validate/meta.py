@@ -10,8 +10,8 @@ validate_meta.py — Meta Tags Validation (v17.0)
 - Title без двокрапки
 - Description містить primary keyword
 - Description довжина 100-160 chars (core/config.py)
-- Description містить "виробника Ultimate" або "производителя Ultimate"
-- Description містить "опт"
+- Description містить фрази [meta] required_phrases з <data root>/project.toml
+  (немає файлу або мови = фраза не потрібна)
 
 Usage:
     uv run python -m llm_keywords_pipeline.validate.meta <meta.json>
@@ -34,6 +34,7 @@ from typing import Any
 
 from llm_keywords_pipeline.core.config import QUALITY_THRESHOLDS
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer, keyword_matches_text
+from llm_keywords_pipeline.core.project import get_project
 from llm_keywords_pipeline.validate.seo import detect_language
 
 # Fix Windows encoding is moved to main() block to avoid pytest conflicts
@@ -52,26 +53,6 @@ DESC_MAX_LENGTH = QUALITY_THRESHOLDS["description_max"]
 # Patterns to detect
 COLON_PATTERN = re.compile(r":\s")
 
-# RU patterns
-PRODUCER_PATTERNS_RU = [
-    r"от производителя",
-    r"производителя ultimate",
-    r"в интернет-магазине ultimate",
-]
-
-# UK patterns
-PRODUCER_PATTERNS_UK = [
-    r"від виробника",
-    r"виробника ultimate",
-    r"в інтернет-магазині ultimate",
-]
-
-
-# Wholesale patterns by language
-WHOLESALE_PATTERNS_RU = [r"опт\b", r"розница", r"оптом"]
-WHOLESALE_PATTERNS_UK = [r"опт\b", r"роздріб", r"оптом"]
-
-
 MARKETING_FLUFF = [
     r"без разводов",
     r"без розводів",
@@ -84,27 +65,6 @@ MARKETING_FLUFF = [
     r"лучшие цены",
     r"найкращі ціни",
 ]
-
-
-def get_validation_patterns(lang: str = "ru") -> dict[str, list[str]]:
-    """
-    Get validation patterns for specified language.
-
-    Args:
-        lang: 'ru' (default) or 'uk'
-
-    Returns:
-        Dict with 'producer' and 'wholesale' pattern lists
-    """
-    if lang == "uk":
-        return {
-            "producer": PRODUCER_PATTERNS_UK,
-            "wholesale": WHOLESALE_PATTERNS_UK,
-        }
-    return {
-        "producer": PRODUCER_PATTERNS_RU,
-        "wholesale": WHOLESALE_PATTERNS_RU,
-    }
 
 
 # =============================================================================
@@ -176,7 +136,7 @@ def validate_title(
     Validate meta title.
 
     Checks:
-    - Length TITLE_MIN_LENGTH-TITLE_MAX_LENGTH chars (before | Ultimate)
+    - Length TITLE_MIN_LENGTH-TITLE_MAX_LENGTH chars (before the | brand suffix)
     - No colon
     - Contains primary keyword
     - No marketing fluff
@@ -285,8 +245,7 @@ def validate_description(
     Checks:
     - Length DESC_MIN_LENGTH-DESC_MAX_LENGTH chars
     - Contains primary keyword
-    - Contains "виробника Ultimate" or equivalent
-    - Contains "опт" or wholesale indicator
+    - Contains each [meta] required_phrases regex of project.toml for lang
     - No marketing fluff
 
     Args:
@@ -297,8 +256,7 @@ def validate_description(
     checks: dict[str, Any] = {
         "length": {"passed": False, "message": ""},
         "primary_keyword": {"passed": False, "message": ""},
-        "producer": {"passed": False, "message": ""},
-        "wholesale": {"passed": False, "message": ""},
+        "required_phrases": {"passed": False, "message": ""},
         "no_fluff": {"passed": False, "message": ""},
     }
     results: dict[str, Any] = {
@@ -309,9 +267,6 @@ def validate_description(
     }
 
     desc_lower = description.lower()
-
-    # Get language-specific patterns
-    patterns = get_validation_patterns(lang)
 
     # 1. Length check
     desc_length = len(description)
@@ -352,45 +307,20 @@ def validate_description(
         results["checks"]["primary_keyword"]["passed"] = True
         results["checks"]["primary_keyword"]["message"] = "No keywords to check"
 
-    # 3. Producer check (use language-specific patterns)
-    producer_found = any(re.search(p, desc_lower) for p in patterns["producer"])
-    if producer_found:
-        producer_msg = (
-            "OK (contains 'від виробника')" if lang == "uk" else "OK (contains 'от производителя')"
+    # 3. Client phrases from project.toml [meta] required_phrases (none configured = none required)
+    required = get_project().required_phrases.get(lang, ())
+    missing = [p for p in required if not re.search(p, description, re.IGNORECASE)]
+    if missing:
+        results["checks"]["required_phrases"]["message"] = "Missing required phrases: " + ", ".join(
+            missing
         )
-        results["checks"]["producer"]["passed"] = True
-        results["checks"]["producer"]["message"] = producer_msg
     else:
-        missing_msg = (
-            "Missing 'від виробника Ultimate'"
-            if lang == "uk"
-            else "Missing 'от производителя Ultimate'"
+        results["checks"]["required_phrases"]["passed"] = True
+        results["checks"]["required_phrases"]["message"] = (
+            "OK (required phrases found)" if required else "OK (no required phrases configured)"
         )
-        results["checks"]["producer"]["message"] = missing_msg
 
-    # Check if this is a "shop" pattern (no Ultimate products) vs "producer" pattern
-    shop_pattern = (
-        r"в інтернет-магазині ultimate" if lang == "uk" else r"в интернет-магазине ultimate"
-    )
-    is_shop_pattern = bool(re.search(shop_pattern, desc_lower))
-
-    # 4. Wholesale check - only required for producer pattern (Ultimate products)
-    wholesale_found = any(re.search(p, desc_lower) for p in patterns["wholesale"])
-    if wholesale_found:
-        wholesale_msg = (
-            "OK (contains 'опт/роздріб')" if lang == "uk" else "OK (contains 'опт/розница')"
-        )
-        results["checks"]["wholesale"]["passed"] = True
-        results["checks"]["wholesale"]["message"] = wholesale_msg
-    elif is_shop_pattern:
-        # Shop pattern doesn't require wholesale
-        results["checks"]["wholesale"]["passed"] = True
-        results["checks"]["wholesale"]["message"] = "OK (shop pattern, wholesale not required)"
-    else:
-        missing_wholesale = "Missing 'Опт і роздріб'" if lang == "uk" else "Missing 'Опт и розница'"
-        results["checks"]["wholesale"]["message"] = missing_wholesale
-
-    # 5. No marketing fluff
+    # 4. No marketing fluff
     fluff_found = [p for p in MARKETING_FLUFF if re.search(p, desc_lower)]
     if not fluff_found:
         results["checks"]["no_fluff"]["passed"] = True
@@ -401,7 +331,8 @@ def validate_description(
     # Overall
     all_passed = all(c["passed"] for c in results["checks"].values())
     critical_passed = (
-        results["checks"]["primary_keyword"]["passed"] and results["checks"]["producer"]["passed"]
+        results["checks"]["primary_keyword"]["passed"]
+        and results["checks"]["required_phrases"]["passed"]
     )
 
     if all_passed:

@@ -39,7 +39,24 @@ def test_existing_meta_regenerated_with_force(tree):
     generated, _, _ = all_meta.process_categories(lang="ru", force=True)
     assert generated == 1
     meta = json.loads(tree.read_text(encoding="utf-8"))
-    assert meta["meta"]["title"] == "Тест ключ — купить, цены | Ultimate"
+    assert meta["meta"]["title"] == "Тест ключ — купить, цены"
+    assert "производител" not in meta["meta"]["description"]
+    assert "Опт" not in meta["meta"]["description"]
+
+
+@pytest.mark.parametrize(
+    ("lang", "title"),
+    [("ru", "Тест ключ — купить, цены | Genesis"), ("uk", "Тест ключ — купити, ціни | Genesis")],
+)
+def test_brand_suffix_from_project_toml(tree, lang, title):
+    root = tree.parents[3]
+    (root / "project.toml").write_text('[project]\nbrand = "Genesis"\n', encoding="utf-8")
+    generator = all_meta.generate_meta_ru if lang == "ru" else all_meta.generate_meta_uk
+
+    meta = generator(SLUG, {"name": "тест", "keywords": [{"keyword": "тест ключ"}]})
+
+    assert meta["meta"]["title"] == title
+    assert "Ultimate" not in meta["meta"]["description"]
 
 
 def test_missing_meta_generated_without_force(tree):

@@ -1,6 +1,5 @@
 """Per-project config <data root>/project.toml (core.project) and the structure CSV path from it."""
 
-import importlib
 import json
 import os
 import subprocess
@@ -8,11 +7,9 @@ import sys
 
 import pytest
 
-from llm_keywords_pipeline.core import config
 from llm_keywords_pipeline.core.project import (
     ProjectConfig,
     ProjectConfigError,
-    get_project,
     load_project,
 )
 
@@ -54,6 +51,55 @@ def test_broken_file_names_the_file(tmp_path):
         load_project(tmp_path)
 
 
+def test_meta_required_phrases_per_language(tmp_path):
+    (tmp_path / "project.toml").write_text(
+        '[meta]\nrequired_phrases = { uk = ["опт\\\\b", "дистриб"], ru = [] }\n',
+        encoding="utf-8",
+    )
+
+    project = load_project(tmp_path)
+
+    assert project.required_phrases == {"uk": ("опт\\b", "дистриб"), "ru": ()}
+
+
+def test_no_meta_section_requires_no_phrase(tmp_path):
+    (tmp_path / "project.toml").write_text('[project]\nbrand = "X"\n', encoding="utf-8")
+
+    assert load_project(tmp_path).required_phrases == {}
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "[project]\nbrand = 1\n",
+        "[project]\nsite = []\n",
+        '[project]\nlanguages = "uk"\n',
+        "[project]\nlanguages = [1]\n",
+        "[paths]\nsemantics_csv = 5\n",
+        "project = 1\n",
+        'meta = "x"\n',
+        '[meta]\nrequired_phrases = ["опт"]\n',
+        '[meta]\nrequired_phrases = { uk = "опт" }\n',
+        "[meta]\nrequired_phrases = { uk = [1] }\n",
+        '[meta]\nrequired_phrases = { uk = ["(опт"] }\n',
+    ],
+)
+def test_wrong_type_names_the_file(tmp_path, body):
+    path = tmp_path / "project.toml"
+    path.write_text(body, encoding="utf-8")
+
+    with pytest.raises(ProjectConfigError, match=str(path)):
+        load_project(tmp_path)
+
+
+def test_non_utf8_file_names_the_file(tmp_path):
+    path = tmp_path / "project.toml"
+    path.write_bytes('[project]\nbrand = "Бренд"\n'.encode("cp1251"))
+
+    with pytest.raises(ProjectConfigError, match=str(path)):
+        load_project(tmp_path)
+
+
 def test_load_is_cached_per_root(tmp_path):
     assert load_project(tmp_path) is load_project(tmp_path)
 
@@ -73,10 +119,25 @@ def test_load_is_cached_per_root(tmp_path):
         ),
     ],
 )
-def test_unset_semantics_csv_keeps_old_name(module_name, legacy):
-    assert get_project().semantics_csv is None
-    module = importlib.import_module(module_name)
-    assert module.SEMANTICS_CSV == config.PROJECT_ROOT / legacy
+def test_unset_semantics_csv_keeps_old_name(tmp_path, module_name, legacy):
+    # Empty data root: the repo's own files never decide the result.
+    code = (
+        "import importlib, sys\n"
+        "from llm_keywords_pipeline.core.project import get_project\n"
+        "assert get_project().semantics_csv is None\n"
+        "print(importlib.import_module(sys.argv[1]).SEMANTICS_CSV)\n"
+    )
+    env = {**os.environ, "LLM_KEYWORDS_PROJECT_ROOT": str(tmp_path)}
+
+    out = subprocess.run(
+        [sys.executable, "-c", code, module_name],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+
+    assert out.strip() == str(tmp_path.resolve() / legacy)
 
 
 def test_every_module_reads_semantics_csv_from_project_toml(tmp_path):
