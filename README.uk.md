@@ -155,9 +155,9 @@ LLM може швидко написати чернетку, але пайпла
 
 Перевірки враховують українську та російську мову: tokenization, stopwords, stemming,
 lemmatization і morphology-aware matching, а не лише exact string match. Спільний
-токенізатор (`core/text`) і water audit для української лишають слова з апострофом
-(`м'який`, з `'`, `’` або `ʼ`) одним токеном; токени лем у check-seo і density та
-matching ключів (coverage у validate.content) розбивають їх по апострофу. NER і
+токенізатор (`core/text`), water audit для української та matching лем у check-seo,
+density і coverage ключів (validate.content) лишають слова з апострофом (`м'який`,
+з `'`, `’` або `ʼ`) одним токеном і зводять апостроф до `'`. NER і
 морфологія natasha працюють лише для російської; для української audit-brands
 пропускає NER, а water audit лематизує через pymorphy3.
 

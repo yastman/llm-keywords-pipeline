@@ -151,9 +151,9 @@ but the pipeline verifies coverage, structure, and over-optimization.
 
 The code handles Russian and Ukrainian text with language-aware tokenization,
 stopwords, stemming, lemmatization, and morphology-aware keyword matching. The shared
-tokenizer (`core/text`) and the Ukrainian water audit keep apostrophe words (`м'який`,
-with `'`, `’` or `ʼ`) as one token; check-seo and density lemma tokens and keyword
-matching (validate.content coverage) split them at the apostrophe. natasha NER and
+tokenizer (`core/text`), the Ukrainian water audit, and the lemma matching of check-seo,
+density and keyword coverage (validate.content) keep apostrophe words (`м'який`, with
+`'`, `’` or `ʼ`) as one token, normalised to `'`. natasha NER and
 morphology run only for Russian; for Ukrainian, audit-brands skips NER and the water audit
 lemmatizes with pymorphy3.
 
