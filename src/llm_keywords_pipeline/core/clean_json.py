@@ -39,6 +39,15 @@ def keyword_entries(data: dict[str, Any]) -> list[dict]:
     return [*groups.get("primary", []), *rest]
 
 
+def refresh_stats_totals(data: dict[str, Any]) -> None:
+    """Recompute ``stats.total_volume`` as the sum of keyword volumes (as restore_csv writes it).
+
+    A file without a ``stats`` dict gets none added.
+    """
+    if isinstance(data.get("stats"), dict):
+        data["stats"]["total_volume"] = sum(kw.get("volume", 0) for kw in keyword_entries(data))
+
+
 def set_keyword_groups(data: dict[str, Any], groups: dict[str, list[dict]]) -> None:
     """Write groups back in the shape keyword_groups read: flat list or dict of groups."""
     if list(groups) == [FLAT_GROUP]:

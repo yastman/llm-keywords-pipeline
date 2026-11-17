@@ -147,6 +147,41 @@ class TestSyncCategory:
         assert clean_file.read_text() == original_content
 
 
+class TestSyncStatsTotals:
+    """stats totals follow the synced keyword entries."""
+
+    def _sync(self, tmp_path, data, rows):
+        cat_dir = tmp_path / "categories" / "test-cat" / "data"
+        cat_dir.mkdir(parents=True)
+        clean_file = cat_dir / "test-cat_clean.json"
+        clean_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        sync_category("test-cat", rows, tmp_path / "categories", dry_run=False)
+        return json.loads(clean_file.read_text(encoding="utf-8"))
+
+    def test_grouped_keywords_recompute_total_volume(self, tmp_path):
+        data = {
+            "id": "test-cat",
+            "keywords": {
+                "primary": [{"keyword": "a", "volume": 10}],
+                "secondary": [{"keyword": "b", "volume": 5}, {"keyword": "gone", "volume": 7}],
+            },
+            "stats": {"before": 3, "after": 3, "total_volume": 22},
+        }
+        rows = [
+            {"keyword": "a", "volume": 100, "type": "keyword", "use_in": ""},
+            {"keyword": "b", "volume": 5, "type": "keyword", "use_in": ""},
+            {"keyword": "new", "volume": 30, "type": "keyword", "use_in": ""},
+            {"keyword": "syn", "volume": 1000, "type": "synonym", "use_in": ""},
+        ]
+        result = self._sync(tmp_path, data, rows)
+        assert result["stats"] == {"before": 3, "after": 3, "total_volume": 135}
+
+    def test_no_stats_not_added(self, tmp_path):
+        data = {"id": "test-cat", "keywords": {"primary": [{"keyword": "a", "volume": 10}]}}
+        rows = [{"keyword": "a", "volume": 100, "type": "keyword", "use_in": ""}]
+        assert "stats" not in self._sync(tmp_path, data, rows)
+
+
 class TestLoadMasterCsv:
     """Test loading master CSV."""
 
