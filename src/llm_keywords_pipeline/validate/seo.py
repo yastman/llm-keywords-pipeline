@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
-from llm_keywords_pipeline.core.text import extract_h2s
+from llm_keywords_pipeline.core.text import _APOSTROPHES, extract_h2s
 
 
 def detect_language(file_path: str) -> str:
@@ -70,10 +70,12 @@ def get_keyword_variations(keyword: str) -> list[str]:
 
 
 def get_token_lemmas(text: str, lang: str = "ru") -> list[str]:
-    """Токены текста по порядку: леммы кириллических слов длиннее 2 букв и латиница/цифры ([a-z0-9]+) как есть."""
+    """Токены текста по порядку: леммы кириллических слов длиннее 2 букв (UK м'який — одно слово) и латиница/цифры ([a-z0-9]+) как есть."""
     morph = MorphAnalyzer("uk" if lang == "uk" else "ru")
     tokens = []
-    for word in re.findall(r"[а-яёїієґ]+|[a-z0-9]+", text.lower()):
+    for word in re.findall(
+        r"[а-яёїієґ]+(?:'[а-яёїієґ]+)*|[a-z0-9]+", text.lower().translate(_APOSTROPHES)
+    ):
         if word.isascii():
             tokens.append(word)
         elif len(word) > 2:

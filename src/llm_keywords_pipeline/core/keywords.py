@@ -26,6 +26,11 @@ import warnings
 from functools import lru_cache
 from typing import Literal
 
+from llm_keywords_pipeline.core.text import _APOSTROPHES
+
+# Letters only (no digits); an apostrophe between letters keeps a UK word whole (м'який), as core/text.split_words
+_LETTER_WORD_RE = re.compile(r"[а-яёїієґa-z]+(?:'[а-яёїієґa-z]+)*")
+
 # =============================================================================
 # Constants (SSOT - Single Source of Truth)
 # =============================================================================
@@ -208,7 +213,7 @@ class MorphAnalyzer:
 
         "щётки для мытья машины" → ["щётка", "мытьё", "машина"]
         """
-        words = re.findall(r"[а-яёїієґa-z]+", phrase.lower())
+        words = _LETTER_WORD_RE.findall(phrase.lower().translate(_APOSTROPHES))
         lemmas = []
         for w in words:
             if len(w) > 2:
@@ -388,7 +393,7 @@ class KeywordMatcher:
 
         # Strategy 2: Compare stems (works with Snowball fallback)
         word_stem = self.morph.get_lemma(word)
-        text_words = re.findall(r"[а-яёїієґa-z]+", text_lower)
+        text_words = _LETTER_WORD_RE.findall(text_lower.translate(_APOSTROPHES))
 
         for text_word in text_words:
             text_stem = self.morph.get_lemma(text_word)
@@ -413,7 +418,7 @@ class KeywordMatcher:
             return (False, None)
 
         # Tokenize text
-        text_words = re.findall(r"[а-яёїієґa-z]+", text.lower())
+        text_words = _LETTER_WORD_RE.findall(text.lower().translate(_APOSTROPHES))
         text_lemmas = [self.morph.get_lemma(w) for w in text_words]
 
         # Find sequence with gap tolerance (max 2 words between)
