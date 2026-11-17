@@ -94,6 +94,10 @@ class TestValidateNoDuplicates:
         assert len(errors) == 1
         assert "a" in errors[0]
 
+    def test_finds_case_yo_apostrophe_variants(self):
+        rows = [{"keyword": "Пам’ять Ёлки"}, {"keyword": "пам'ять елки"}]
+        assert len(validate_no_duplicates(rows)) == 1
+
 
 class TestValidateTypes:
     """Test type field validation."""

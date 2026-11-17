@@ -12,3 +12,14 @@ def test_load_categories_csv_reads_utf8_bom(tmp_path):
 
     assert list(data) == ["key one"]
     assert data["key one"][0]["volume"] == 10
+
+
+def test_load_categories_csv_groups_yo_apostrophe_variants(tmp_path):
+    """'Пам’ять Ёлки' and 'пам'ять елки' land under one key; rows keep their form."""
+    path = tmp_path / "cats.csv"
+    path.write_text("keyword,volume\nПам’ять Ёлки,1\nпам'ять елки,2\n", encoding="utf-8")
+
+    data = load_categories_csv(path)
+
+    assert list(data) == ["пам'ять елки"]
+    assert [r["keyword"] for r in data["пам'ять елки"]] == ["Пам’ять Ёлки", "пам'ять елки"]

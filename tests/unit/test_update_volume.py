@@ -116,3 +116,9 @@ class TestStatsTotalVolume:
     def test_no_stats_not_added(self, tmp_path):
         data = {"keywords": [{"keyword": "a", "volume": 10}]}
         assert "stats" not in self._run(tmp_path, data, {"a": 20})
+
+    def test_case_yo_apostrophe_variants_match(self, tmp_path):
+        """CSV 'пам'ять елки' updates 'Пам’ять Ёлки'; the keyword stays as written."""
+        data = {"keywords": [{"keyword": "Пам’ять Ёлки", "volume": 1}]}
+        result = self._run(tmp_path, data, {"пам'ять елки": 30})
+        assert result["keywords"][0] == {"keyword": "Пам’ять Ёлки", "volume": 30}

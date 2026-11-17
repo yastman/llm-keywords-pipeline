@@ -19,6 +19,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT, TASKS_DIR
+from llm_keywords_pipeline.core.coverage import keyword_key
 
 # =============================================================================
 # Configuration
@@ -42,13 +43,13 @@ COMMERCIAL_MARKERS = ["купить", "цена", "отзывы", "заказа�
 def normalize_keyword(keyword: str) -> str:
     """
     Creates a canonical fingerprint of the keyword for comparison.
-    1. Lowercase
+    1. keyword_key (casefold, NFKC, apostrophes, ё->е, spaces)
     2. Remove 'avto' related words
     3. Remove stop words
     4. Stem common prefixes (polir, ochist)
     5. Sort words
     """
-    text = keyword.lower()
+    text = keyword_key(keyword)
 
     # 1. Remove specific auto terms
     # Sort by length desc to handle multi-word phrases first
@@ -84,7 +85,7 @@ def normalize_keyword(keyword: str) -> str:
 
 def is_commercial(keyword: str) -> bool:
     """Checks if keyword has commercial intent."""
-    return any(marker in keyword.lower() for marker in COMMERCIAL_MARKERS)
+    return any(marker in keyword_key(keyword) for marker in COMMERCIAL_MARKERS)
 
 
 # =============================================================================
@@ -126,7 +127,7 @@ def analyze_category(category_path: Path) -> dict | None:
     for k in keywords_flat:
         norm = normalize_keyword(k["keyword"])
         if not norm:  # If empty (e.g. just "avto"), use original
-            norm = k["keyword"].lower()
+            norm = keyword_key(k["keyword"])
         clusters[norm].append(k)
 
     proposed_changes = []

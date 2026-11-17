@@ -4,6 +4,9 @@ from llm_keywords_pipeline.core.synonyms import analyze_category, is_commercial,
 
 
 class TestNormalizeKeyword:
+    def test_case_yo_apostrophe_variants_equal(self):
+        assert normalize_keyword("Пам’ять Ёлки") == normalize_keyword("пам'ять елки")
+
     def test_basic_normalization(self):
         # "автошампунь для авто" -> remove "для", "авто" -> "автошампунь"
         kw = "автошампунь для авто"
