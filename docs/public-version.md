@@ -11,7 +11,7 @@ operational data.
 - LLM prompt templates under `prompts/` as reference material.
 - Public research workflow documentation under `docs/research-workflow.md`.
 - Local-only Docker Compose demo for MariaDB/Adminer.
-- GitHub Actions CI for linting and tests.
+- Local pre-commit/pre-push git hooks for linting, type checks, and tests.
 
 ## Omitted
 

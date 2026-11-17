@@ -9,9 +9,6 @@
 **Перетворює сирий список ключів на SEO-групи, LLM-ready briefs і вимірювані перевірки тексту: coverage, density, переспам, вода та нудота.**
 
 <p>
-  <a href="https://github.com/yastman/llm-keywords-pipeline/actions/workflows/ci.yml">
-    <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/yastman/llm-keywords-pipeline/ci.yml?branch=main&label=tests&style=for-the-badge">
-  </a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white">
   <img alt="uv" src="https://img.shields.io/badge/package%20manager-uv-6E56CF?style=for-the-badge">
   <img alt="Ruff" src="https://img.shields.io/badge/lint-ruff-46A758?style=for-the-badge">
@@ -225,7 +222,7 @@ deployment recipe.
 | Документ | Що всередині |
 | --- | --- |
 | [Architecture](docs/architecture.md) | Package map, workflow boundaries і supported public surface. |
-| [Testing](docs/testing.md) | Test tiers, default commands, CI parity, data-required skips. |
+| [Testing](docs/testing.md) | Test tiers, default commands, local git hooks, data-required skips. |
 | [Research Workflow](docs/research-workflow.md) | Як clustered keywords перетворювались на `RESEARCH_PROMPT.md`, `RESEARCH_DATA.md` і content brief. |
 | [Public Version](docs/public-version.md) | Що включено, що виключено і навіщо залишені prompts. |
 | [Prompt Templates](prompts/README.md) | Prepare/produce/deliver LLM workflow templates. |
