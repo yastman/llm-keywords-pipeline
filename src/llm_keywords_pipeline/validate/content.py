@@ -67,15 +67,6 @@ try:
 except ImportError:
     check_blacklist = None
 
-# Grammar check (language_tool_python)
-try:
-    import language_tool_python
-
-    GRAMMAR_AVAILABLE = True
-except ImportError:
-    language_tool_python = None
-    GRAMMAR_AVAILABLE = False
-
 # MD-Linting (pymarkdownlnt)
 try:
     from pymarkdown.api import PyMarkdownApi
@@ -745,62 +736,6 @@ def check_content_standards(text: str, lang: str = "ru") -> dict:
     return results
 
 
-def check_grammar(text: str, lang: str = "ru") -> dict:
-    """
-    Check grammar using language_tool_python (uk-UA for lang 'uk', else ru-RU).
-
-    WARNING only (not blocker) - grammar issues don't stop workflow.
-
-    Returns:
-        Dict with errors list and overall status
-    """
-    results = {"errors": [], "error_count": 0, "overall": "UNKNOWN", "note": None}
-
-    if not GRAMMAR_AVAILABLE:
-        results["note"] = "Grammar check unavailable (install: uv add language-tool-python)"
-        results["overall"] = "SKIPPED"
-        return results
-
-    try:
-        tool = language_tool_python.LanguageTool("uk-UA" if lang == "uk" else "ru-RU")
-        try:
-            # Clean markdown for grammar check
-            clean_text = clean_markdown(text)
-
-            # Check grammar
-            matches = tool.check(clean_text)
-        finally:
-            tool.close()
-
-        if not matches:
-            results["overall"] = "PASS"
-            return results
-
-        # Parse errors (limit to 10)
-        for match in matches[:10]:
-            results["errors"].append(
-                {
-                    "message": match.message,
-                    "context": match.context[:80] if match.context else "",
-                    "rule": match.ruleId,
-                    "suggestions": match.replacements[:3] if match.replacements else [],
-                }
-            )
-
-        results["error_count"] = len(matches)
-
-        if len(matches) > 5:
-            results["overall"] = "WARNING"
-        else:
-            results["overall"] = "PASS"
-
-    except Exception as e:
-        results["note"] = f"Grammar check error: {str(e)}"
-        results["overall"] = "ERROR"
-
-    return results
-
-
 def check_markdown_lint(file_path: str) -> dict:
     """
     Check Markdown structure using pymarkdownlnt.
@@ -931,7 +866,7 @@ def validate_content(
         coverage = check_keyword_coverage(text, all_keywords or [], lang=lang)
 
     if mode == "seo":
-        # SEO mode: don't enforce quality metrics, grammar, md-lint; keep coverage as INFO.
+        # SEO mode: don't enforce quality metrics, md-lint; keep coverage as INFO.
         if "core" in coverage:
             coverage["core"]["target"] = None
             coverage["core"]["passed"] = True
@@ -987,7 +922,6 @@ def validate_content(
     if mode == "seo":
         length["status"] = "INFO"
         length["note"] = "SEO mode: length is informational only."
-        grammar = {"overall": "SKIPPED", "note": "SEO mode: grammar check disabled."}
         md_lint = {
             "overall": "SKIPPED",
             "note": "SEO mode: markdown lint disabled.",
@@ -995,7 +929,6 @@ def validate_content(
             "violation_count": 0,
         }
     else:
-        grammar = check_grammar(text, lang=lang)
         md_lint = check_markdown_lint(file_path)
 
     # Determine overall status
@@ -1028,10 +961,10 @@ def validate_content(
             warnings.append("blacklist")
         if length["status"].startswith("WARNING"):
             warnings.append("length")
-        if grammar["overall"] == "WARNING":
-            warnings.append("grammar")
         if md_lint["overall"] == "WARNING":
             warnings.append("md_lint")
+        elif md_lint["overall"] == "SKIPPED":
+            warnings.append("md_lint: skipped")
         # FIX v8.5: Add content standards warnings
         if content_standards["overall"] == "WARNING":
             warnings.append("content_standards")
@@ -1060,7 +993,6 @@ def validate_content(
             "blacklist": blacklist,
             "length": length,
             "content_standards": content_standards,  # FIX v8.5
-            "grammar": grammar,
             "md_lint": md_lint,
         },
         "summary": {"overall": overall, "blockers": blockers, "warnings": warnings},
@@ -1192,27 +1124,6 @@ def print_results(results: dict):
         else:
             print(f"   Target: {rec_min}-{rec_max} words")
     print(f"   Status: {length['status']}")
-    print()
-
-    # Grammar
-    gram = checks["grammar"]
-    if gram["overall"] == "SKIPPED":
-        icon = "⏭️"
-    elif gram["overall"] == "PASS":
-        icon = "✅"
-    elif gram["overall"] == "WARNING":
-        icon = "⚠️"
-    else:
-        icon = "ℹ️"
-    print(f"{icon} GRAMMAR:")
-    if gram.get("note"):
-        print(f"   {gram['note']}")
-    elif gram["error_count"] > 0:
-        print(f"   Found {gram['error_count']} potential issues")
-        for err in gram["errors"][:3]:
-            print(f"   - {err['message']}")
-    else:
-        print("   No issues found")
     print()
 
     # MD-Lint

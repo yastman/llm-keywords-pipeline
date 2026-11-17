@@ -151,7 +151,7 @@ stopwords, stemming, lemmatization, and morphology-aware keyword matching.
 | Research prompt workflow | Turns clustered keywords/entities/product insights into a research prompt contract; public docs preserve `RESEARCH_PROMPT.md` → `RESEARCH_DATA.md` as the brief workflow. |
 | Content validation | Checks H1, intro, headings, keyword coverage, meta sync, and language-specific rules. |
 | Density and spam | Finds exact, partial, stem, and substring overuse with warning/spam thresholds. |
-| Water and nausea | Calculates Advego-like water, classic nausea, academic nausea, and lemma repetition. |
+| Water and nausea | Calculates water (stop-word share, calibrated), classic nausea (√ of the top lemma frequency), academic nausea (top lemma's share of repeated significant lemmas), and lemma repetition. |
 | Generation | Produces meta artifacts, SQL exports, semantic review files, catalog JSON, and checklists. |
 | Repair and sync | Updates volumes, restores clean JSON from CSV, merges master keyword data, and fixes ordering or misplaced terms. |
 
