@@ -1,5 +1,6 @@
 # Compatibility snapshot for pip-based environments.
 # The canonical dependency source is pyproject.toml + uv.lock.
+# NLP checks (morphology, water/nausea, NER) need the nlp group: run `uv sync`.
 
 pyyaml>=6.0
 tqdm>=4.67
@@ -8,4 +9,3 @@ toml>=0.10
 pandas>=2.2
 markdown>=3.8
 openpyxl>=3.1
-setuptools>=84.1.0

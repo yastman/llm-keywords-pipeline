@@ -22,6 +22,7 @@ Usage:
 from __future__ import annotations
 
 import re
+import warnings
 from functools import lru_cache
 from typing import Literal
 
@@ -100,7 +101,8 @@ class MorphAnalyzer:
     """
     Singleton морфологический анализатор.
 
-    Uses pymorphy3 if available, otherwise pymorphy2, then Snowball fallback.
+    Uses pymorphy3. Without pymorphy3 or its dictionary for `lang` it warns once and
+    falls back to the Russian Snowball stemmer (RU-only).
     """
 
     _instances: dict[str, MorphAnalyzer] = {}
@@ -118,37 +120,32 @@ class MorphAnalyzer:
         self._stemmer = None
         self._use_pymorphy = False
 
-        # Try pymorphy3 first
         try:
             import pymorphy3
-
-            # `lang="uk"` requires Ukrainian dictionaries; handle missing dicts gracefully.
-            self._morph = pymorphy3.MorphAnalyzer(lang=lang)
-            self._use_pymorphy = True
-        except Exception:
-            pass
-
-        # Fallback to pymorphy2
-        if not self._use_pymorphy:
+        except ImportError:
+            missing = "pymorphy3"
+        else:
             try:
-                import pymorphy2
-
-                # `lang="uk"` requires pymorphy2-dicts-uk; if not installed, this may raise.
-                self._morph = pymorphy2.MorphAnalyzer(lang=lang)
+                self._morph = pymorphy3.MorphAnalyzer(lang=lang)
                 self._use_pymorphy = True
-            except Exception:
-                # Can fail due to missing dictionaries (e.g. uk) or pymorphy2 incompatibilities on newer Python.
-                pass
+                return
+            except ValueError:
+                missing = f"pymorphy3-dicts-{lang}"
 
-        # Fallback to Snowball
-        if not self._use_pymorphy:
-            try:
-                from snowballstemmer import stemmer
+        try:
+            from snowballstemmer import stemmer
 
-                # SnowballStemmer doesn't support Ukrainian; keep Russian as the best-effort fallback.
-                self._stemmer = stemmer("russian")
-            except ImportError:
-                pass
+            self._stemmer = stemmer("russian")
+            fallback = "the Russian Snowball stemmer"
+        except ImportError:
+            fallback = "suffix stripping"
+        message = (
+            f"MorphAnalyzer({lang!r}): {missing} is not installed, falling back to {fallback}; "
+            "run `uv sync` (nlp group) to get real lemmas."
+        )
+        if lang != "ru":
+            message += f" The fallback is RU-only, so {lang!r} lemmas will be wrong."
+        warnings.warn(message, RuntimeWarning, stacklevel=3)
 
     @lru_cache(maxsize=10000)  # noqa: B019 - singleton, no memory leak
     def get_lemma(self, word: str) -> str:

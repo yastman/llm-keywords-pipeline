@@ -158,19 +158,25 @@ class TestKeywordMatcherUK:
     def test_uk_keyword_match_declension_shchitka(self):
         """UK: 'щітка для миття' should match 'щітку для миття'."""
         matcher = KeywordMatcher(lang="uk")
-        found, form = matcher.find_in_text("щітка для миття", "Використовуйте щітку для миття авто.")
+        found, form = matcher.find_in_text(
+            "щітка для миття", "Використовуйте щітку для миття авто."
+        )
         assert found, "Should match declined form щітку"
 
     def test_uk_keyword_match_plural_shampun(self):
         """UK: 'шампунь для авто' should match 'шампуні для авто'."""
         matcher = KeywordMatcher(lang="uk")
-        found, form = matcher.find_in_text("шампунь для авто", "Купуйте шампуні для авто в нашому магазині.")
+        found, form = matcher.find_in_text(
+            "шампунь для авто", "Купуйте шампуні для авто в нашому магазині."
+        )
         assert found, "Should match plural form шампуні"
 
     def test_uk_keyword_match_instrumental_pina(self):
         """UK: 'піна' should match 'піною'."""
         matcher = KeywordMatcher(lang="uk")
-        found, form = matcher.find_in_text("активна піна", "Миття активною піною дає кращий результат.")
+        found, form = matcher.find_in_text(
+            "активна піна", "Миття активною піною дає кращий результат."
+        )
         assert found, "Should match instrumental form піною"
 
     def test_uk_keyword_single_word_accusative(self):
@@ -327,7 +333,9 @@ class TestCoverageChecker:
         """check_split separates core and commercial."""
         checker = CoverageChecker("ru")
         result = checker.check_split(
-            core_keywords=["щётка", "губка"], commercial_keywords=["купить", "цена"], text="используйте щётку для мытья"
+            core_keywords=["щётка", "губка"],
+            commercial_keywords=["купить", "цена"],
+            text="используйте щётку для мытья",
         )
         assert result["core"]["found"] == 1
         assert result["commercial"]["found"] == 0
@@ -432,3 +440,57 @@ class TestMorphAnalyzerSurnFilter:
         # Иванов as noun (not surname Ivanov)
         result = morph.get_lemma("шампунь")
         assert result == "шампунь"
+
+
+class TestMorphAnalyzerFallbackWarning:
+    """Missing pymorphy3 or its dictionary must warn, not switch silently."""
+
+    @pytest.fixture(autouse=True)
+    def _fresh_instances(self, monkeypatch):
+        monkeypatch.setattr(MorphAnalyzer, "_instances", {})
+
+    def test_missing_pymorphy3_warns(self, monkeypatch):
+        import sys
+
+        monkeypatch.setitem(sys.modules, "pymorphy3", None)
+        with pytest.warns(RuntimeWarning) as record:
+            morph = MorphAnalyzer("ru")
+        assert len(record) == 1
+        text = str(record[0].message)
+        assert "pymorphy3 is not installed" in text
+        assert "uv sync" in text
+        assert "RU-only" not in text
+        assert morph.backend == "snowball"
+
+    def test_missing_uk_dicts_warns_ru_only(self, monkeypatch):
+        import pymorphy3
+
+        def no_dict(lang):
+            raise ValueError(f"Can't find a dictionary for language {lang!r}")
+
+        monkeypatch.setattr(pymorphy3, "MorphAnalyzer", no_dict)
+        with pytest.warns(RuntimeWarning) as record:
+            morph = MorphAnalyzer("uk")
+        assert len(record) == 1
+        text = str(record[0].message)
+        assert "pymorphy3-dicts-uk" in text
+        assert "uv sync" in text
+        assert "RU-only" in text
+        assert morph.backend == "snowball"
+
+    def test_missing_snowball_too(self, monkeypatch):
+        import sys
+
+        monkeypatch.setitem(sys.modules, "pymorphy3", None)
+        monkeypatch.setitem(sys.modules, "snowballstemmer", None)
+        with pytest.warns(RuntimeWarning, match="suffix stripping"):
+            morph = MorphAnalyzer("ru")
+        assert morph.backend == "fallback"
+
+    def test_installed_no_warning(self):
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            morph = MorphAnalyzer("uk")
+        assert morph.backend == "pymorphy"
