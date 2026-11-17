@@ -37,6 +37,18 @@ def test_cleanup_misplaced_refreshes_stats(tmp_path, monkeypatch):
     assert _read(path)["stats"] == {"before": 9, "after": 2, "total_volume": 125}
 
 
+def test_stats_count_extra_group_and_missing_volume(tmp_path, monkeypatch):
+    monkeypatch.setattr(cleanup_misplaced, "CATEGORIES_DIR", tmp_path)
+    keywords = _keywords()
+    keywords["extra"] = [{"keyword": "epsilon", "volume": 7}, {"keyword": "zeta"}]
+    path = _write(tmp_path, "cat", {"keywords": keywords, "stats": dict(STATS)})
+
+    assert cleanup_misplaced.remove_keywords_from_category("cat", ["beta"]) == 1
+
+    # every list group counts; an entry without volume counts as 0
+    assert _read(path)["stats"] == {"before": 9, "after": 4, "total_volume": 132}
+
+
 def test_raw_clean_fix_refreshes_stats(tmp_path, monkeypatch):
     monkeypatch.setattr(raw_clean, "CATEGORIES_DIR", tmp_path)
     data = {"keywords": _keywords(), "stats": dict(STATS)}
