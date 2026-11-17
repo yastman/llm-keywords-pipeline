@@ -286,3 +286,70 @@ class TestMainLanguageFromPath:
         results = self._run_main(monkeypatch, capsys, ["--all", "--lang", "ru"])
 
         assert {r["file"]: r["lang"] for r in results} == {"uk/categories/x/meta/x_meta.json": "ru"}
+
+
+class TestMainLanguagePrecedence:
+    """Language precedence: --lang > meta JSON "language" > path > ru."""
+
+    @staticmethod
+    def _write_meta(root: Path, rel_dir: str, language: str) -> str:
+        meta_dir = root / rel_dir / "x" / "meta"
+        meta_dir.mkdir(parents=True)
+        meta_file = meta_dir / "x_meta.json"
+        meta_file.write_text(
+            json.dumps(
+                {"language": language, "h1": "x", "meta": {"title": "x", "description": "x"}}
+            ),
+            encoding="utf-8",
+        )
+        return str(meta_file.relative_to(root))
+
+    @staticmethod
+    def _run_main(monkeypatch, capsys, argv: list[str]) -> list[dict]:
+        from llm_keywords_pipeline.validate import meta
+
+        monkeypatch.setattr("sys.argv", ["meta", *argv, "--json"])
+        with pytest.raises(SystemExit):
+            meta.main()
+        out = json.loads(capsys.readouterr().out)
+        return out if isinstance(out, list) else [out]
+
+    def test_explicit_lang_wins_over_json_language_single(self, tmp_path, monkeypatch, capsys):
+        rel = self._write_meta(tmp_path, "categories", "uk")
+        monkeypatch.chdir(tmp_path)
+
+        [result] = self._run_main(monkeypatch, capsys, [rel, "--lang", "ru"])
+
+        assert result["lang"] == "ru"
+
+    def test_explicit_lang_wins_over_json_language_all(self, tmp_path, monkeypatch, capsys):
+        self._write_meta(tmp_path, "categories", "uk")
+        monkeypatch.chdir(tmp_path)
+
+        [result] = self._run_main(monkeypatch, capsys, ["--all", "--lang", "ru"])
+
+        assert result["lang"] == "ru"
+
+    def test_json_language_wins_over_ru_path(self, tmp_path, monkeypatch, capsys):
+        rel = self._write_meta(tmp_path, "categories", "uk")
+        monkeypatch.chdir(tmp_path)
+
+        [result] = self._run_main(monkeypatch, capsys, [rel])
+
+        assert result["lang"] == "uk"
+
+    def test_json_language_wins_over_uk_path(self, tmp_path, monkeypatch, capsys):
+        rel = self._write_meta(tmp_path, "uk/categories", "ru")
+        monkeypatch.chdir(tmp_path)
+
+        [result] = self._run_main(monkeypatch, capsys, [rel])
+
+        assert result["lang"] == "ru"
+
+    def test_json_language_wins_over_ru_path_all(self, tmp_path, monkeypatch, capsys):
+        self._write_meta(tmp_path, "categories", "uk")
+        monkeypatch.chdir(tmp_path)
+
+        [result] = self._run_main(monkeypatch, capsys, ["--all"])
+
+        assert result["lang"] == "uk"

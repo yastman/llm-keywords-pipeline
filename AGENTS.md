@@ -89,7 +89,7 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
 | `uv run llm-keywords-audit-brands <file.md>` | Brands, cities, strict phrases, AI fluff | from the path |
 | `uv run llm-keywords-audit-water <file.md>` | Water, classic and academic nausea | `--lang ru\|uk`, default ru |
 | `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>" --with-analysis <slug>` | H1/H2 structure, keyword in H1 and intro, core and commercial coverage, water, blacklist, length, markdown lint, FAQ | `--lang ru\|uk`, default ru; also picks the RU or UK `_clean.json` for `<slug>` |
-| `uv run python -m llm_keywords_pipeline.validate.meta <meta.json> --keywords <_clean.json>` | Title and description length, primary keyword, producer and wholesale phrases | `--lang ru\|uk` if given, else from the path as check-seo (also under `--all`) |
+| `uv run python -m llm_keywords_pipeline.validate.meta <meta.json> --keywords <_clean.json>` | Title and description length, primary keyword, producer and wholesale phrases | `--lang ru\|uk` if given, else the meta's `"language"` key, else the path as check-seo, else ru (also under `--all`) |
 
 Pass the keyword source every time: without `--with-analysis` validate.content has no
 category keywords and reports coverage PASS on zero keywords; without `--keywords`
