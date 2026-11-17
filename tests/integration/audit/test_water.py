@@ -179,3 +179,29 @@ def test_check_water_above_config_max_warns(monkeypatch, capsys):
 
     assert water.check_water("x.md") == 0
     assert "Превышение на 1.0%" in capsys.readouterr().out
+
+
+def test_check_water_excess_single_warning_without_tier(monkeypatch, capsys):
+    """Water above target_max: one WARNING message, no Tier wording (tiers are gone)."""
+    from llm_keywords_pipeline.audit import water
+
+    monkeypatch.setattr(water, "calculate_metrics", lambda *a, **k: _fake_metrics(68.0))
+
+    assert water.check_water("x.md") == 0
+    out = capsys.readouterr().out
+    assert "   ⚠️ WARNING: Превышение на 3.0%\n" in out
+    assert "Tier" not in out
+
+
+def test_cli_accepts_float_water_bounds(monkeypatch, tmp_path):
+    from llm_keywords_pipeline.audit import water
+
+    md = tmp_path / "a.md"
+    md.write_text("текст", encoding="utf-8")
+    seen = {}
+    monkeypatch.setattr(
+        water, "check_water", lambda p, lo, hi, lang: seen.update(lo=lo, hi=hi) or 0
+    )
+
+    assert water.main([str(md), "40", "62.5"]) == 0
+    assert seen == {"lo": 40.0, "hi": 62.5}

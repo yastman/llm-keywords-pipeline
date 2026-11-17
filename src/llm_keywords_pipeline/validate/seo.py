@@ -5,7 +5,7 @@ SEO Structure Check — проверка структурных SEO-требов
 Проверяет:
 1. Main keyword в первых 150 символах (INTRO)
 2. Keywords в H2 заголовках (минимум 2 из 4)
-3. Main keyword frequency (3-5 раз по тексту, не больше - антиспам)
+3. Main keyword frequency (3-7 раз по тексту, spam >10)
 
 Usage:
     uv run python -m llm_keywords_pipeline.validate.seo <file.md> "<main_keyword>"

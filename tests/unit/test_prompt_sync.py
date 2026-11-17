@@ -33,6 +33,12 @@ class TestCodeThresholdsConsistency:
             "seo.py docstring claims 100-char intro limit but code uses 150"
         )
 
+    def test_seo_frequency_in_docstring(self):
+        """seo.py docstring states the keyword frequency bounds from config."""
+        content = SEO_PY.read_text(encoding="utf-8")
+        lo, hi, spam = Q["keyword_freq_min"], Q["keyword_freq_max"], Q["keyword_freq_spam"]
+        assert f"({lo}-{hi} раз по тексту, spam >{spam})" in content
+
     def test_density_thresholds_documented(self):
         """density.py must have SPAM_THRESHOLD and WARNING_THRESHOLD as named constants."""
         content = DENSITY_PY.read_text()
@@ -87,6 +93,12 @@ class TestPromptNumbersMatchCode:
             deliver
         )
         assert _ranges(_lines("deliver.md", "Density:")) == {optimal}
+        targets = [ln for ln in _lines("deliver.md", "Density:") if "target:" in ln]
+        assert targets
+        assert all(f"(target: {optimal[0]}-{optimal[1]}%)" in ln for ln in targets)
+        low_rows = re.findall(r"\| Density <" + _NUM + "%", deliver)
+        assert low_rows
+        assert {float(n) for n in low_rows} == {optimal[0]}
         main_kw = _lines("deliver.md", "Main keyword:")
         assert _ranges(main_kw) == {optimal}
         assert all(

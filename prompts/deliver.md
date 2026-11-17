@@ -105,7 +105,7 @@ uv run python -m llm_keywords_pipeline.validate.content \
 |--------|-----|
 | Water >70% | Убрать вводные слова, сократить параграфы |
 | Nausea >4.0 | Synonym rotation, разнообразить предложения |
-| Density <0.5% | Добавить keyword в H2/FAQ |
+| Density <1.0% | Добавить keyword в H2/FAQ |
 | Competitor found | Заменить на "средство", "состав" |
 
 ### Step 3: Package Deliverables
@@ -197,7 +197,7 @@ uv run python -m llm_keywords_pipeline.validate.content \
 
 ### SEO
 
-- Keyword Density: {density}% (target: {tier_density})
+- Keyword Density: {density}% (target: 1.0-2.5%)
 - Water: {water}% (target: 40-65%)
 - Classic Nausea: {nausea} (target: ≤3.5)
 - Academic Nausea: {academic}% (target: 7-9.5%)

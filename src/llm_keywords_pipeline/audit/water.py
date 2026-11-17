@@ -288,10 +288,7 @@ def check_water(
         print("   ✅ PASS")
     elif metrics["water_percent"] > target_max:
         excess = metrics["water_percent"] - target_max
-        if excess <= 5.0:
-            print(f"   ⚠️ WARNING: Превышение на {excess:.1f}% (допустимо для Tier C)")
-        else:
-            print(f"   ⚠️ WARNING: Превышение на {excess:.1f}%")
+        print(f"   ⚠️ WARNING: Превышение на {excess:.1f}%")
     else:
         deficit = target_min - metrics["water_percent"]
         print(f"   ⚠️ WARNING: Ниже минимума на {deficit:.1f}%")
@@ -376,14 +373,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "target_min",
         nargs="?",
-        type=int,
+        type=float,
         default=water_min,
         help=f"Мин. %% воды (default: {water_min:g})",
     )
     parser.add_argument(
         "target_max",
         nargs="?",
-        type=int,
+        type=float,
         default=water_max,
         help=f"Макс. %% воды (default: {water_max:g})",
     )
