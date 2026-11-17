@@ -228,29 +228,38 @@ def is_false_positive_location(word: str, context: str) -> bool:
     if word_lower not in _FALSE_POSITIVE_CITIES:
         return False
 
-    return not _after_location_preposition(word_lower, context)
-
-
-def _after_location_preposition(word: str, context: str) -> bool:
-    """True if `word` stands right after a location preposition in `context`."""
     context_lower = context.lower()
-    return any(
-        re.search(rf"\b{prep}\s+{re.escape(word.lower())}\b", context_lower)
-        for prep in LOCATION_PREPOSITIONS
-    )
+
+    for prep in LOCATION_PREPOSITIONS:
+        pattern = rf"\b{prep}\s+{re.escape(word_lower)}\b"
+        if re.search(pattern, context_lower):
+            return False
+
+    return True
+
+
+_PERSON_NAME_TAGS = {"Name", "Surn", "Patr"}
 
 
 @lru_cache(maxsize=10000)
 def _city_parse(word: str) -> tuple[str, bool] | None:
-    """City lemma of `word` from any UK/RU parse, and whether the word has non-city parses too.
+    """City lemma of `word` from any UK/RU parse, and whether it also reads as a common word.
 
-    Every parse counts, not only the first: 'києві' parses as 'кий' first, 'київ' third.
+    Every parse counts, not only the first ('києві': 'кий' first, 'київ' third).
+    Person-name parses (харкові → Surn 'харко', львові → Surn 'львов') are ignored.
+    A city reading is a NOUN parse: adverb 'ровно' shares the normal form of 'Ровно'.
     """
     for lang in ("uk", "ru"):
-        forms = [p.normal_form for p in MorphAnalyzer(lang)._morph.parse(word)]
-        cities = [f for f in forms if f in CITY_BLACKLIST]
+        parses = [
+            p
+            for p in MorphAnalyzer(lang)._morph.parse(word)
+            if not _PERSON_NAME_TAGS & p.tag.grammemes
+        ]
+        cities = [
+            p.normal_form for p in parses if p.normal_form in CITY_BLACKLIST and "NOUN" in p.tag
+        ]
         if cities:
-            return cities[0], len(cities) < len(forms)
+            return cities[0], len(cities) < len(parses)
     return None
 
 
@@ -275,10 +284,17 @@ def check_blacklist(text: str) -> dict:
                     {"entity": brand, "type": "BRAND", "context": f"...{context}..."}
                 )
 
+    # Слова с городским разбором (Києві, Рівному, Львові) проверяются по разбору ниже,
+    # а не по основе-подстроке ("львов" внутри "львові")
+    city_words = [(m, _city_parse(m.group())) for m in re.finditer(r"\w+", text_lower)]
+    city_words = [(m, parsed) for m, parsed in city_words if parsed]
+
     # Проверка городов (с фильтрацией false positives)
     for city in CITY_BLACKLIST:
         if city in text_lower:
             for match in re.finditer(re.escape(city), text_lower):
+                if any(m.start() <= match.start() < m.end() for m, _ in city_words):
+                    continue
                 start = max(0, match.start() - 30)
                 end = min(len(text), match.end() + 30)
                 context = text[start:end].replace("\n", " ")
@@ -288,22 +304,14 @@ def check_blacklist(text: str) -> dict:
 
                 found_cities.append({"entity": city, "type": "CITY", "context": f"...{context}..."})
 
-    # UK падежи (Києву, Києві, Тернополю) не содержат основу из списка — ищем по разборам.
-    # Неоднозначная форма (києві: кий/київ, рівним: рівний/рівне, сумах: сума/суми)
-    # — город только после предлога места перед самим словом (не перед леммой).
-    for match in re.finditer(r"\w+", text_lower):
-        word = match.group()
-        if any(city in word for city in CITY_BLACKLIST):
-            continue  # уже найдено проверкой выше
-        parsed = _city_parse(word)
-        if parsed is None:
+    # Форма, которая читается и как обычное слово (рівному: рівне/рівний, сумах: суми/сума,
+    # києві: київ/кий), — город только с заглавной буквы: морфология их не различает.
+    for match, (lemma, ambiguous) in city_words:
+        if ambiguous and not text[match.start()].isupper():
             continue
-        lemma, ambiguous = parsed
         start = max(0, match.start() - 30)
         end = min(len(text), match.end() + 30)
         context = text[start:end].replace("\n", " ")
-        if ambiguous and not _after_location_preposition(word, context):
-            continue
         found_cities.append({"entity": lemma, "type": "CITY", "context": f"...{context}..."})
 
     # Проверка Strict Phrases (FAIL)

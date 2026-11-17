@@ -31,3 +31,10 @@ def test_uk_locative_city_exits_nonzero(tmp_path, capsys):
     f.write_text("Доставка у Києві.", encoding="utf-8")
     assert main([str(f), "--json"]) != 0
     assert '"київ"' in capsys.readouterr().out
+
+
+def test_uk_city_after_po_exits_nonzero(tmp_path, capsys):
+    f = tmp_path / "rivne.md"
+    f.write_text("Доставка по Рівному.", encoding="utf-8")
+    assert main([str(f), "--json"]) != 0
+    assert '"рівне"' in capsys.readouterr().out

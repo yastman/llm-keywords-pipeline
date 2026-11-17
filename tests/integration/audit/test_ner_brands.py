@@ -67,12 +67,12 @@ class TestCityBlacklist:
         assert sorted(c["entity"] for c in result["cities"]) == ["київ", "тернопіль", "харків"]
 
     def test_ru_city_form_reported_once(self):
-        """'Киеву' is matched by the 'киев' stem; the lemma pass must not add a duplicate."""
+        """'Киеву' has the 'киев' stem and a city parse; it is reported once."""
         result = check_blacklist("Доставка по Киеву")
         assert [c["entity"] for c in result["cities"]] == ["киев"]
 
     def test_uk_lemma_false_positive_city_skipped(self):
-        """'сумах' lemmatizes to 'суми' but without a preposition it is not the city."""
+        """Lowercase 'сумах' reads as 'суми' and 'сума'; it is not the city."""
         text = "Ціни в гривнях і різних сумах"
         result = check_blacklist(text)
         assert result["cities"] == []
@@ -82,15 +82,35 @@ class TestCityBlacklist:
         result = check_blacklist("Доставка у Києві.")
         assert [c["entity"] for c in result["cities"]] == ["київ"]
 
-    def test_uk_locative_city_after_preposition(self):
-        """Ambiguous city forms count after a location preposition before the word."""
+    def test_uk_capitalized_ambiguous_city_counts(self):
+        """A capitalized form with a common-word reading (Сумах, Рівному) is the city."""
         result = check_blacklist("Доставка в Сумах і у Рівному")
         assert sorted(c["entity"] for c in result["cities"]) == ["рівне", "суми"]
 
-    def test_uk_adjective_rivnyi_not_city(self):
-        """'рівним/рівного' (adjective 'рівний') are not the city Рівне."""
+    def test_uk_city_without_location_preposition(self):
+        """'по Рівному' and cities in a list after 'та'/',' are caught."""
+        result = check_blacklist("Доставка у Києві та Рівному.")
+        assert sorted(c["entity"] for c in result["cities"]) == ["київ", "рівне"]
+        result = check_blacklist("Офіс у Києві та Харкові")
+        assert sorted(c["entity"] for c in result["cities"]) == ["київ", "харків"]
+        result = check_blacklist("Працюємо в Києві, Миколаєві, Черкасах і Луцьку")
+        assert sorted(c["entity"] for c in result["cities"]) == [
+            "київ",
+            "луцьк",
+            "миколаїв",
+            "черкаси",
+        ]
+
+    def test_uk_city_name_not_surname_parse(self):
+        """Surname readings ('львов', 'харко') neither become the city nor make it ambiguous."""
+        assert [c["entity"] for c in check_blacklist("Магазин у Львові")["cities"]] == ["львів"]
+        assert [c["entity"] for c in check_blacklist("магазин у харкові")["cities"]] == ["харків"]
+
+    def test_uk_lowercase_common_word_not_city(self):
+        """'рівним/рівного' (adjective) and 'сумах' (amounts) in lowercase are not cities."""
         text = "Нанесіть рівним шаром на рівну поверхню, рівного кольору"
         assert check_blacklist(text)["cities"] == []
+        assert check_blacklist("У сумах до 1000 грн")["cities"] == []
 
     def test_rovno_adverb_not_city(self):
         assert check_blacklist("Отрежьте ровно половину")["cities"] == []
