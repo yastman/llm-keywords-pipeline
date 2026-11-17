@@ -36,6 +36,7 @@ uk/categories/{slug}/...                     same for UK; text is content/{slug}
 data/ru_semantics_master.csv                 master CSV: keyword,volume,category,type,use_in
 key_all.csv                                  volume export: columns "Ключевое слово","Показов в месяц"
 project.toml                                 client rules, see New client below
+brief.md                                     sourced client facts, from prompts/intake.md
 <[paths] semantics_csv>                      structure CSV (L1:/L2:/L3: rows), see New client
 ```
 
@@ -52,8 +53,14 @@ given.
 
 Run commands from the repo root with `uv run`; data paths are absolute or under the data root.
 
+0. **Intake.** Before any keyword is grouped or dropped, write `brief.md` and fill
+   `project.toml` by `prompts/intake.md`.
 1. **Keywords in.** Read the owner's keyword CSV. Assign each keyword a category slug and
-   a type (`keyword` or `synonym`); write `data/ru_semantics_master.csv`.
+   a type (`keyword` or `synonym`); write `data/ru_semantics_master.csv`. Drop a keyword
+   only by a rule of `brief.md` (city keys only where a warehouse or pickup point is
+   confirmed; «від виробника» only for a producer; brand keys only for brands the shop
+   sells); once step 2 has made its `_clean.json`, list it there under `excluded` with
+   that reason (`prompts/intake.md`, section Excluding keywords).
 2. **Per-category JSON.** Push the master CSV into `_clean.json` files; review the dry run
    first. The CSV decides which keywords a file holds: an entry the CSV lacks is dropped,
    a new one lands in `supporting`.
@@ -83,7 +90,7 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
    the meta generators.
 5. **Validate and fix.** Run every validator below on the file; fix the text and rerun
    until each exits 0; a WARNING you leave in place is named, with the reason, in the hand-over.
-6. **Hand over** the files under the data root. Nothing from steps 1-5 is committed.
+6. **Hand over** the files under the data root. Nothing from steps 0-5 is committed.
 
 ## Validators
 
@@ -126,10 +133,11 @@ never from a prompt or this file. No validator checks grammar or spelling: proof
 2. Put `project.toml` in the data root (`src/llm_keywords_pipeline/core/project.py` reads
    it). No file is an empty config: no client rule applies and generic rules stay on. An
    invalid file raises `ProjectConfigError` naming the file and the key.
-3. Set only the keys the client needs. A command that cannot run without a key stops
-   before it writes anything, with `<root>/project.toml: <key> is not set; this command
-   needs it`: `[paths] semantics_csv` for `batch.generate`, `[opencart]` for
-   `generate.sql` (ru) and `generate.plural_sql` (uk and ru).
+3. Set only the keys the client needs; `prompts/intake.md` says which the brief fills.
+   A command that cannot run without a key stops before it writes anything, with
+   `<root>/project.toml: <key> is not set; this command needs it`: `[paths] semantics_csv`
+   for `batch.generate`, `[opencart]` for `generate.sql` (ru) and `generate.plural_sql`
+   (uk and ru).
 
 Every section, commented (a B2B sweets shop as the example):
 
