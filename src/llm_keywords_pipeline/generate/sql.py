@@ -209,7 +209,10 @@ def _read_category_meta(slug: str) -> CategoryMeta:
         return CategoryMeta()
 
     data = json.loads(meta_path.read_text(encoding="utf-8"))
-    meta = data.get("meta", {}) if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        return CategoryMeta()
+    # Nested {"meta": {...}} or top-level {"title", "description"} (prompts/produce.md).
+    meta = data["meta"] if isinstance(data.get("meta"), dict) else data
     return CategoryMeta(
         title=str(meta.get("title", "") or ""),
         description=str(meta.get("description", "") or ""),
@@ -225,9 +228,14 @@ def generate_update_sql(slug: str, category_id: int) -> str:
     meta = _read_category_meta(slug)
 
     html_sql = escape_sql(html)
-    title_sql = escape_sql(meta.title)
-    desc_sql = escape_sql(meta.description)
     h1_sql = escape_sql(h1)
+
+    # Empty meta is left out of SET so it never blanks the store's current value.
+    meta_lines = []
+    if meta.title:
+        meta_lines.append(f"    `meta_title` = '{escape_sql(meta.title)}',")
+    if meta.description:
+        meta_lines.append(f"    `meta_description` = '{escape_sql(meta.description)}',")
 
     return "\n".join(
         [
@@ -235,8 +243,7 @@ def generate_update_sql(slug: str, category_id: int) -> str:
             "UPDATE `oc_category_description`",
             "SET",
             f"    `description` = '{html_sql}',",
-            f"    `meta_title` = '{title_sql}',",
-            f"    `meta_description` = '{desc_sql}',",
+            *meta_lines,
             f"    `meta_h1` = '{h1_sql}'",
             f"WHERE `category_id` = {category_id} AND `language_id` = {LANGUAGE_ID};",
             "",
