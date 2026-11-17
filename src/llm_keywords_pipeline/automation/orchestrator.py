@@ -109,11 +109,13 @@ def run_category(
     state_dir: Path | None = None,
     brief: str | None = None,
     max_retries: int = MAX_RETRIES,
+    rerun_needs_human: bool = False,
 ) -> CategoryRunState:
     """
     Run the full pipeline for one category.
 
-    Idempotent: skips completed stages on re-run.
+    Idempotent: skips completed stages on re-run. A category left in needs_human
+    keeps its content and makes no LLM call unless rerun_needs_human=True.
     Implements the produce→validate→revise loop (issue #20).
     """
     state_dir = state_dir or Path(".")
@@ -129,7 +131,11 @@ def run_category(
         _save_state(state, state_path)
 
     # --- PRODUCE + validate + revise loop ---
-    produce_done = state.last_stage("produce") and state.last_stage("produce").status == "done"
+    last_produce = state.last_stage("produce")
+    if last_produce and last_produce.status == "needs_human" and not rerun_needs_human:
+        state.state = CategoryState.needs_human.value
+        return state
+    produce_done = last_produce and last_produce.status == "done"
     if not produce_done:
         state.state = CategoryState.produce.value
         _save_state(state, state_path)

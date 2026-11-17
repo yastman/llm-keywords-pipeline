@@ -64,11 +64,13 @@ def run_batch(
     state_dir: Path | None = None,
     limit: int | None = None,
     max_retries: int = MAX_RETRIES,
+    rerun_needs_human: bool = False,
 ) -> BatchReport:
     """
     Process a batch of categories.
 
     Checkpointed: state_dir/<slug>_state.json persists progress.
+    needs_human categories are kept on resume unless rerun_needs_human=True.
     One failure does not abort the rest.
     """
     import time
@@ -84,7 +86,13 @@ def run_batch(
         error = ""
         run_state: CategoryRunState | None = None
         try:
-            run_state = run_category(cat, llm, state_dir=state_dir, max_retries=max_retries)
+            run_state = run_category(
+                cat,
+                llm,
+                state_dir=state_dir,
+                max_retries=max_retries,
+                rerun_needs_human=rerun_needs_human,
+            )
         except Exception as exc:
             error = str(exc)
 
