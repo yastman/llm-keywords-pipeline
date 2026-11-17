@@ -192,7 +192,7 @@ uv run pytest
 ```
 
 The pre-commit hook runs ruff (check and format) and file hygiene checks on staged files;
-the pre-push hook runs `uv lock --check`, `uv run mypy` and
+the pre-push hook runs `uv lock --check`, `uv run ruff check src tests`, `uv run mypy` and
 `uv run pytest -q --cov-fail-under=20`. There is no remote CI: these hooks are the only gate.
 
 Run a public fixture through one of the packaged CLI tools:

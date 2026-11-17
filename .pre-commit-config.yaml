@@ -2,7 +2,7 @@
 #   uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 #
 # pre-commit stage: lint/format/hygiene on the staged files only.
-# pre-push stage: the full-repo gate (lockfile, mypy, pytest with the coverage floor).
+# pre-push stage: the full-repo gate (lockfile, ruff on src and tests, mypy, pytest with the coverage floor).
 # There is no remote CI: these hooks are the only gate.
 # Ruff runs from the uv environment so hooks and uv.lock use one ruff version.
 
@@ -48,6 +48,13 @@ repos:
       - id: uv-lock-check
         name: uv lock --check
         entry: uv lock --check
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+      - id: ruff-full
+        name: ruff check src tests
+        entry: uv run ruff check src tests
         language: system
         pass_filenames: false
         always_run: true

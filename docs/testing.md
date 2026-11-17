@@ -68,6 +68,7 @@ The pre-push hook runs on the whole repository:
 
 ```bash
 uv lock --check
+uv run ruff check src tests
 uv run mypy
 uv run pytest -q --cov-fail-under=20
 ```
