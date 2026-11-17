@@ -21,6 +21,28 @@ class TestBrandBlacklist:
         result = check_blacklist(text)
         assert len(result["brands"]) > 0
 
+    def test_brand_inside_word_not_flagged_ru(self):
+        """'ауди' inside 'аудиосистемы' is not the brand Audi."""
+        text = "Протрите пластик аудиосистемы мягкой микрофиброй"
+        result = check_blacklist(text)
+        assert result["brands"] == []
+
+    def test_brand_inside_word_not_flagged_uk(self):
+        """'ауди' inside 'аудіосистема'/'аудиторія' is not the brand Audi."""
+        text = "Протріть пластик аудиосистеми, це оцінить аудиторія"
+        result = check_blacklist(text)
+        assert result["brands"] == []
+
+    def test_brand_as_word_flagged_ru(self):
+        text = "Полироль подходит для Ауди и других авто"
+        result = check_blacklist(text)
+        assert [b["entity"] for b in result["brands"]] == ["ауди"]
+
+    def test_brand_as_word_flagged_uk(self):
+        text = "Поліроль підходить для Ауди та інших авто"
+        result = check_blacklist(text)
+        assert [b["entity"] for b in result["brands"]] == ["ауди"]
+
     def test_no_brands_in_clean_text(self):
         """Clean text should have no brands."""
         text = "Активная пена для бесконтактной мойки автомобиля"
@@ -36,6 +58,24 @@ class TestCityBlacklist:
         text = "Доставка по Киеву и области"
         result = check_blacklist(text)
         assert len(result["cities"]) > 0
+
+    def test_detects_uk_city_case_forms(self):
+        """UK oblique forms (Києву, Харкову, Тернополю) are caught by lemma."""
+        text = "Доставка по Києву, Харкову та Тернополю"
+        result = check_blacklist(text)
+        # one finding per word, though "тернополю" has a UK and a RU city lemma
+        assert sorted(c["entity"] for c in result["cities"]) == ["київ", "тернопіль", "харків"]
+
+    def test_ru_city_form_reported_once(self):
+        """'Киеву' is matched by the 'киев' stem; the lemma pass must not add a duplicate."""
+        result = check_blacklist("Доставка по Киеву")
+        assert [c["entity"] for c in result["cities"]] == ["киев"]
+
+    def test_uk_lemma_false_positive_city_skipped(self):
+        """'сумах' lemmatizes to 'суми' but without a preposition it is not the city."""
+        text = "Ціни в гривнях і різних сумах"
+        result = check_blacklist(text)
+        assert result["cities"] == []
 
     def test_no_cities_in_clean_text(self):
         """Clean text should have no cities."""

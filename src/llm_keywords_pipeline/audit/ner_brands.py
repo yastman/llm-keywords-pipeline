@@ -23,6 +23,7 @@ import re
 import sys
 from pathlib import Path
 
+from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 from llm_keywords_pipeline.core.text import clean_markdown
 
 try:
@@ -248,7 +249,8 @@ def check_blacklist(text: str) -> dict:
     # Проверка брендов
     for brand in BRAND_BLACKLIST:
         if brand in text_lower:
-            for match in re.finditer(re.escape(brand), text_lower):
+            # Только целое слово: "ауди" не ловится внутри "аудиосистемы"
+            for match in re.finditer(rf"(?<!\w){re.escape(brand)}(?!\w)", text_lower):
                 start = max(0, match.start() - 30)
                 end = min(len(text), match.end() + 30)
                 context = text[start:end].replace("\n", " ")
@@ -268,6 +270,23 @@ def check_blacklist(text: str) -> dict:
                     continue
 
                 found_cities.append({"entity": city, "type": "CITY", "context": f"...{context}..."})
+
+    # UK падежи (Києву, Харкову, Тернополю) не содержат основу из списка — ищем по лемме
+    morph_uk, morph_ru = MorphAnalyzer("uk"), MorphAnalyzer("ru")
+    for match in re.finditer(r"\w+", text_lower):
+        word = match.group()
+        if any(city in word for city in CITY_BLACKLIST):
+            continue  # уже найдено проверкой выше
+        for lemma in (morph_uk.get_lemma(word), morph_ru.get_lemma(word)):
+            if lemma not in CITY_BLACKLIST:
+                continue
+            start = max(0, match.start() - 30)
+            end = min(len(text), match.end() + 30)
+            context = text[start:end].replace("\n", " ")
+            if is_false_positive_location(lemma, context):
+                continue
+            found_cities.append({"entity": lemma, "type": "CITY", "context": f"...{context}..."})
+            break  # одно слово — одна находка (uk и ru леммы могут обе быть городом)
 
     # Проверка Strict Phrases (FAIL)
     for phrase in _STRICT_PHRASES:
@@ -423,7 +442,7 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
 
-    if len(argv) < 1:
+    if len(argv) < 1 or argv[0] in ("-h", "--help"):
         print(__doc__)
         return 0
 

@@ -1,0 +1,26 @@
+"""Smoke tests for the llm-keywords-audit-brands CLI (ner_brands.main)."""
+
+from llm_keywords_pipeline.audit.ner_brands import main
+
+
+def test_help_prints_usage_and_exits_0(capsys):
+    assert main(["--help"]) == 0
+    out = capsys.readouterr().out
+    assert "Usage" in out
+    assert "Файл не найден" not in out
+
+
+def test_short_help_exits_0(capsys):
+    assert main(["-h"]) == 0
+    assert "Usage" in capsys.readouterr().out
+
+
+def test_missing_file_exits_2(tmp_path, capsys):
+    assert main([str(tmp_path / "missing.md")]) == 2
+    assert "Файл не найден" in capsys.readouterr().out
+
+
+def test_uk_city_case_forms_exit_nonzero(tmp_path, capsys):
+    f = tmp_path / "uk_city.md"
+    f.write_text("Доставка по Києву, Харкову та Тернополю.", encoding="utf-8")
+    assert main([str(f)]) != 0

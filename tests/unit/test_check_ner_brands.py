@@ -49,13 +49,8 @@ class TestCheckNerBrands(unittest.TestCase):
         cities_found = [item["entity"] for item in results["cities"]]
         self.assertIn("киев", cities_found)
         self.assertIn("харьков", cities_found)
-        # "одессу" matches "одесса" in blacklist?
-        # The script uses `if city in text_lower`.
-        # "одесса" is NOT in "одессу".
-        # But "одеса" (ukr) might be?
-        # Let's check regex logic in script: `re.finditer(re.escape(city), text_lower)`
-        # If blacklist has "одесса", and text has "одессу", it won't match.
-        # This confirms current strict matching behavior.
+        # "одесса" is not a substring of "одессу"; the lemma pass catches it
+        self.assertIn("одесса", cities_found)
 
         # Let's test exact match
         text2 = "Город Одесса красивый."
