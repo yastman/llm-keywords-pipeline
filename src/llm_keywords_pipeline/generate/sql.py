@@ -97,7 +97,7 @@ def _read_category_meta(slug: str) -> CategoryMeta:
     data = json.loads(meta_path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         return CategoryMeta()
-    # Nested {"meta": {...}} or top-level {"title", "description"} (prompts/produce.md).
+    # Nested {"meta": {...}} (prompts/produce.md) or top-level {"title", "description"} (older files).
     meta = data["meta"] if isinstance(data.get("meta"), dict) else data
     return CategoryMeta(
         title=str(meta.get("title", "") or ""),

@@ -83,3 +83,42 @@ def test_configured_phrases_apply_per_language(data_root):
     desc, keyword = DISTRIBUTOR["ru"]
 
     assert validate_description(desc, [keyword], lang="ru")["overall"] == "PASS"
+
+
+def test_required_phrase_matches_capitalised_text(data_root):
+    (data_root / "project.toml").write_text(
+        '[meta]\nrequired_phrases = { uk = ["офіційн\\\\w+ дистриб\'ютор"] }\n', encoding="utf-8"
+    )
+    desc, keyword = DISTRIBUTOR["uk"]
+    desc = desc.replace("офіційного дистриб'ютора", "Офіційного Дистриб'ютора")
+
+    result = validate_description(desc, [keyword], lang="uk")
+
+    assert result["checks"]["required_phrases"]["passed"], result["checks"]
+    assert result["overall"] == "PASS"
+
+
+def test_missing_recommended_phrase_warns(data_root):
+    (data_root / "project.toml").write_text(
+        '[meta]\nrecommended_phrases = { uk = ["роздріб"] }\n', encoding="utf-8"
+    )
+    desc, keyword = DISTRIBUTOR["uk"]
+
+    result = validate_description(desc, [keyword], lang="uk")
+
+    assert result["overall"] == "WARNING"
+    assert result["checks"]["recommended_phrases"]["message"] == (
+        "Missing recommended phrases: роздріб"
+    )
+
+
+def test_present_recommended_phrase_passes_case_insensitive(data_root):
+    (data_root / "project.toml").write_text(
+        '[meta]\nrecommended_phrases = { uk = ["понад \\\\d+ позиц"] }\n', encoding="utf-8"
+    )
+    desc, keyword = DISTRIBUTOR["uk"]
+
+    result = validate_description(desc, [keyword], lang="uk")
+
+    assert result["checks"]["recommended_phrases"]["passed"]
+    assert result["overall"] == "PASS"

@@ -107,32 +107,6 @@ VALIDATION_MODES = {
 }
 
 # =============================================================================
-# Category Mapping (L3 → Slug)
-# =============================================================================
-
-L3_TO_SLUG: dict[str, str] = {
-    "Активная пена": "aktivnaya-pena",
-    "Для ручной мойки": "dlya-ruchnoy-moyki",
-    "Очистители стекол": "ochistiteli-stekol",
-    "Глина и автоскрабы": "glina-i-avtoskraby",
-    "Антимошка": "antimoshka",
-    "Антибитум": "antibitum",
-    "Чернители шин": "cherniteli-shin",
-    "Очистители дисков": "ochistiteli-diskov",
-    "Очистители шин": "ochistiteli-shin",
-    "Аппараты Tornador": "apparaty-tornador",
-    "Меховые": "mekhovye",
-    "Поролоновые": "porolonovye",
-    "Наборы для мойки": "nabory-dlya-moyki",
-    "Наборы для полировки": "nabory-dlya-polirovki",
-    "Наборы для ухода за кожей": "nabory-dlya-ukhoda-za-kozhey",
-    "Наборы для химчистки": "nabory-dlya-khimchistki",
-    "Подарочные наборы": "podarochnye-nabory",
-}
-
-SLUG_TO_L3: dict[str, str] = {v: k for k, v in L3_TO_SLUG.items()}
-
-# =============================================================================
 # Commercial Keywords (for coverage split)
 # =============================================================================
 
@@ -203,6 +177,7 @@ AI_FLUFF_PATTERNS: dict[str, list[str]] = {
 }
 
 # Strict phrases (plain substrings, lowercase) that should trigger FAIL, by text language.
+# [blacklist] phrases_allow of <data root>/project.toml drops a phrase from the check.
 # UK is a direct translation of RU (both в/у forms and both apostrophes).
 STRICT_BLACKLIST_PHRASES: dict[str, list[str]] = {
     "ru": [
@@ -233,12 +208,8 @@ FALSE_POSITIVE_CITIES: list[str] = [
 # =============================================================================
 
 CONTENT_STANDARDS = {
-    "required": {
-        "safety_block": True,  # ## Safety или test spot
-        "howto_steps": True,  # нумерованные шаги
-        "evergreen_math": True,  # расход/концентрация
-        "warnings": True,  # "так не делайте"
-    },
+    # "required" switches (safety block, how-to steps, расход/концентрация, warnings) come
+    # from [content_standards] of <data root>/project.toml; none is required by default.
     "recommended": {
         "crosslinks_min": 0,  # SSOT: перелинковка отдельным этапом
         "faq_min": 2,  # FAQ вопросов

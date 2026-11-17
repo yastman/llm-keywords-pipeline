@@ -7,6 +7,24 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+ULTIMATE_PROJECT_TOML = Path(__file__).parent / "fixtures" / "project_ultimate.toml"
+
+
+@pytest.fixture
+def data_root(tmp_path, monkeypatch):
+    """Empty data root: no project.toml, so no client rule applies."""
+    from llm_keywords_pipeline.core import config
+
+    monkeypatch.setattr(config, "PROJECT_ROOT", tmp_path)
+    return tmp_path
+
+
+@pytest.fixture
+def ultimate_root(data_root):
+    """Data root whose project.toml holds the old car-care rules."""
+    (data_root / "project.toml").write_bytes(ULTIMATE_PROJECT_TOML.read_bytes())
+    return data_root
+
 
 @pytest.fixture
 def sample_text_ru():

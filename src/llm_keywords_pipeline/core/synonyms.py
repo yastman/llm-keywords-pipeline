@@ -21,6 +21,7 @@ from pathlib import Path
 from llm_keywords_pipeline.core.clean_json import refresh_stats_totals
 from llm_keywords_pipeline.core.config import PROJECT_ROOT, TASKS_DIR
 from llm_keywords_pipeline.core.coverage import keyword_key
+from llm_keywords_pipeline.core.project import get_project
 
 # =============================================================================
 # Configuration
@@ -29,12 +30,13 @@ from llm_keywords_pipeline.core.coverage import keyword_key
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 REPORT_FILE = TASKS_DIR / "synonym_cleanup_report.md"
 
-# Synonyms for normalization (SSOT)
-AUTO_SYNONYMS = ["авто", "автомобиля", "машины", "машина", "автомобиль", "в авто", "для авто"]
+# Niche terms dropped before comparing and word stems: [synonyms] strip_terms / stems of
+# <data root>/project.toml (none by default).
 STOP_WORDS = {"для", "в", "на", "под", "с", "от"}
 
-# Commercial intent markers (to separate commercial keys from informational)
-COMMERCIAL_MARKERS = ["купить", "цена", "отзывы", "заказать", "стоимость", "киев", "украина"]
+# Commercial intent markers (to separate commercial keys from informational);
+# [markers] commercial.ru of project.toml adds to them.
+COMMERCIAL_MARKERS = ["купить", "цена", "отзывы", "заказать", "стоимость"]
 
 # =============================================================================
 # Logic: Normalization
@@ -45,16 +47,17 @@ def normalize_keyword(keyword: str) -> str:
     """
     Creates a canonical fingerprint of the keyword for comparison.
     1. keyword_key (casefold, NFKC, apostrophes, ё->е, spaces)
-    2. Remove 'avto' related words
+    2. Remove [synonyms] strip_terms of project.toml
     3. Remove stop words
-    4. Stem common prefixes (polir, ochist)
+    4. Stem by [synonyms] stems of project.toml (word prefix -> stem)
     5. Sort words
     """
+    project = get_project()
     text = keyword_key(keyword)
 
-    # 1. Remove specific auto terms
+    # 1. Remove configured niche terms
     # Sort by length desc to handle multi-word phrases first
-    sorted_synonyms = sorted(AUTO_SYNONYMS, key=len, reverse=True)
+    sorted_synonyms = sorted(project.synonym_strip_terms, key=len, reverse=True)
     for syn in sorted_synonyms:
         text = re.sub(rf"\b{re.escape(syn)}\b", " ", text)
 
@@ -66,17 +69,11 @@ def normalize_keyword(keyword: str) -> str:
     # 3. Clean up spaces and split
     words = [w for w in re.split(r"\s+", text) if w.strip()]
 
-    # 4. Handle specific stemming/variations
+    # 4. Handle configured stemming/variations
     normalized_words = []
     for w in words:
-        if w.startswith("полиров") or w.startswith("полирал"):
-            normalized_words.append("полир")
-        elif w.startswith("очистит"):
-            normalized_words.append("очист")
-        elif w.startswith("кузов"):
-            normalized_words.append("кузов")
-        else:
-            normalized_words.append(w)
+        stem = next((s for p, s in project.synonym_stems.items() if w.startswith(p)), w)
+        normalized_words.append(stem)
 
     # 5. Sort to handle word order
     normalized_words.sort()
@@ -86,7 +83,8 @@ def normalize_keyword(keyword: str) -> str:
 
 def is_commercial(keyword: str) -> bool:
     """Checks if keyword has commercial intent."""
-    return any(marker in keyword_key(keyword) for marker in COMMERCIAL_MARKERS)
+    markers = [*COMMERCIAL_MARKERS, *get_project().commercial_markers.get("ru", ())]
+    return any(marker in keyword_key(keyword) for marker in markers)
 
 
 # =============================================================================

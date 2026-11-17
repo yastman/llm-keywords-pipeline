@@ -4,10 +4,8 @@ from llm_keywords_pipeline.core.config import (
     CATEGORIES_DIR,
     COMMERCIAL_MODIFIERS,
     CONTENT_STANDARDS,
-    L3_TO_SLUG,
     PROJECT_ROOT,
     QUALITY_THRESHOLDS,
-    SLUG_TO_L3,
 )
 from llm_keywords_pipeline.core.coverage import (
     MatchResult,
@@ -43,8 +41,6 @@ __all__ = [
     "CATEGORIES_DIR",
     "QUALITY_THRESHOLDS",
     "CONTENT_STANDARDS",
-    "L3_TO_SLUG",
-    "SLUG_TO_L3",
     "COMMERCIAL_MODIFIERS",
     # Keywords
     "KeywordMatcher",

@@ -159,16 +159,16 @@ class TestCountStemFrequencies:
 
 
 class TestSubstringAnalysisLang:
-    """CATEGORY_KEYWORDS holds Russian substrings: run them only for ru (audit C10)."""
+    """Car-care project.toml has only ru substrings: uk text gets none (audit C10)."""
 
-    def test_uk_text_skips_russian_substrings(self):
+    def test_uk_text_skips_russian_substrings(self, ultimate_root):
         from llm_keywords_pipeline.validate.density import analyze_text
 
         result = analyze_text("Активна піна для миття авто.", slug="aktivnaya-pena", lang="uk")
 
         assert result["substring_analysis"] is None
 
-    def test_ru_text_keeps_substrings(self):
+    def test_ru_text_keeps_substrings(self, ultimate_root):
         from llm_keywords_pipeline.validate.density import analyze_text
 
         result = analyze_text("Активная пена для мойки авто.", slug="aktivnaya-pena", lang="ru")

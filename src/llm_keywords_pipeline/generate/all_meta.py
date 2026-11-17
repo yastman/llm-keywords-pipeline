@@ -2,7 +2,9 @@
 """
 Batch generate meta tags for all categories.
 Formula: {ВЧ Ключ} — купить, цены | {brand}; brand from <data root>/project.toml
-[project] brand, none = no suffix.
+[project] brand, none = no suffix. Description: [meta] description_template.<lang>
+of project.toml ({keyword}, {name}, {types}, {brand}), else "{name}. {types}." plus a
+neutral filler up to 100 chars. Types skip [blacklist] brands of project.toml.
 
 Usage:
     uv run python -m llm_keywords_pipeline.generate.all_meta [--dry-run] [--force] [--lang ru|uk]
@@ -19,8 +21,23 @@ from datetime import date
 from pathlib import Path
 
 from llm_keywords_pipeline.core.clean_json import keyword_entries
-from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, QUALITY_THRESHOLDS
 from llm_keywords_pipeline.core.project import load_project
+
+DESC_MIN_LENGTH = int(QUALITY_THRESHOLDS["description_min"])
+DESC_MAX_LENGTH = int(QUALITY_THRESHOLDS["description_max"])
+
+# Neutral sentences added, in order, to a description shorter than DESC_MIN_LENGTH.
+DESCRIPTION_FILLER = {
+    "ru": [
+        "Цены, наличие и характеристики товаров — в каталоге.",
+        "Подберите подходящий вариант по описанию и параметрам.",
+    ],
+    "uk": [
+        "Ціни, наявність і характеристики товарів — у каталозі.",
+        "Оберіть відповідний варіант за описом і параметрами.",
+    ],
+}
 
 
 def load_json(filepath: Path, silent: bool = False) -> dict | None:
@@ -66,9 +83,9 @@ def get_types_from_entities(data: dict) -> list[str]:
         "entities", []
     )
     types = []
-    brand_markers = ["menzerna", "koch", "rupes", "sonax", "gyeon", "shiny", "carpro"]
+    brands = load_project(PROJECT_ROOT).blacklist_brands
     for entity in entities:
-        if any(brand in entity.lower() for brand in brand_markers):
+        if any(brand in entity.lower() for brand in brands):
             continue
         if any(char.isdigit() for char in entity):
             continue
@@ -93,6 +110,26 @@ def capitalize_first(text: str) -> str:
     return text[0].upper() + text[1:] if text else text
 
 
+def build_description(lang: str, primary_kw: str, name: str, types: list[str]) -> str:
+    """[meta] description_template of project.toml, else name, types and a neutral filler."""
+    project = load_project(PROJECT_ROOT)
+    types_str = capitalize_first(", ".join(types))
+    template = project.description_template.get(lang)
+    if template:
+        description = template.format(
+            keyword=primary_kw, name=name, types=types_str, brand=project.brand
+        ).strip()
+    else:
+        description = f"{name}. {types_str}." if types_str else f"{name}."
+        for sentence in DESCRIPTION_FILLER[lang]:
+            if len(description) >= DESC_MIN_LENGTH:
+                break
+            description = f"{description} {sentence}"
+    if len(description) > DESC_MAX_LENGTH:
+        description = description[: DESC_MAX_LENGTH - 3] + "..."
+    return description
+
+
 def generate_meta_ru(slug: str, data: dict) -> dict:
     """Generate Russian meta tags following Front-Loading principle."""
     primary_kw = capitalize_first(get_primary_keyword(data))
@@ -104,14 +141,7 @@ def generate_meta_ru(slug: str, data: dict) -> dict:
     # H1: Primary keyword
     h1 = primary_kw
 
-    # Description: ~150-160 chars
-    types_str = ", ".join(types) if types else ""
-    if types_str:
-        description = f"{name}. {capitalize_first(types_str)}."
-    else:
-        description = f"{name}. Профессиональное качество."
-    if len(description) > 160:
-        description = description[:157] + "..."
+    description = build_description("ru", primary_kw, name, types)
 
     return {
         "slug": slug,
@@ -133,13 +163,7 @@ def generate_meta_uk(slug: str, data: dict) -> dict:
 
     h1 = primary_kw
 
-    types_str = ", ".join(types) if types else ""
-    if types_str:
-        description = f"{name}. {capitalize_first(types_str)}."
-    else:
-        description = f"{name}. Професійна якість."
-    if len(description) > 160:
-        description = description[:157] + "..."
+    description = build_description("uk", primary_kw, name, types)
 
     return {
         "slug": slug,

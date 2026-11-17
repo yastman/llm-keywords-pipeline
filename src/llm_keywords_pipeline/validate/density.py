@@ -29,12 +29,14 @@ import json
 import re
 import sys
 from collections import Counter
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 # Import from core
 from llm_keywords_pipeline.core.config import get_data_path
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
+from llm_keywords_pipeline.core.project import get_project
 from llm_keywords_pipeline.core.text import clean_markdown, get_stopwords, tokenize
 from llm_keywords_pipeline.validate.seo import count_keyword_lemma_ngrams, get_token_lemmas
 
@@ -82,13 +84,9 @@ STEM_PATTERNS = {
 # Минимальная частота для включения stem-группы в отчёт
 MIN_STEM_FREQUENCY = 3
 
-# Ключевые подстроки для проверки каннибализации и основных ключей
-# Формат: category_slug -> (primary_substrings, anti_substrings)
-CATEGORY_KEYWORDS = {
-    "aktivnaya-pena": (["пен", "активн"], ["ручн", "шампун"]),
-    "shampuni-dlya-ruchnoy-moyki": (["ручн", "шампун"], ["пен"]),
-    "avtoshampuni": (["автошампун", "шампун"], []),
-}
+# Ключевые подстроки для проверки каннибализации и основных ключей:
+# [density.category_substrings.<lang>] <slug> = { primary = [...], anti = [...] }
+# в <data root>/project.toml; по умолчанию нет.
 
 
 # =============================================================================
@@ -169,7 +167,7 @@ def calculate_density(count: int, total_words: int) -> float:
     return (count / total_words) * 100
 
 
-def count_substring_frequencies(words: list[str], substrings: list[str]) -> dict[str, int]:
+def count_substring_frequencies(words: list[str], substrings: Sequence[str]) -> dict[str, int]:
     """
     Count words containing each substring (user's methodology).
 
@@ -241,11 +239,11 @@ def analyze_text(
     # Stem frequencies
     stem_freq = count_stem_frequencies(all_words, lang)
 
-    # Substring analysis (user's methodology) - if slug provided.
-    # CATEGORY_KEYWORDS holds Russian substrings: only meaningful for ru text.
+    # Substring analysis (user's methodology) - if slug provided and configured for lang.
     substring_analysis = None
-    if lang == "ru" and slug and slug in CATEGORY_KEYWORDS:
-        primary_subs, anti_subs = CATEGORY_KEYWORDS[slug]
+    category_substrings = get_project().category_substrings.get(lang, {})
+    if slug and slug in category_substrings:
+        primary_subs, anti_subs = category_substrings[slug]
         primary_counts = count_substring_frequencies(all_words, primary_subs)
         anti_counts = count_substring_frequencies(all_words, anti_subs)
 

@@ -7,7 +7,7 @@ class TestNormalizeKeyword:
     def test_case_yo_apostrophe_variants_equal(self):
         assert normalize_keyword("Пам’ять Ёлки") == normalize_keyword("пам'ять елки")
 
-    def test_basic_normalization(self):
+    def test_basic_normalization(self, ultimate_root):
         # "автошампунь для авто" -> remove "для", "авто" -> "автошампунь"
         kw = "автошампунь для авто"
         assert normalize_keyword(kw) == "автошампунь"

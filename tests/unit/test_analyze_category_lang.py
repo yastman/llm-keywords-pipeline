@@ -107,7 +107,9 @@ def test_list_ru_without_csv_lists_clean_json_categories(project, monkeypatch, c
     assert "Total: 1 categories" in out
 
 
-def test_list_ru_without_csv_skips_empty_dirs_and_names_mapped_slug(project, monkeypatch, capsys):
+def test_list_ru_without_csv_skips_empty_dirs_and_names_mapped_slug(
+    project, ultimate_root, monkeypatch, capsys
+):
     monkeypatch.setattr(category, "SEMANTICS_CSV", project / "missing.csv")
     (project / "categories" / "aktivnaya-pena").mkdir(parents=True)  # mapped, no data
     data_dir = project / "categories" / "antibitum" / "data"
@@ -119,7 +121,7 @@ def test_list_ru_without_csv_skips_empty_dirs_and_names_mapped_slug(project, mon
 
     out = capsys.readouterr().out
     assert code == 0
-    assert category.SLUG_TO_L3["antibitum"] in out
+    assert "Антибитум" in out
     assert "aktivnaya-pena" not in out
     assert "Total: 1 categories" in out
 

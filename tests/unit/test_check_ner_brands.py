@@ -4,12 +4,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from llm_keywords_pipeline.audit import ner_brands
 from llm_keywords_pipeline.audit.ner_brands import (
     analyze_file,
     check_blacklist,
     clean_markdown,
     is_false_positive_location,
 )
+from llm_keywords_pipeline.core.project import ProjectConfig
 
 
 class TestCheckNerBrands(unittest.TestCase):
@@ -35,7 +37,9 @@ class TestCheckNerBrands(unittest.TestCase):
     def test_check_blacklist_brands(self):
         # Test detection of banned brands
         text = "Мы продаем технику Karcher и химию Grass для авто."
-        results = check_blacklist(text)
+        project = ProjectConfig(blacklist_brands=("karcher", "grass"))
+        with patch.object(ner_brands, "get_project", return_value=project):
+            results = check_blacklist(text)
 
         brands_found = [item["entity"] for item in results["brands"]]
         self.assertIn("karcher", brands_found)

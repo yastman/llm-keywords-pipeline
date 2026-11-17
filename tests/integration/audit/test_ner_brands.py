@@ -1,5 +1,7 @@
 """Tests for audit/ner_brands.py"""
 
+import pytest
+
 from llm_keywords_pipeline.audit import ner_brands
 from llm_keywords_pipeline.audit.ner_brands import (
     check_blacklist,
@@ -15,8 +17,9 @@ def test_ner_unavailable_warning_names_uv(monkeypatch):
     assert "uv sync --group nlp" in result["warning"]
 
 
+@pytest.mark.usefixtures("ultimate_root")
 class TestBrandBlacklist:
-    """Tests for brand blacklist checks."""
+    """Tests for brand blacklist checks ([blacklist] brands of the car-care project.toml)."""
 
     def test_detects_brand_koch(self):
         """Should detect Koch Chemie brand."""
