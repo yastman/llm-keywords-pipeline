@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.coverage import keyword_key
 
 ROOT = PROJECT_ROOT
 CATEGORIES_DIR = ROOT / "categories"
@@ -106,7 +107,7 @@ def load_excel_keywords(excel_path: Path) -> dict[str, int]:
 
     result = {}
     for _, row in df.iterrows():
-        kw = str(row[kw_col]).strip().lower()
+        kw = str(row[kw_col]).strip()
         try:
             vol = int(row[vol_col])
         except (ValueError, TypeError):
@@ -123,19 +124,19 @@ def merge_keywords(existing: list[dict], excel_volumes: dict[str, int]) -> list[
     # several categories or as both keyword and synonym
     by_key = {}
     for row in existing:
-        key = (row["category"], row["type"], row["keyword"].lower().strip())
+        key = (row["category"], row["type"], keyword_key(row["keyword"]))
         if key not in by_key or (row["volume"] or 0) > (by_key[key]["volume"] or 0):
             by_key[key] = row.copy()
 
     # Update volumes from Excel: every row of that keyword
     for kw, vol in excel_volumes.items():
-        kw_lower = kw.lower().strip()
-        matches = [r for (_, _, k), r in by_key.items() if k == kw_lower]
+        kw_key = keyword_key(kw)
+        matches = [r for (_, _, k), r in by_key.items() if k == kw_key]
         for r in matches:
             r["volume"] = vol
         if not matches:
             # New keyword from Excel
-            by_key[("uncategorized", "keyword", kw_lower)] = {
+            by_key[("uncategorized", "keyword", kw_key)] = {
                 "keyword": kw,
                 "volume": vol,
                 "category": "uncategorized",

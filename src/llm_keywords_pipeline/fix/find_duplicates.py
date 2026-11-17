@@ -18,6 +18,7 @@ import sys
 from collections import defaultdict
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.coverage import keyword_key
 
 # Корневая директория проекта
 ROOT_DIR = PROJECT_ROOT
@@ -134,7 +135,7 @@ def extract_all_keywords(data: dict) -> list[tuple[str, int, str]]:
             kw = item.get("keyword", "")
             vol = item.get("volume", 0)
             if kw:
-                keywords.append((kw.lower().strip(), vol, kw_type))
+                keywords.append((kw.strip(), vol, kw_type))
 
     return keywords
 
@@ -157,6 +158,7 @@ def find_exact_duplicates(
     """
     # Собираем все ключи со всех категорий
     keyword_locations = defaultdict(list)
+    first_form: dict[str, str] = {}
 
     for slug in categories:
         data = load_category_keywords(slug)
@@ -165,10 +167,12 @@ def find_exact_duplicates(
 
         keywords = extract_all_keywords(data)
         for kw, vol, kw_type in keywords:
-            keyword_locations[kw].append((slug, kw_type, vol))
+            key = keyword_key(kw)
+            first_form.setdefault(key, kw)
+            keyword_locations[key].append((slug, kw_type, vol))
 
     # Фильтруем — оставляем только дубликаты (присутствуют в 2+ категориях)
-    duplicates = {kw: locs for kw, locs in keyword_locations.items() if len(locs) > 1}
+    duplicates = {first_form[key]: locs for key, locs in keyword_locations.items() if len(locs) > 1}
 
     return duplicates
 
@@ -184,7 +188,7 @@ def find_hierarchy_conflicts(verbose: bool = False) -> list[dict]:
         if not parent_data:
             continue
 
-        parent_keywords = {kw for kw, _, _ in extract_all_keywords(parent_data)}
+        parent_keywords = {keyword_key(kw) for kw, _, _ in extract_all_keywords(parent_data)}
 
         for child_slug in children:
             child_data = load_category_keywords(child_slug)
@@ -194,7 +198,7 @@ def find_hierarchy_conflicts(verbose: bool = False) -> list[dict]:
             child_keywords = extract_all_keywords(child_data)
 
             for kw, vol, kw_type in child_keywords:
-                if kw in parent_keywords:
+                if keyword_key(kw) in parent_keywords:
                     conflicts.append(
                         {
                             "keyword": kw,
@@ -223,7 +227,7 @@ def find_misplaced_by_intent(categories: list[str], verbose: bool = False) -> li
         keywords = extract_all_keywords(data)
 
         for kw, vol, kw_type in keywords:
-            kw_lower = kw.lower().strip()
+            kw_key = keyword_key(kw)
 
             # Проверяем каждый паттерн
             for target_category, patterns in INTENT_PATTERNS.items():
@@ -239,7 +243,7 @@ def find_misplaced_by_intent(categories: list[str], verbose: bool = False) -> li
                         continue
 
                     # Проверяем точное или частичное совпадение
-                    if pattern.lower() in kw_lower:
+                    if keyword_key(pattern) in kw_key:
                         misplaced.append(
                             {
                                 "keyword": kw,

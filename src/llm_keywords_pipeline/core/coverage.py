@@ -37,6 +37,14 @@ def normalize_text(text: str) -> str:
     return text
 
 
+def keyword_key(keyword: str) -> str:
+    """Comparison key for a keyword: normalize_text plus collapsed whitespace.
+
+    Use it only to compare or group keywords; write the original form out.
+    """
+    return " ".join(normalize_text(keyword).split())
+
+
 MatchStatus = Literal[
     "EXACT",
     "NORM",

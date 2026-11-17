@@ -9,6 +9,8 @@ from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
+from llm_keywords_pipeline.core.coverage import keyword_key
+
 # Словарь синонимов для нормализации
 SYNONYM_MAP = {
     "автомобиля": "авто",
@@ -24,7 +26,7 @@ SYNONYM_MAP = {
 
 def normalize_keyword(keyword: str) -> str:
     """Нормализует ключ для сравнения."""
-    normalized = keyword.lower()
+    normalized = keyword_key(keyword)
     for old, new in SYNONYM_MAP.items():
         normalized = normalized.replace(old, new)
     return normalized

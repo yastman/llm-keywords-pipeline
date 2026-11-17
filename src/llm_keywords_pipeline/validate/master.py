@@ -7,6 +7,7 @@ from collections import Counter
 from pathlib import Path
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.coverage import keyword_key
 
 ROOT = PROJECT_ROOT
 DEFAULT_CSV = ROOT / "data" / "ru_semantics_master.csv"
@@ -61,7 +62,7 @@ def validate_categories_exist(rows: list[dict], categories_dir: Path) -> list[st
 
 def validate_no_duplicates(rows: list[dict]) -> list[str]:
     """Проверяет отсутствие дубликатов ключей."""
-    keywords = [row["keyword"].lower().strip() for row in rows]
+    keywords = [keyword_key(row["keyword"]) for row in rows]
     counts = Counter(keywords)
     duplicates = [kw for kw, count in counts.items() if count > 1]
 

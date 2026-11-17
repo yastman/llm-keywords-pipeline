@@ -28,6 +28,15 @@ class TestNormalizeKeyword:
 
         assert normalize_keyword("Привет Мир") == "привет мир"
 
+    def test_case_yo_apostrophe_variants_are_duplicates(self):
+        from llm_keywords_pipeline.analyze.duplicates import find_duplicates_in_keywords
+
+        groups = find_duplicates_in_keywords(
+            [{"keyword": "Пам’ять Ёлки"}, {"keyword": "пам'ять елки"}]
+        )
+
+        assert len(groups) == 1
+
     def test_empty_string(self):
         from llm_keywords_pipeline.analyze.duplicates import normalize_keyword
 

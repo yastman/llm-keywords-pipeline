@@ -107,6 +107,16 @@ class TestLoadExcelKeywords:
 
         assert keywords == {"тест1": 100, "тест2": 200}
 
+    def test_keeps_original_keyword_form(self, tmp_path):
+        """Excel keywords keep case, ё and ’ (only surrounding spaces stripped)."""
+        import pandas as pd
+
+        df = pd.DataFrame({"Ключевое слово": [" Пам’ять Ёлки "], "Точное вхождение": [7]})
+        excel_path = tmp_path / "test.xlsx"
+        df.to_excel(excel_path, index=False)
+
+        assert load_excel_keywords(excel_path) == {"Пам’ять Ёлки": 7}
+
 
 class TestMergeKeywords:
     """Test merging keywords."""
@@ -132,6 +142,46 @@ class TestMergeKeywords:
         assert len(result) == 1
         assert result[0]["category"] == "uncategorized"
         assert result[0]["type"] == "keyword"
+
+    def test_case_yo_apostrophe_variants_match(self):
+        """Excel 'пам'ять елки' updates the existing 'Пам’ять Ёлки' row, no new row."""
+        existing = [
+            {
+                "keyword": "Пам’ять Ёлки",
+                "volume": 5,
+                "category": "cat1",
+                "type": "keyword",
+                "use_in": "",
+            },
+        ]
+
+        result = merge_keywords(existing, {"пам'ять елки": 40})
+
+        assert len(result) == 1
+        assert result[0]["volume"] == 40
+        assert result[0]["keyword"] == "Пам’ять Ёлки"
+
+    def test_dedups_case_yo_variants_in_category(self):
+        """Two spellings of one keyword in one category and type collapse to one row."""
+        existing = [
+            {"keyword": "Ёлка", "volume": 5, "category": "c", "type": "keyword", "use_in": ""},
+            {"keyword": "елка", "volume": 9, "category": "c", "type": "keyword", "use_in": ""},
+        ]
+
+        result = merge_keywords(existing, {})
+
+        assert len(result) == 1
+        assert result[0]["volume"] == 9
+
+    def test_new_keyword_written_in_original_form(self, tmp_path):
+        """A new Excel keyword reaches the master CSV unchanged."""
+        result = merge_keywords([], {"Пам’ять Ёлки": 3})
+        csv_path = tmp_path / "master.csv"
+
+        save_master_csv(result, csv_path)
+
+        lines = csv_path.read_text(encoding="utf-8").strip().split("\n")
+        assert lines[1].startswith("Пам’ять Ёлки,3,")
 
     def test_updates_volume_for_every_row_of_keyword(self):
         """Excel volume should apply to the keyword in every category and type."""

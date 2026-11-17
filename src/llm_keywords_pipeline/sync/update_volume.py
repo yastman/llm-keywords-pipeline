@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.coverage import keyword_key
 
 ROOT = PROJECT_ROOT
 CSV_FILE = ROOT / "key_all.csv"
@@ -27,6 +28,7 @@ def load_csv_volumes() -> dict:
 def update_category(clean_file: Path, volumes: dict) -> tuple[int, int]:
     """Обновляет volume в _clean.json. Возвращает (обновлено, всего)."""
     data = json.loads(clean_file.read_text(encoding="utf-8"))
+    volumes = {keyword_key(k): v for k, v in volumes.items()}
     updated = 0
     total = 0
 
@@ -36,7 +38,7 @@ def update_category(clean_file: Path, volumes: dict) -> tuple[int, int]:
         keywords = [kw for group in keywords.values() for kw in group]
     for kw in keywords:
         total += 1
-        keyword = kw["keyword"]
+        keyword = keyword_key(kw["keyword"])
         if keyword in volumes:
             old_vol = kw.get("volume", 0)
             new_vol = volumes[keyword]
@@ -47,7 +49,7 @@ def update_category(clean_file: Path, volumes: dict) -> tuple[int, int]:
     # Обновляем synonyms
     for kw in data.get("synonyms", []):
         total += 1
-        keyword = kw["keyword"]
+        keyword = keyword_key(kw["keyword"])
         if keyword in volumes:
             old_vol = kw.get("volume", 0)
             new_vol = volumes[keyword]

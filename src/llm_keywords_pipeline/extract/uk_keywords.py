@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.coverage import keyword_key
 
 # Словарь перевода RU → UK
 TRANSLATION_DICT = {
@@ -260,9 +261,13 @@ def translate_keyword(keyword: str) -> str:
     return result
 
 
-def extract_keywords_from_file(filepath: Path) -> set:
-    """Извлекает все ключи из _clean.json файла."""
-    keywords = set()
+def extract_keywords_from_file(filepath: Path) -> dict[str, str]:
+    """Извлекает все ключи из _clean.json файла.
+
+    Возвращает {keyword_key: исходная форма}; из вариантов одного ключа
+    остаётся первый.
+    """
+    keywords: dict[str, str] = {}
 
     try:
         with open(filepath, encoding="utf-8") as f:
@@ -274,17 +279,17 @@ def extract_keywords_from_file(filepath: Path) -> set:
     # Извлекаем keywords
     for item in data.get("keywords", []):
         if "keyword" in item:
-            keywords.add(item["keyword"].lower().strip())
+            keywords.setdefault(keyword_key(item["keyword"]), item["keyword"].strip())
 
     # Извлекаем synonyms
     for item in data.get("synonyms", []):
         if "keyword" in item:
-            keywords.add(item["keyword"].lower().strip())
+            keywords.setdefault(keyword_key(item["keyword"]), item["keyword"].strip())
 
     # Извлекаем variations
     for item in data.get("variations", []):
         if "keyword" in item:
-            keywords.add(item["keyword"].lower().strip())
+            keywords.setdefault(keyword_key(item["keyword"]), item["keyword"].strip())
 
     return keywords
 
@@ -297,16 +302,17 @@ def main():
     print(f"Найдено {len(clean_files)} файлов _clean.json")
 
     # Извлекаем все ключи
-    all_ru_keywords = set()
+    all_ru_keywords: dict[str, str] = {}
     for filepath in clean_files:
         keywords = extract_keywords_from_file(filepath)
-        all_ru_keywords.update(keywords)
+        for key, keyword in keywords.items():
+            all_ru_keywords.setdefault(key, keyword)
 
     print(f"Извлечено {len(all_ru_keywords)} уникальных русских ключей")
 
     # Переводим на украинский
     all_uk_keywords = set()
-    for ru_kw in all_ru_keywords:
+    for ru_kw in all_ru_keywords.values():
         uk_kw = translate_keyword(ru_kw)
         all_uk_keywords.add(uk_kw)
 

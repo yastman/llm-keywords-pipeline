@@ -6,16 +6,12 @@ from collections import defaultdict
 from pathlib import Path
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.coverage import keyword_key
 
 ROOT = PROJECT_ROOT
 CATEGORIES_CSV = ROOT / "data" / "generated" / "all_from_categories.csv"
 MASTER_CSV = ROOT / "data" / "ru_semantics_master.csv"
 OUTPUT_FILE = ROOT / "data" / "generated" / "comparison_report.md"
-
-
-def normalize(keyword: str) -> str:
-    """Нормализует ключ для сравнения."""
-    return " ".join(keyword.lower().strip().split())
 
 
 def load_categories_csv(path: Path) -> dict:
@@ -25,7 +21,7 @@ def load_categories_csv(path: Path) -> dict:
         reader = csv.DictReader(f)
         for row in reader:
             row["volume"] = int(row["volume"])
-            key = normalize(row["keyword"])
+            key = keyword_key(row["keyword"])
             data[key].append(row)
     return dict(data)
 
@@ -37,7 +33,7 @@ def load_master_csv(path: Path) -> dict:
         reader = csv.DictReader(f)
         for row in reader:
             row["volume"] = int(row["volume"])
-            key = normalize(row["keyword"])
+            key = keyword_key(row["keyword"])
             data[key].append(row)
     return dict(data)
 
