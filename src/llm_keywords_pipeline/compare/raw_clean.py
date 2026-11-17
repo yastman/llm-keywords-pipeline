@@ -11,9 +11,9 @@ Usage:
     uv run python -m llm_keywords_pipeline.compare.raw_clean aktivnaya-pena
 """
 
+import argparse
 import csv
 import json
-import sys
 from pathlib import Path
 
 # Paths
@@ -358,14 +358,17 @@ def fix_clean_json(
     )
 
 
-def main():
-    fix_mode = "--fix" in sys.argv
-    target_slug = None
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Compare CSV semantics with _clean.json files.")
+    parser.add_argument("slug", nargs="?", help="check only this category slug")
+    parser.add_argument("--fix", action="store_true", help="write fixes to _clean.json")
+    return parser.parse_args(argv)
 
-    for arg in sys.argv[1:]:
-        if not arg.startswith("--"):
-            target_slug = arg
-            break
+
+def main(argv=None):
+    args = parse_args(argv)
+    fix_mode = args.fix
+    target_slug = args.slug
 
     print(f"📖 Reading CSV: {SEMANTICS_CSV}")
     csv_blocks = parse_csv_keywords()

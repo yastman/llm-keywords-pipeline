@@ -7,6 +7,7 @@ find_orphan_keywords.py — Находит ключи из CSV, которых �
 3. Находит "сирот" и предлагает категории для них
 """
 
+import argparse
 import csv
 import json
 import re
@@ -252,6 +253,17 @@ def suggest_category(keyword: str) -> tuple[str, int]:
     return best_slug, best_priority
 
 
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Find CSV keywords missing from _clean.json files."
+    )
+    parser.add_argument(
+        "--distribute", action="store_true", help="distribute orphans to categories"
+    )
+    parser.add_argument("--apply", action="store_true", help="write changes (default: dry run)")
+    return parser.parse_args(argv)
+
+
 def main():
     print("📖 Парсинг всех ключей из CSV...")
     csv_keywords = parse_all_csv_keywords()
@@ -427,10 +439,9 @@ def distribute_orphans(by_category: dict[str, list], dry_run: bool = True) -> in
 
 
 if __name__ == "__main__":
-    import sys
-
-    distribute_mode = "--distribute" in sys.argv
-    dry_run = "--apply" not in sys.argv
+    args = parse_args()
+    distribute_mode = args.distribute
+    dry_run = not args.apply
 
     by_category, unassigned = main()
 
