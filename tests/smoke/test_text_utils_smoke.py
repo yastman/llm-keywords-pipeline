@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.real_data import UK_FIXTURE_CONTENT
+from tests.fixtures.real_data import UK_FIXTURE_CONTENT, UK_FIXTURE_SLUG
 
 # Real data paths (using actual hierarchy)
 PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -23,7 +23,7 @@ def find_uk_content(slug: str) -> Path | None:
     path = PROJECT_ROOT / "uk" / "categories" / slug / "content" / f"{slug}_uk.md"
     if path.exists():
         return path
-    return UK_FIXTURE_CONTENT if slug == "aktivnaya-pena" else None
+    return UK_FIXTURE_CONTENT if slug == UK_FIXTURE_SLUG else None
 
 
 class TestTextUtilsSmoke:

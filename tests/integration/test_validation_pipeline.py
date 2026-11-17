@@ -6,7 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.real_data import UK_FIXTURE_CONTENT, UK_FIXTURE_META
+from tests.fixtures.real_data import (
+    UK_FIXTURE_CLEAN,
+    UK_FIXTURE_CONTENT,
+    UK_FIXTURE_META,
+    UK_FIXTURE_SLUG,
+)
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
@@ -37,7 +42,7 @@ def find_uk_content(slug: str) -> Path | None:
     path = PROJECT_ROOT / "uk" / "categories" / slug / "content" / f"{slug}_uk.md"
     if path.exists():
         return path
-    return UK_FIXTURE_CONTENT if slug == "aktivnaya-pena" else None
+    return UK_FIXTURE_CONTENT if slug == UK_FIXTURE_SLUG else None
 
 
 def find_uk_meta(slug: str) -> Path | None:
@@ -45,13 +50,15 @@ def find_uk_meta(slug: str) -> Path | None:
     path = PROJECT_ROOT / "uk" / "categories" / slug / "meta" / f"{slug}_meta.json"
     if path.exists():
         return path
-    return UK_FIXTURE_META if slug == "aktivnaya-pena" else None
+    return UK_FIXTURE_META if slug == UK_FIXTURE_SLUG else None
 
 
 def find_uk_clean(slug: str) -> Path | None:
-    """Find UK clean JSON in uk/categories."""
+    """Find UK clean JSON in uk/categories, else the hand-written fixture."""
     path = PROJECT_ROOT / "uk" / "categories" / slug / "data" / f"{slug}_clean.json"
-    return path if path.exists() else None
+    if path.exists():
+        return path
+    return UK_FIXTURE_CLEAN if slug == UK_FIXTURE_SLUG else None
 
 
 class TestFullValidationPipeline:
@@ -122,12 +129,11 @@ class TestFullValidationPipeline:
             pytest.skip("UK category data not complete")
 
         # 1. Load clean.json for primary keyword
+        from llm_keywords_pipeline.core.clean_json import keyword_entries
+
         clean_data = json.loads(clean_path.read_text(encoding="utf-8"))
-        keywords = clean_data.get("keywords", [])
-        if keywords and isinstance(keywords[0], dict):
-            primary_keyword = keywords[0].get("keyword", "активна піна")
-        else:
-            primary_keyword = "активна піна"
+        keywords = keyword_entries(clean_data)
+        primary_keyword = keywords[0].get("keyword", "активна піна") if keywords else "активна піна"
 
         # 2. Validate meta
         from llm_keywords_pipeline.validate.meta import validate_meta_file

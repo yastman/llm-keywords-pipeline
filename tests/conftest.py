@@ -62,25 +62,3 @@ def sample_uk_markdown():
     from tests.fixtures.real_data import SAMPLE_UK_MARKDOWN
 
     return SAMPLE_UK_MARKDOWN
-
-
-@pytest.fixture
-def real_ru_content_path():
-    """Path to real RU content file (aktivnaya-pena)."""
-    from tests.fixtures.real_data import get_ru_content_path
-
-    path = get_ru_content_path("aktivnaya-pena")
-    if not path.exists():
-        pytest.skip(f"Real data not available: {path}")
-    return path
-
-
-@pytest.fixture
-def real_uk_content_path():
-    """Path to real UK content file (aktivnaya-pena)."""
-    from tests.fixtures.real_data import get_uk_content_path
-
-    path = get_uk_content_path("aktivnaya-pena")
-    if not path.exists():
-        pytest.skip(f"Real data not available: {path}")
-    return path
