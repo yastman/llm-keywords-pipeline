@@ -91,8 +91,7 @@ TRANSLATIONS = {
     # Commercial (meta_only)
     "цена": "ціна",
     "украина": "україна",
-    "Украина": "Україна",
-    "Украине": "Україні",
+    "украине": "україні",
 }
 
 # Category name translations
@@ -157,10 +156,22 @@ CATEGORY_NAMES = {
 
 
 def translate_keyword(text: str) -> str:
-    """Translate RU keyword to UK, replacing whole words only."""
+    """Translate RU keyword to UK, replacing whole words only.
+
+    Keys are lowercase; a capitalised source word gets a capitalised translation.
+    """
+
+    def replace(match: re.Match[str], uk: str) -> str:
+        return uk[:1].upper() + uk[1:] if match.group(0)[:1].isupper() else uk
+
     result = text
     for ru, uk in sorted(TRANSLATIONS.items(), key=lambda x: -len(x[0])):
-        result = re.sub(rf"(?<!\w){re.escape(ru)}(?!\w)", uk, result, flags=re.IGNORECASE)
+        result = re.sub(
+            rf"(?<!\w){re.escape(ru)}(?!\w)",
+            lambda m, uk=uk: replace(m, uk),
+            result,
+            flags=re.IGNORECASE,
+        )
     return result
 
 
