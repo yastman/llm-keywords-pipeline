@@ -431,9 +431,7 @@ def write_fix_prompt(slug: str, validation: dict) -> str:
 # =============================================================================
 
 
-def process_category(
-    slug: str, log: dict, analyze_only: bool = False, fix_prompt: bool = True
-) -> bool:
+def process_category(slug: str, log: dict, analyze_only: bool = False) -> bool:
     """Process a single category through the pipeline."""
     print(f"\n{'=' * 60}")
     print(f"Processing: {slug}")
@@ -488,9 +486,7 @@ def process_category(
     else:
         print("   Validation: FAIL")
         update_category_status(log, slug, "validate", "FAIL", validation)
-
-        if fix_prompt:
-            print(f"   Fix prompt: {write_fix_prompt(slug, validation)}")
+        print(f"   Fix prompt: {write_fix_prompt(slug, validation)}")
 
         log["total_failed"] = log.get("total_failed", 0) + 1
         return False

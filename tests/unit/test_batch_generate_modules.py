@@ -1,5 +1,6 @@
 """batch.generate calls the real analyze/validate modules; fix prompt keeps full content."""
 
+import inspect
 import json
 import subprocess
 import sys
@@ -114,3 +115,7 @@ def test_failed_validation_writes_fix_prompt_without_self_heal_claim(monkeypatch
     assert (content_dir / "s_fix_prompt.md").exists()
     assert log["categories"]["s"]["last_status"] == "FAIL"
     assert "heal" not in capsys.readouterr().out.lower()
+
+
+def test_process_category_has_no_fix_prompt_switch():
+    assert "fix_prompt" not in inspect.signature(generate.process_category).parameters
