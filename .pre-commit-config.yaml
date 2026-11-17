@@ -32,11 +32,14 @@ repos:
       - id: check-yaml
       - id: check-merge-conflict
       - id: check-added-large-files
+        stages: [pre-commit]
       - id: detect-private-key
       - id: trailing-whitespace
         exclude: ^(archive/|.*\.csv$|.*\.md$)
+        stages: [pre-commit]
       - id: end-of-file-fixer
         exclude: ^(archive/|.*\.csv$)
+        stages: [pre-commit]
 
   # CI checks before push
   - repo: local
