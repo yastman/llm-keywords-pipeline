@@ -7,14 +7,14 @@ batch_generate.py — Batch Content Generation Orchestrator
 Features:
 - Batch processing of multiple categories
 - Progress logging (batch_log.json)
-- Self-healing loop (auto-fix on validation errors)
-- Resume from last failed category
+- Fix prompt on validation errors (written to a file; the LLM run is manual)
+- Resume: rerun every category whose last status is FAIL
 
 Workflow per category:
 1. llm_keywords_pipeline.analyze.category → context for LLM
 2. (External) LLM generation
 3. llm_keywords_pipeline.validate.content → quality check
-4. If FAIL → retry with fixes
+4. If FAIL → write {slug}_fix_prompt.md for a manual LLM fix
 
 Usage:
     uv run python -m llm_keywords_pipeline.batch.generate --list
@@ -286,10 +286,8 @@ def run_validate(slug: str, primary_keyword: str) -> tuple[bool, dict]:
 
 
 # =============================================================================
-# Self-Healing Loop
+# Fix Prompt
 # =============================================================================
-
-MAX_HEALING_ATTEMPTS = 3
 
 
 def extract_issues_from_validation(validation: dict) -> list[str]:
@@ -396,42 +394,36 @@ def generate_fix_prompt(slug: str, issues: list[str], content: str) -> str:
 """
 
 
-def attempt_self_heal(slug: str, validation: dict, attempt: int = 1) -> tuple[bool, str]:
+def write_fix_prompt(slug: str, validation: dict) -> str:
     """
-    Attempt to self-heal content based on validation errors.
+    Write a fix prompt for the validation errors; the LLM run is manual.
 
     Returns:
-        (success, message)
+        status message
     """
-    if attempt > MAX_HEALING_ATTEMPTS:
-        return False, f"Max healing attempts ({MAX_HEALING_ATTEMPTS}) reached"
-
     issues = extract_issues_from_validation(validation)
     if not issues:
-        return False, "No fixable issues detected"
+        return "No fixable issues detected"
 
-    print(f"\n   [SELF-HEAL] Attempt {attempt}/{MAX_HEALING_ATTEMPTS}")
+    print("\n   [FIX PROMPT]")
     print(f"   Issues detected: {', '.join(issues)}")
 
     # Read current content
     content_file = CATEGORIES_DIR / slug / "content" / f"{slug}_ru.md"
     if not content_file.exists():
-        return False, "Content file not found"
+        return "Content file not found"
 
     content = content_file.read_text(encoding="utf-8")
 
-    # Generate fix prompt
     fix_prompt = generate_fix_prompt(slug, issues, content)
 
-    # Note: Actual LLM call should be done externally
-    # This returns the prompt for manual/external execution
     prompt_file = CATEGORIES_DIR / slug / "content" / f"{slug}_fix_prompt.md"
     prompt_file.write_text(fix_prompt, encoding="utf-8")
 
     print(f"   Fix prompt saved to: {prompt_file.name}")
     print(f"   Run LLM manually or use: 'исправь {slug}'")
 
-    return False, "Fix prompt generated. Manual intervention required."
+    return "Fix prompt generated. Manual intervention required."
 
 
 # =============================================================================
@@ -440,7 +432,7 @@ def attempt_self_heal(slug: str, validation: dict, attempt: int = 1) -> tuple[bo
 
 
 def process_category(
-    slug: str, log: dict, analyze_only: bool = False, self_heal: bool = True
+    slug: str, log: dict, analyze_only: bool = False, fix_prompt: bool = True
 ) -> bool:
     """Process a single category through the pipeline."""
     print(f"\n{'=' * 60}")
@@ -497,20 +489,8 @@ def process_category(
         print("   Validation: FAIL")
         update_category_status(log, slug, "validate", "FAIL", validation)
 
-        # Attempt self-healing
-        if self_heal:
-            healed, msg = attempt_self_heal(slug, validation)
-            if healed:
-                # Re-validate after healing
-                print("\n   Re-validating after self-heal...")
-                success, validation = run_validate(slug, primary_kw)
-                if validation.get("status") in ["PASS", "WARNING"]:
-                    print("   Self-heal SUCCESSFUL!")
-                    update_category_status(log, slug, "self_heal", "PASS", validation)
-                    log["total_success"] = log.get("total_success", 0) + 1
-                    return True
-            else:
-                print(f"   Self-heal: {msg}")
+        if fix_prompt:
+            print(f"   Fix prompt: {write_fix_prompt(slug, validation)}")
 
         log["total_failed"] = log.get("total_failed", 0) + 1
         return False
@@ -620,14 +600,16 @@ def main():
 
     elif arg == "--resume":
         log = load_batch_log()
-        # Find last failed category
-        for slug, cat_log in log.get("categories", {}).items():
-            if cat_log.get("last_status") == "FAIL":
-                print(f"Resuming from failed category: {slug}")
-                process_category(slug, log)
-                break
-        else:
+        failed = [
+            slug
+            for slug, cat_log in log.get("categories", {}).items()
+            if cat_log.get("last_status") == "FAIL"
+        ]
+        if not failed:
             print("No failed categories to resume")
+        for slug in failed:
+            print(f"Resuming failed category: {slug}")
+            process_category(slug, log)
 
     else:
         # Single category

@@ -77,3 +77,40 @@ def test_fix_prompt_embeds_full_content():
     prompt = generate.generate_fix_prompt("slug", ["h1_missing"], content)
 
     assert content in prompt
+
+
+def test_resume_reruns_every_failed_slug(monkeypatch):
+    log = {
+        "categories": {
+            "a": {"last_status": "FAIL"},
+            "b": {"last_status": "PASS"},
+            "c": {"last_status": "FAIL"},
+        }
+    }
+    calls = []
+    monkeypatch.setattr(generate, "load_batch_log", lambda: log)
+    monkeypatch.setattr(generate, "process_category", lambda slug, lg: calls.append(slug))
+    monkeypatch.setattr(sys, "argv", ["generate", "--resume"])
+
+    generate.main()
+
+    assert calls == ["a", "c"]
+
+
+def test_failed_validation_writes_fix_prompt_without_self_heal_claim(monkeypatch, tmp_path, capsys):
+    content_dir = tmp_path / "s" / "content"
+    content_dir.mkdir(parents=True)
+    (content_dir / "s_ru.md").write_text("# H1\n", encoding="utf-8")
+    monkeypatch.setattr(generate, "CATEGORIES_DIR", tmp_path)
+    monkeypatch.setattr(generate, "save_batch_log", lambda log: None)
+    monkeypatch.setattr(generate, "run_analyze", lambda slug: (True, {"keywords": {}}))
+    validation = {"status": "FAIL", "output": "H1 missing"}
+    monkeypatch.setattr(generate, "run_validate", lambda slug, kw: (True, validation))
+    monkeypatch.setattr(generate, "extract_issues_from_validation", lambda v: ["h1_missing"])
+    log = {"categories": {}}
+
+    assert generate.process_category("s", log) is False
+
+    assert (content_dir / "s_fix_prompt.md").exists()
+    assert log["categories"]["s"]["last_status"] == "FAIL"
+    assert "heal" not in capsys.readouterr().out.lower()
