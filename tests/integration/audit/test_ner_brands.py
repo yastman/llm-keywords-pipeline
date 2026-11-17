@@ -152,11 +152,13 @@ class TestCityBlacklist:
         assert [c["entity"] for c in check_blacklist("Доставка в Сумах")["cities"]] == ["суми"]
 
     def test_lowercase_form_after_na_not_city(self):
-        """'на' alone before a non-title-case form is no place; title-case forms after 'на' count."""
+        """'на' alone before a lowercase form is no place; any other case after 'на' counts."""
         assert check_blacklist("на ровном месте")["cities"] == []
         assert check_blacklist("Працюйте на рівному майданчику")["cities"] == []
-        assert check_blacklist("ПРАЦЮЙТЕ НА РІВНОМУ МАЙДАНЧИКУ")["cities"] == []
-        assert check_blacklist("ДОСТАВКА НА РІВНЕ")["cities"] == []
+        # ALL-CAPS after a preposition counts, "на" included (the copy cannot tell them apart)
+        result = check_blacklist("ПРАЦЮЙТЕ НА РІВНОМУ МАЙДАНЧИКУ")
+        assert [c["entity"] for c in result["cities"]] == ["рівне"]
+        assert [c["entity"] for c in check_blacklist("ДОСТАВКА НА РІВНЕ")["cities"]] == ["рівне"]
         assert [c["entity"] for c in check_blacklist("Доставка на Київ")["cities"]] == ["київ"]
         assert [c["entity"] for c in check_blacklist("Доставка на Рівне")["cities"]] == ["рівне"]
         # other prepositions keep any case

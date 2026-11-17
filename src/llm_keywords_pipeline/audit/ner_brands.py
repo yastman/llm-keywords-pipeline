@@ -337,8 +337,8 @@ def check_blacklist(text: str) -> dict:
 
     # Предлог места прямо перед формой или перед первым городом списка
     # ("у Києві, Миколаєві, Черкасах і Луцьку"), в любом регистре; "м."/"г." между
-    # ними прозрачно ("у м. Києві"). Одно "на" перед формой не с заглавной (строчной
-    # или КАПСОМ) — не место ("на ровном месте", "НА РІВНОМУ МАЙДАНЧИКУ").
+    # ними прозрачно ("у м. Києві"). Одно "на" перед строчной формой — не место
+    # ("на ровном месте", "на рівному майданчику"); заглавная или КАПС после "на" — место.
     after_preposition = [False] * len(words)
     for k, m in enumerate(words):
         if not parses[k] or k == 0:
@@ -356,7 +356,7 @@ def check_blacklist(text: str) -> dict:
         if (
             prev.group() in _CITY_PREPOSITIONS
             and text_lower[prev.end() : words[prep_k + 1].start()].isspace()
-            and not (prev.group() == "на" and not _is_title_case(text[m.start() : m.end()]))
+            and not (prev.group() == "на" and not text[m.start()].isupper())
         ):
             after_preposition[k] = True
             continue
