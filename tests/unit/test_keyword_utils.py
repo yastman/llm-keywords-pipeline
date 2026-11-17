@@ -160,6 +160,23 @@ class TestKeywordMatcherUK:
         assert found is True
         assert form == "щітку"
 
+    def test_uk_buy_key_kuplyu_matches_kupyty(self):
+        """UK: buy key 'куплю X' matches a text with 'купити X' (куплю is not the noun купля)."""
+        assert MorphAnalyzer("uk").get_lemma("куплю") == "купити"
+        matcher = KeywordMatcher(lang="uk")
+        found, form = matcher.find_in_text(
+            "куплю цукерки оптом", "Де купити цукерки оптом у Києві?"
+        )
+        assert found is True
+        assert form == "купити цукерки оптом"
+
+    def test_ru_buy_key_kuplyu_matches_kupit(self):
+        """RU: 'куплю X' matches 'купить X' (pymorphy3 ranks the verb parse first)."""
+        assert MorphAnalyzer("ru").get_lemma("куплю") == "купить"
+        matcher = KeywordMatcher(lang="ru")
+        found, _ = matcher.find_in_text("куплю конфеты оптом", "Где купить конфеты оптом?")
+        assert found is True
+
 
 class TestKeywordMatcher:
     """Test KeywordMatcher class."""
