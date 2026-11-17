@@ -120,7 +120,7 @@ points:
 | `uv run llm-keywords-density <file.md>` | Keyword density, stem groups, category substrings, spam/warning thresholds. | `--lang ru\|uk`, default ru. |
 | `uv run llm-keywords-audit-brands <file.md>` | Blacklisted brands, city mentions, NER entities, AI fluff. Strict phrases give FAIL; any brand, city, AI-fluff or strict hit gives exit 1; NER entities are info only (no exit 1). Strict and AI-fluff lists follow the file's language (from the path). | From the path, as check-seo. |
 | `uv run llm-keywords-audit-water <file.md>` | Water, classic nausea, academic nausea. | `--lang ru\|uk`, default ru. |
-| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>"` | H1/H2 structure, primary keyword in H1 and intro, core and commercial coverage, water/nausea, blacklist, length, content standards, markdown lint, FAQ. | `--lang ru\|uk`, default ru; the blacklist check uses the same language. |
+| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>" --with-analysis <slug>` | H1/H2 structure, primary keyword in H1 and intro, core and commercial coverage (keywords from `--with-analysis`; without it coverage passes on zero keywords), water/nausea, blacklist, length, content standards, markdown lint, FAQ. | `--lang ru\|uk`, default ru; the blacklist check uses the same language. |
 
 Morphology-aware for both Russian and Ukrainian (pymorphy3 lemmas): check-seo keyword
 matching, density keyword counts (keywords are counted by lemma n-grams), and core

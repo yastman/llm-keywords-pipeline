@@ -34,6 +34,7 @@ from typing import Any
 
 from llm_keywords_pipeline.core.config import QUALITY_THRESHOLDS
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer, keyword_matches_text
+from llm_keywords_pipeline.validate.seo import detect_language
 
 # Fix Windows encoding is moved to main() block to avoid pytest conflicts
 
@@ -755,7 +756,7 @@ def main():
         all_results = []
         for meta_path, keywords_path in meta_files:
             # Auto-detect language from path
-            file_lang = "uk" if "/uk/" in meta_path or "\\uk\\" in meta_path else lang
+            file_lang = "uk" if detect_language(meta_path) == "uk" else lang
             results = validate_meta_file(meta_path, keywords_path, lang=file_lang)
             all_results.append(results)
 
@@ -791,7 +792,7 @@ def main():
                 keywords_path = sys.argv[idx + 1]
 
         # Auto-detect language from path if not explicitly set
-        if "--lang" not in sys.argv and ("/uk/" in meta_path or "\\uk\\" in meta_path):
+        if "--lang" not in sys.argv and detect_language(meta_path) == "uk":
             lang = "uk"
 
         results = validate_meta_file(meta_path, keywords_path, lang=lang)

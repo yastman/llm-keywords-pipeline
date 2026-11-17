@@ -62,13 +62,20 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
 
    Then cluster: move each file's keywords into `primary` / `secondary` / `supporting` /
    `commercial` in the JSON.
-   Related commands: `sync.merge_master [--excel f.xlsx ...]` rebuilds the master CSV from
-   the `_clean.json` files; `sync.update_volume` (no flags) rewrites volumes in every
-   `_clean.json` from `key_all.csv`, in place.
+   Related commands, RU only (they scan `categories/`, never `uk/`):
+   `sync.merge_master [--excel f.xlsx ...]` rebuilds the master CSV from the RU
+   `_clean.json` files; `sync.update_volume` (no flags) rewrites their volumes from
+   `key_all.csv`, in place.
+
+   UK has no CSV and no sync: you make each UK file yourself by translating and adapting
+   the RU `_clean.json` into `uk/categories/{slug}/data/{slug}_clean.json` (same shape).
 3. **Brief.** `uv run python -m llm_keywords_pipeline.analyze.category <slug> [--lang uk] [--json]`
    prints the keyword groups, recommended length, coverage target and structure.
-4. **Text and meta.** Write the text and meta by `prompts/produce.md` (RU); prepare and
-   delivery steps are in `prompts/prepare.md` and `prompts/deliver.md`.
+4. **Text and meta.** Write the text by `prompts/produce.md` (RU); prepare and delivery
+   steps are in `prompts/prepare.md` and `prompts/deliver.md`. The meta follows
+   `validate.meta`, not produce.md: the shape above, and a description with the producer
+   phrase (`от производителя Ultimate` / `від виробника Ultimate`) and the wholesale one
+   (`Опт и розница` / `Опт і роздріб`).
 5. **Validate and fix.** Run every validator below on the file; fix the text and rerun
    until each exits 0; a WARNING you leave in place is named, with the reason, in the hand-over.
 6. **Hand over** the files under the data root. Nothing from steps 1-5 is committed.
@@ -77,12 +84,16 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
 
 | Command | Checks | Language |
 | --- | --- | --- |
-| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Main keyword in intro and H2, keyword frequency | from the path: `/uk/` → uk, else ru |
+| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Main keyword in intro and H2, keyword frequency | from the path: `uk/categories/` or `/uk/` in it → uk, else ru |
 | `uv run llm-keywords-density <file.md> [--slug SLUG]` | Keyword density, stem groups, spam | `--lang ru\|uk`, default ru |
 | `uv run llm-keywords-audit-brands <file.md>` | Brands, cities, strict phrases, AI fluff | from the path |
 | `uv run llm-keywords-audit-water <file.md>` | Water, classic and academic nausea | `--lang ru\|uk`, default ru |
-| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>"` | H1/H2 structure, keyword in H1 and intro, coverage, water, blacklist, length, markdown lint, FAQ | `--lang ru\|uk`, default ru |
-| `uv run python -m llm_keywords_pipeline.validate.meta <meta.json> [--keywords <_clean.json>]` | Title and description length, primary keyword, producer and wholesale phrases | from the path, or `--lang ru\|uk` |
+| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>" --with-analysis <slug>` | H1/H2 structure, keyword in H1 and intro, core and commercial coverage, water, blacklist, length, markdown lint, FAQ | `--lang ru\|uk`, default ru; also picks the RU or UK `_clean.json` for `<slug>` |
+| `uv run python -m llm_keywords_pipeline.validate.meta <meta.json> --keywords <_clean.json>` | Title and description length, primary keyword, producer and wholesale phrases | from the path, as check-seo, or `--lang ru\|uk` |
+
+Pass the keyword source every time: without `--with-analysis` validate.content has no
+category keywords and reports coverage PASS on zero keywords; without `--keywords`
+validate.meta skips the primary-keyword check ("No keywords to check").
 
 Exit codes: 0 PASS, 1 WARNING, 2 FAIL, except audit-brands (1 for any hit, WARNING or
 FAIL) and audit-water (0 PASS or WARNING, 1 BLOCKER). `validate.meta --all` scans
