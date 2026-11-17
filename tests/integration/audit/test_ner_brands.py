@@ -1,9 +1,18 @@
 """Tests for audit/ner_brands.py"""
 
+from llm_keywords_pipeline.audit import ner_brands
 from llm_keywords_pipeline.audit.ner_brands import (
     check_blacklist,
     is_false_positive_location,
 )
+
+
+def test_ner_unavailable_warning_names_uv(monkeypatch):
+    """Without full Natasha, check_ner's warning names the uv command."""
+    monkeypatch.setattr(ner_brands, "NATASHA_FULL", False)
+    result = ner_brands.check_ner("Текст.")
+    assert result["ner_entities"] == []
+    assert "uv sync --group nlp" in result["warning"]
 
 
 class TestBrandBlacklist:
@@ -143,11 +152,15 @@ class TestCityBlacklist:
         assert [c["entity"] for c in check_blacklist("Доставка в Сумах")["cities"]] == ["суми"]
 
     def test_lowercase_form_after_na_not_city(self):
-        """'на' alone before a lowercase form is no place; capitalised forms after 'на' count."""
+        """'на' alone before a non-title-case form is no place; title-case forms after 'на' count."""
         assert check_blacklist("на ровном месте")["cities"] == []
         assert check_blacklist("Працюйте на рівному майданчику")["cities"] == []
+        assert check_blacklist("ПРАЦЮЙТЕ НА РІВНОМУ МАЙДАНЧИКУ")["cities"] == []
+        assert check_blacklist("ДОСТАВКА НА РІВНЕ")["cities"] == []
         assert [c["entity"] for c in check_blacklist("Доставка на Київ")["cities"]] == ["київ"]
-        assert [c["entity"] for c in check_blacklist("ДОСТАВКА НА РІВНЕ")["cities"]] == ["рівне"]
+        assert [c["entity"] for c in check_blacklist("Доставка на Рівне")["cities"]] == ["рівне"]
+        # other prepositions keep any case
+        assert [c["entity"] for c in check_blacklist("ДОСТАВКА У РІВНЕ")["cities"]] == ["рівне"]
 
     def test_lowercase_sumy_vetoed_after_preposition(self):
         """Lowercase 'суми' after a preposition is an amount; 'в ровно' stays a city."""
@@ -162,6 +175,14 @@ class TestCityBlacklist:
         assert [c["entity"] for c in check_blacklist("офіс у м. києві")["cities"]] == ["київ"]
         # 'кг.' is no one-letter abbreviation: it ends the sentence
         assert check_blacklist("Ціна за кг. Рівним шаром нанесіть.")["cities"] == []
+        # no preposition reaches the city: only the sentence rule sees 'м.'
+        result = check_blacklist("Адреса: м. Рівне, вул. Соборна")
+        assert [c["entity"] for c in result["cities"]] == ["рівне"]
+
+    def test_unit_after_number_ends_sentence(self):
+        """'5 м.' / '50 г.' is a unit, not a city abbreviation."""
+        assert check_blacklist("Довжина 5 м. Рівним шаром нанесіть пасту.")["cities"] == []
+        assert check_blacklist("Візьміть 50 г. Рівним шаром нанесіть.")["cities"] == []
 
     def test_all_caps_and_table_cell_not_city(self):
         """An ALL-CAPS word is no capital-letter signal; '|' opens a table cell."""

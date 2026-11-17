@@ -257,13 +257,24 @@ _CITY_ABBREVIATIONS = {"м", "г"}
 
 
 def _is_city_abbreviation(text: str, dot: int) -> bool:
-    """True if the '.' at `dot` closes a one-letter 'м.'/'г.' ('у м. Києві')."""
-    return (
+    """True if the '.' at `dot` closes a one-letter 'м.'/'г.' ('у м. Києві').
+
+    After a number it is a unit ('5 м.', '50 г.'), not a city abbreviation.
+    """
+    if not (
         dot >= 1
         and text[dot] == "."
         and text[dot - 1].lower() in _CITY_ABBREVIATIONS
         and (dot == 1 or not text[dot - 2].isalnum())
-    )
+    ):
+        return False
+    before = text[: dot - 1].rstrip()
+    return not (before and before[-1].isdigit())
+
+
+def _is_title_case(word: str) -> bool:
+    """Capital first letter and not ALL-CAPS ('Рівне', not 'РІВНЕ' or 'рівне')."""
+    return word[:1].isupper() and not word.isupper()
 
 
 def _starts_sentence(text: str, pos: int) -> bool:
@@ -326,8 +337,8 @@ def check_blacklist(text: str) -> dict:
 
     # Предлог места прямо перед формой или перед первым городом списка
     # ("у Києві, Миколаєві, Черкасах і Луцьку"), в любом регистре; "м."/"г." между
-    # ними прозрачно ("у м. Києві"). Одно "на" перед строчной формой — не место
-    # ("на ровном месте", "на рівному майданчику").
+    # ними прозрачно ("у м. Києві"). Одно "на" перед формой не с заглавной (строчной
+    # или КАПСОМ) — не место ("на ровном месте", "НА РІВНОМУ МАЙДАНЧИКУ").
     after_preposition = [False] * len(words)
     for k, m in enumerate(words):
         if not parses[k] or k == 0:
@@ -345,7 +356,7 @@ def check_blacklist(text: str) -> dict:
         if (
             prev.group() in _CITY_PREPOSITIONS
             and text_lower[prev.end() : words[prep_k + 1].start()].isspace()
-            and not (prev.group() == "на" and not text[m.start()].isupper())
+            and not (prev.group() == "на" and not _is_title_case(text[m.start() : m.end()]))
         ):
             after_preposition[k] = True
             continue
@@ -386,7 +397,7 @@ def check_blacklist(text: str) -> dict:
         if ambiguous:
             word = match.group()
             upper = text[match.start()].isupper()
-            title_case = upper and not text[match.start() : match.end()].isupper()
+            title_case = _is_title_case(text[match.start() : match.end()])
             by_capital = title_case and not _starts_sentence(text, match.start())
             vetoed = not upper and word in _FALSE_POSITIVE_CITIES and word != "ровно"
             if not by_capital and not (after_preposition[k] and not vetoed):
@@ -429,7 +440,10 @@ def check_blacklist(text: str) -> dict:
 def check_ner(text: str) -> dict:
     """Использует Natasha NER для поиска сущностей."""
     if not NATASHA_FULL:
-        return {"ner_entities": [], "warning": "NER недоступен (установите natasha полностью)"}
+        return {
+            "ner_entities": [],
+            "warning": "NER недоступен (установите natasha: uv sync --group nlp)",
+        }
 
     segmenter = Segmenter()
     emb = NewsEmbedding()
