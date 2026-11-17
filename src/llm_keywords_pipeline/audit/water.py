@@ -5,13 +5,17 @@ Stage 8.1: Water and Nausea Calculator using NATASHA
 SEO 2025 v7.3 (Shop Mode - Buying Guides)
 
 Рассчитывает метрики качества текста:
-- Вода (%) = (стоп-слова / всего слов) × 100 | Target: 40-60% (Tier A/B), 40-65% (Tier C)
+- Вода (%) = (стоп-слова / всего слов) × 100 | Target: 40-65%
 - Классическая тошнота = √(max_lemma_frequency) | Target: ≤3.5 (BLOCKER >4.0)
 - Академическая тошнота (доля топ-леммы) = (max_freq / total_significant) × 100,
   где total_significant — сумма частот значимых лемм (не стоп-слова, freq>1) | Target: 7-9.5%
+  (BLOCKER >12%)
+Пороги берутся из QUALITY_THRESHOLDS (core/config.py).
 
 Usage:
     uv run python -m llm_keywords_pipeline.audit.water <file.md> [target_min] [target_max]
+
+Exit code: 0 = PASS или WARNING; 1 = BLOCKER, файл не найден или пустые метрики.
 """
 
 from __future__ import annotations
@@ -21,6 +25,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from llm_keywords_pipeline.core.config import QUALITY_THRESHOLDS
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 from llm_keywords_pipeline.core.text import clean_markdown, get_stopwords, split_words
 
@@ -248,13 +253,16 @@ def calculate_metrics(file_path: str | Path, lang: str = "ru") -> dict | None:
 
 
 def check_water(
-    file_path: str | Path, target_min: int = 40, target_max: int = 60, lang: str = "ru"
+    file_path: str | Path,
+    target_min: float = QUALITY_THRESHOLDS["water_target_min"],
+    target_max: float = QUALITY_THRESHOLDS["water_target_max"],
+    lang: str = "ru",
 ) -> int:
     """
     Проверяет воду и тошноту по стандартам SEO 2025 v7.3.
 
     Returns:
-        0 = PASS, 1 = WARNING/FAIL
+        0 = PASS или WARNING, 1 = BLOCKER или пустые метрики
     """
     print(f"📊 Анализ качества текста (NATASHA): {Path(file_path).name}\n")
 
@@ -274,7 +282,7 @@ def check_water(
         f"   Raw (Natasha): {metrics['water_percent_raw']:.1f}% × 2.4 = {metrics['water_percent']:.1f}%"
     )
     print(f"   Стоп-слова: {metrics['water_count']} из {metrics['total_words']}")
-    print(f"   Цель: {target_min}-{target_max}%")
+    print(f"   Цель: {target_min:g}-{target_max:g}%")
 
     if target_min <= metrics["water_percent"] <= target_max:
         print("   ✅ PASS")
@@ -295,22 +303,27 @@ def check_water(
     print(
         f"   Самое частое слово: '{metrics['most_common_lemma']}' ({metrics['max_frequency']} раз)"
     )
-    print("   Цель: ≤3.5 (BLOCKER >4.0)")
+    classic_target = QUALITY_THRESHOLDS["nausea_classic_target"]
+    classic_blocker = QUALITY_THRESHOLDS["nausea_classic_blocker"]
+    print(f"   Цель: ≤{classic_target:g} (BLOCKER >{classic_blocker:g})")
 
     status = 0
-    if metrics["classic_nausea"] <= 3.5:
+    if metrics["classic_nausea"] <= classic_target:
         print("   ✅ PASS")
-    elif metrics["classic_nausea"] <= 4.0:
-        print(f"   ⚠️ WARNING: Превышение ({metrics['classic_nausea']:.2f} > 3.5)")
+    elif metrics["classic_nausea"] <= classic_blocker:
+        print(f"   ⚠️ WARNING: Превышение ({metrics['classic_nausea']:.2f} > {classic_target:g})")
     else:
-        print(f"   ❌ BLOCKER: Критическое превышение ({metrics['classic_nausea']:.2f} > 4.0)")
+        print(
+            f"   ❌ BLOCKER: Критическое превышение ({metrics['classic_nausea']:.2f} > {classic_blocker:g})"
+        )
         status = 1
 
     print()
 
     # 3. АКАДЕМИЧЕСКАЯ ТОШНОТА
-    ACADEMIC_MIN = 7.0
-    ACADEMIC_MAX = 9.5
+    ACADEMIC_MIN = QUALITY_THRESHOLDS["nausea_academic_min"]
+    ACADEMIC_MAX = QUALITY_THRESHOLDS["nausea_academic_max"]
+    ACADEMIC_BLOCKER = QUALITY_THRESHOLDS["nausea_academic_blocker"]
 
     print(f"📚 АКАДЕМИЧЕСКАЯ ТОШНОТА (доля топ-леммы): {metrics['academic_nausea']:.1f}%")
     if metrics["most_common_significant"]:
@@ -321,18 +334,20 @@ def check_water(
     else:
         print("   Нет повторяющихся значимых слов")
 
-    print(f"   Цель: {ACADEMIC_MIN}-{ACADEMIC_MAX}%")
+    print(f"   Цель: {ACADEMIC_MIN:g}-{ACADEMIC_MAX:g}%")
 
     if ACADEMIC_MIN <= metrics["academic_nausea"] <= ACADEMIC_MAX:
         print("   ✅ PASS")
     elif metrics["academic_nausea"] < ACADEMIC_MIN:
         print(f'   🟦 INFO: Текст "сухой" ({metrics["academic_nausea"]:.1f}% < {ACADEMIC_MIN}%)')
-    elif ACADEMIC_MAX < metrics["academic_nausea"] <= 12.0:
+    elif ACADEMIC_MAX < metrics["academic_nausea"] <= ACADEMIC_BLOCKER:
         print(
             f"   ⚠️ WARNING: Начинается переспам ({metrics['academic_nausea']:.1f}% > {ACADEMIC_MAX}%)"
         )
     else:
-        print(f"   ❌ BLOCKER: Критический переспам ({metrics['academic_nausea']:.1f}% > 12%)")
+        print(
+            f"   ❌ BLOCKER: Критический переспам ({metrics['academic_nausea']:.1f}% > {ACADEMIC_BLOCKER:g}%)"
+        )
         status = 1
 
     print()
@@ -356,11 +371,21 @@ def main(argv: list[str] | None = None) -> int:
         description="Аудит водности и тошноты текста.",
     )
     parser.add_argument("file_path", help="Путь к .md файлу")
+    water_min = QUALITY_THRESHOLDS["water_target_min"]
+    water_max = QUALITY_THRESHOLDS["water_target_max"]
     parser.add_argument(
-        "target_min", nargs="?", type=int, default=40, help="Мин. %% воды (default: 40)"
+        "target_min",
+        nargs="?",
+        type=int,
+        default=water_min,
+        help=f"Мин. %% воды (default: {water_min:g})",
     )
     parser.add_argument(
-        "target_max", nargs="?", type=int, default=60, help="Макс. %% воды (default: 60)"
+        "target_max",
+        nargs="?",
+        type=int,
+        default=water_max,
+        help=f"Макс. %% воды (default: {water_max:g})",
     )
     parser.add_argument("--lang", choices=["ru", "uk"], default="ru", help="Язык (default: ru)")
 

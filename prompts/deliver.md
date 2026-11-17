@@ -24,14 +24,13 @@ external orchestration.
 
 **Adaptive Thresholds:**
 
-> **Note:** The table below is the prompt-side guidance. Actual spam/warning thresholds
-> enforced by `validate/density.py` are `SPAM_THRESHOLD = 3.0%` and `WARNING_THRESHOLD = 2.5%`
-> (no adaptive logic by keyword count). These values in the code are the ground truth for the validator.
+> **Note:** These are the thresholds enforced by `validate/density.py`
+> (`SPAM_THRESHOLD`, `WARNING_THRESHOLD`, `OPTIMAL_RANGE`), the same for any keyword count.
+> The values in the code are the ground truth for the validator.
 
-| Keywords | Density Blocker | Density Warning |
-|----------|-----------------|-----------------|
-| ≤20 (clean) | 5.0% | 3.5% |
-| >20 (raw)   | 3.5% | 2.5% |
+| Density Spam | Density Warning | Density Optimal |
+|--------------|-----------------|-----------------|
+| >3.0% | >2.5% | 1.0-2.5% |
 
 ---
 
@@ -73,12 +72,12 @@ uv run python -m llm_keywords_pipeline.validate.content \
    - Synonym rotation (max 2 повтора/параграф) и commercial markers ≥ минимум: тоже вычиткой
 
 3. **Water/Nausea**
-   - Water: 40-60% (Tier A/B), 40-65% (Tier C)
+   - Water: 40-65%
    - Classic Nausea: ≤3.5
    - Academic Nausea (доля топ-леммы среди повторяющихся значимых лемм): 7-9.5%
 
 4. **Keyword Density**
-   - Main keyword: 0.5-1.5% (A), 0.5-1.8% (B), 0.5-2.0% (C)
+   - Main keyword: 1.0-2.5% (warning >2.5%, spam >3.0%)
    - Равномерное распределение (не кластеры)
 
 5. **NER & Blacklist**
@@ -199,7 +198,7 @@ uv run python -m llm_keywords_pipeline.validate.content \
 ### SEO
 
 - Keyword Density: {density}% (target: {tier_density})
-- Water: {water}% (target: 40-60%)
+- Water: {water}% (target: 40-65%)
 - Classic Nausea: {nausea} (target: ≤3.5)
 - Academic Nausea: {academic}% (target: 7-9.5%)
 
@@ -274,9 +273,9 @@ Deliverables:
 
 Metrics:
 - Chars: 2300 / 2000-2500 ✓
-- Water: 56.9% / 40-60% ✓
+- Water: 56.9% / 40-65% ✓
 - Nausea: 2.45 / ≤3.5 ✓
-- Density: 1.5% / 0.5-1.5% ✓
+- Density: 1.5% / 1.0-2.5% ✓
 - Commercial: 5 / min 4 ✓
 
 Task Status: COMPLETED ✅
@@ -297,7 +296,7 @@ Ready for:
 ❌ VALIDATION FAILED
 
 Failed checks:
-- Water/Nausea: Water 75% (max 60%)
+- Water/Nausea: Water 75% (max 65%)
 - Nausea: 4.2 (max 3.5)
 
 Action Required:

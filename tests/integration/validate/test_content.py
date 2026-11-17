@@ -82,6 +82,18 @@ class TestCheckPrimaryKeyword:
         assert result["in_intro"]["passed"]
         assert result["overall"] == "PASS"
 
+    def test_frequency_status_uses_config_bounds(self):
+        """Frequency LOW below keyword_freq_min 3, HIGH above keyword_freq_max 7."""
+        from llm_keywords_pipeline.validate.content import check_primary_keyword
+
+        def status(n: int) -> str:
+            text = "# Пена\n\n" + " ".join(["пена"] * (n - 1)) + " и всё.\n\n## Как выбрать\n"
+            result = check_primary_keyword(text, "пена")
+            assert result["frequency"]["count"] == n
+            return result["frequency"]["status"]
+
+        assert [status(n) for n in (2, 3, 7, 8)] == ["LOW", "OK", "OK", "HIGH"]
+
     def test_keyword_missing_fails(self):
         """Content without keyword should fail."""
         from llm_keywords_pipeline.validate.content import check_primary_keyword

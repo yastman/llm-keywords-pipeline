@@ -16,7 +16,7 @@ class TestTitleChecks:
     """Tests for title validation."""
 
     def test_title_too_short_returns_warning(self):
-        """Title < 50 chars should return warning."""
+        """Title < 30 chars should return warning."""
         meta = {"meta": {"title": "Short"}}
         result = check_title_length(meta)
         assert result is not None
@@ -30,6 +30,11 @@ class TestTitleChecks:
         assert result is not None
         assert result["severity"] == WARNING
         assert "длинный" in result["message"]
+
+    def test_title_at_config_min_passes(self):
+        """Title of 30-49 chars is within config title_min 30, not a warning."""
+        meta = {"meta": {"title": "A" * 40}}
+        assert check_title_length(meta) is None
 
     def test_title_with_brand_suffix_removes_suffix(self):
         """Title with | Ultimate should have suffix removed for length check."""
@@ -57,11 +62,16 @@ class TestDescChecks:
     """Tests for description validation."""
 
     def test_desc_too_short_returns_warning(self):
-        """Description < 120 chars should return warning."""
+        """Description < 100 chars should return warning."""
         meta = {"meta": {"description": "Short description"}}
         result = check_desc_length(meta)
         assert result is not None
         assert result["severity"] == WARNING
+
+    def test_desc_at_config_min_passes(self):
+        """Description of 100-119 chars is within config description_min 100."""
+        meta = {"meta": {"description": "A" * 110}}
+        assert check_desc_length(meta) is None
 
     def test_desc_too_long_returns_warning(self):
         """Description > 160 chars should return warning."""

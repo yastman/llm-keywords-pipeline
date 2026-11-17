@@ -6,7 +6,15 @@ Confirmed discrepancies:
 Fix: update seo.py docstring to 150; add a note in deliver.md that thresholds come from code.
 """
 
+import re
 from pathlib import Path
+
+from llm_keywords_pipeline.core.config import QUALITY_THRESHOLDS as Q
+from llm_keywords_pipeline.validate.density import (
+    OPTIMAL_RANGE,
+    SPAM_THRESHOLD,
+    WARNING_THRESHOLD,
+)
 
 ROOT = Path(__file__).parents[2]
 SEO_PY = ROOT / "src" / "llm_keywords_pipeline" / "validate" / "seo.py"
@@ -38,3 +46,57 @@ class TestCodeThresholdsConsistency:
         assert "density.py" in content or "SPAM_THRESHOLD" in content or "код" in content.lower(), (
             "deliver.md must reference that density thresholds come from code constants"
         )
+
+
+PROMPTS = ROOT / "prompts"
+_NUM = r"(\d+(?:\.\d+)?)"
+_RANGE = re.compile(_NUM + r"-" + _NUM + r"%")
+
+
+def _lines(name: str, marker: str) -> list[str]:
+    lines = [ln for ln in (PROMPTS / name).read_text(encoding="utf-8").splitlines() if marker in ln]
+    assert lines, f"{name}: no line with {marker!r}"
+    return lines
+
+
+def _ranges(lines: list[str]) -> set[tuple[float, float]]:
+    return {(float(a), float(b)) for ln in lines for a, b in _RANGE.findall(ln)}
+
+
+class TestPromptNumbersMatchCode:
+    """Threshold numbers in prompts equal core/config.py and validate/density.py."""
+
+    def test_deliver_water_range(self):
+        lines = _lines("deliver.md", "Water")
+        water = (Q["water_target_min"], Q["water_target_max"])
+        assert _ranges(lines) == {water}
+        maxes = {float(m) for ln in lines for m in re.findall(r"max " + _NUM + "%", ln)}
+        assert maxes <= {Q["water_target_max"]}
+
+    def test_deliver_nausea(self):
+        classic = _lines("deliver.md", "Classic Nausea")
+        assert all(f"≤{Q['nausea_classic_target']:g}" in ln for ln in classic)
+        academic = _lines("deliver.md", "Academic Nausea")
+        expected = f"{Q['nausea_academic_min']:g}-{Q['nausea_academic_max']:g}%"
+        assert all(expected in ln for ln in academic)
+
+    def test_density_numbers(self):
+        optimal = (float(OPTIMAL_RANGE[0]), float(OPTIMAL_RANGE[1]))
+        deliver = (PROMPTS / "deliver.md").read_text(encoding="utf-8")
+        assert f"| >{SPAM_THRESHOLD}% | >{WARNING_THRESHOLD}% | {optimal[0]}-{optimal[1]}% |" in (
+            deliver
+        )
+        assert _ranges(_lines("deliver.md", "Density:")) == {optimal}
+        main_kw = _lines("deliver.md", "Main keyword:")
+        assert _ranges(main_kw) == {optimal}
+        assert all(
+            f"warning >{WARNING_THRESHOLD}%" in ln and f"spam >{SPAM_THRESHOLD}%" in ln
+            for ln in main_kw
+        )
+        assert _ranges(_lines("prepare.md", "density")) == {optimal}
+
+    def test_produce_meta_lengths(self):
+        title = _lines("produce.md", "`title`:")
+        assert f"{Q['title_min']}-{Q['title_max']} chars" in title[0]
+        desc = _lines("produce.md", "`description`:")
+        assert f"{Q['description_min']}-{Q['description_max']} chars" in desc[0]
