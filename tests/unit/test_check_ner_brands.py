@@ -49,18 +49,31 @@ class TestCheckNerBrands(unittest.TestCase):
         cities_found = [item["entity"] for item in results["cities"]]
         self.assertIn("киев", cities_found)
         self.assertIn("харьков", cities_found)
-        # "одессу" matches "одесса" in blacklist?
-        # The script uses `if city in text_lower`.
-        # "одесса" is NOT in "одессу".
-        # But "одеса" (ukr) might be?
-        # Let's check regex logic in script: `re.finditer(re.escape(city), text_lower)`
-        # If blacklist has "одесса", and text has "одессу", it won't match.
-        # This confirms current strict matching behavior.
+        # "одесса" is not a substring of "одессу"; the lemma pass catches it
+        self.assertIn("одесса", cities_found)
 
         # Let's test exact match
         text2 = "Город Одесса красивый."
         results2 = check_blacklist(text2)
         self.assertIn("одесса", [item["entity"] for item in results2["cities"]])
+
+    def test_city_parse_skips_language_without_morph(self):
+        """A language whose analyzer has no `_morph` is skipped, not dereferenced."""
+        from llm_keywords_pipeline.audit import ner_brands
+
+        real = ner_brands.MorphAnalyzer
+
+        class Stub:
+            def __init__(self, lang):
+                self._morph = None if lang == "uk" else real(lang)._morph
+
+        ner_brands._city_parse.cache_clear()
+        try:
+            with patch.object(ner_brands, "MorphAnalyzer", Stub):
+                self.assertIsNone(ner_brands._city_parse("києві"))
+                self.assertEqual(ner_brands._city_parse("киеву")[0], "киев")
+        finally:
+            ner_brands._city_parse.cache_clear()
 
     def test_check_blacklist_ai_fluff(self):
         # Test AI fluff detection
@@ -95,7 +108,9 @@ Frontmatter
     def test_analyze_file_safe_pass(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             temp_file = Path(tmpdir) / "safe.md"
-            temp_file.write_text("Хороший текст про полировку автомобиля. Без брендов.", encoding="utf-8")
+            temp_file.write_text(
+                "Хороший текст про полировку автомобиля. Без брендов.", encoding="utf-8"
+            )
 
             with patch("builtins.print"):
                 exit_code = analyze_file(str(temp_file))

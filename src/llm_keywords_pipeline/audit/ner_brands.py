@@ -21,8 +21,10 @@ from __future__ import annotations
 import json
 import re
 import sys
+from functools import lru_cache
 from pathlib import Path
 
+from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 from llm_keywords_pipeline.core.text import clean_markdown
 
 try:
@@ -181,7 +183,7 @@ CITY_BLACKLIST = {
 }
 
 # FIX v8.5: Whitelist для false positives
-_FALSE_POSITIVE_CITIES = FALSE_POSITIVE_CITIES or {"ровно", "суми"}
+_FALSE_POSITIVE_CITIES = FALSE_POSITIVE_CITIES or {"ровно", "суми", "сумах"}
 
 # Strict Blacklist (Фразы-паразиты)
 _STRICT_PHRASES = STRICT_BLACKLIST_PHRASES or [
@@ -236,6 +238,50 @@ def is_false_positive_location(word: str, context: str) -> bool:
     return True
 
 
+_PERSON_NAME_TAGS = {"Name", "Surn", "Patr"}
+
+# Предлоги места перед формой, которая читается и как город, и как обычное слово
+_CITY_PREPOSITIONS = {
+    # UK
+    "у", "в", "до", "з", "із", "по", "на", "під", "біля",
+    # RU
+    "во", "из", "под", "около",
+}  # fmt: skip
+# Разделитель городов в списке: "Києві, Миколаєві", "Києві та Рівному", "Черкасах і Луцьку"
+_CITY_LIST_CONJUNCTIONS = {"та", "і", "й", "и"}
+_CITY_LIST_SEP_RE = re.compile(r"\s*,\s*(?:(?:та|і|й|и)\s+)?|\s+(?:та|і|й|и)\s+")
+_SENTENCE_END = ".!?…\n"
+
+
+def _starts_sentence(text: str, pos: int) -> bool:
+    """True if the word at `pos` opens the text, a line or a sentence (quotes/markers skipped)."""
+    i = pos
+    while i > 0 and not text[i - 1].isalnum() and text[i - 1] not in _SENTENCE_END:
+        i -= 1
+    return i == 0 or text[i - 1] in _SENTENCE_END
+
+
+@lru_cache(maxsize=10000)
+def _city_parse(word: str) -> tuple[str, bool] | None:
+    """City lemma of `word` from any UK/RU parse, and whether it also reads as a common word.
+
+    Every parse counts, not only the first ('києві': 'кий' first, 'київ' third).
+    Person-name parses (харкові → Surn 'харко', львові → Surn 'львов') are ignored.
+    A city reading is a NOUN parse: adverb 'ровно' shares the normal form of 'Ровно'.
+    """
+    for lang in ("uk", "ru"):
+        morph = MorphAnalyzer(lang)._morph
+        if morph is None:
+            continue
+        parses = [p for p in morph.parse(word) if not _PERSON_NAME_TAGS & p.tag.grammemes]
+        cities = [
+            p.normal_form for p in parses if p.normal_form in CITY_BLACKLIST and "NOUN" in p.tag
+        ]
+        if cities:
+            return cities[0], len(cities) < len(parses)
+    return None
+
+
 def check_blacklist(text: str) -> dict:
     """Проверяет текст на наличие запрещённых слов."""
     text_lower = text.lower()
@@ -248,7 +294,8 @@ def check_blacklist(text: str) -> dict:
     # Проверка брендов
     for brand in BRAND_BLACKLIST:
         if brand in text_lower:
-            for match in re.finditer(re.escape(brand), text_lower):
+            # Только целое слово: "ауди" не ловится внутри "аудиосистемы"
+            for match in re.finditer(rf"(?<!\w){re.escape(brand)}(?!\w)", text_lower):
                 start = max(0, match.start() - 30)
                 end = min(len(text), match.end() + 30)
                 context = text[start:end].replace("\n", " ")
@@ -256,10 +303,36 @@ def check_blacklist(text: str) -> dict:
                     {"entity": brand, "type": "BRAND", "context": f"...{context}..."}
                 )
 
+    # Слова с городским разбором (Києві, Рівному, Львові) проверяются по разбору ниже,
+    # а не по основе-подстроке ("львов" внутри "львові")
+    words = list(re.finditer(r"\w+", text_lower))
+    parses = [_city_parse(m.group()) for m in words]
+    city_words = [(m, parsed) for m, parsed in zip(words, parses, strict=True) if parsed]
+
+    # Предлог места прямо перед формой или перед первым городом списка
+    # ("у Києві, Миколаєві, Черкасах і Луцьку"), в любом регистре
+    after_preposition = [False] * len(words)
+    for k, m in enumerate(words):
+        if not parses[k] or k == 0:
+            continue
+        prev = words[k - 1]
+        if prev.group() in _CITY_PREPOSITIONS and text_lower[prev.end() : m.start()].isspace():
+            after_preposition[k] = True
+            continue
+        j = k - 2 if prev.group() in _CITY_LIST_CONJUNCTIONS else k - 1
+        if (
+            j >= 0
+            and after_preposition[j]
+            and _CITY_LIST_SEP_RE.fullmatch(text_lower[words[j].end() : m.start()])
+        ):
+            after_preposition[k] = True
+
     # Проверка городов (с фильтрацией false positives)
     for city in CITY_BLACKLIST:
         if city in text_lower:
             for match in re.finditer(re.escape(city), text_lower):
+                if any(m.start() <= match.start() < m.end() for m, _ in city_words):
+                    continue
                 start = max(0, match.start() - 30)
                 end = min(len(text), match.end() + 30)
                 context = text[start:end].replace("\n", " ")
@@ -268,6 +341,27 @@ def check_blacklist(text: str) -> dict:
                     continue
 
                 found_cities.append({"entity": city, "type": "CITY", "context": f"...{context}..."})
+
+    # Форма, которая читается и как обычное слово (рівному: рівне/рівний, сумах: суми/сума,
+    # києві: київ/кий), — город, если (а) с заглавной буквы не в начале предложения
+    # или (б) после предлога места / в списке после него. Строчная форма из
+    # FALSE_POSITIVE_CITIES, которая сама не название города ("у сумах до 1000 грн"),
+    # по (б) не считается; "в ровно" — город, как в is_false_positive_location.
+    for k, match in enumerate(words):
+        if not parses[k]:
+            continue
+        lemma, ambiguous = parses[k]
+        if ambiguous:
+            word = match.group()
+            upper = text[match.start()].isupper()
+            by_capital = upper and not _starts_sentence(text, match.start())
+            vetoed = not upper and word in _FALSE_POSITIVE_CITIES and word not in CITY_BLACKLIST
+            if not by_capital and not (after_preposition[k] and not vetoed):
+                continue
+        start = max(0, match.start() - 30)
+        end = min(len(text), match.end() + 30)
+        context = text[start:end].replace("\n", " ")
+        found_cities.append({"entity": lemma, "type": "CITY", "context": f"...{context}..."})
 
     # Проверка Strict Phrases (FAIL)
     for phrase in _STRICT_PHRASES:
@@ -423,7 +517,7 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
 
-    if len(argv) < 1:
+    if len(argv) < 1 or argv[0] in ("-h", "--help"):
         print(__doc__)
         return 0
 
