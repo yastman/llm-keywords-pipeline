@@ -27,6 +27,18 @@ class TestDetectLanguage:
         """Unknown path defaults to RU."""
         assert detect_language("some/random/path/file.md") == "ru"
 
+    def test_parent_dir_ending_in_uk_is_ru(self):
+        """A data root like /data/shop-uk is not a uk/ segment."""
+        assert detect_language("/data/shop-uk/categories/x/meta/x_meta.json") == "ru"
+
+    def test_relative_parent_dir_ending_in_uk_is_ru(self):
+        """A relative dir like shop-uk/categories is not a uk/ segment."""
+        assert detect_language("shop-uk/categories/x/content/x_ru.md") == "ru"
+
+    def test_absolute_root_uk_categories_path(self):
+        """/root/uk/categories/... is uk."""
+        assert detect_language("/root/uk/categories/x/meta/x_meta.json") == "uk"
+
 
 class TestH2KeywordMatching:
     """Tests for H2 keyword detection with language support."""

@@ -84,12 +84,12 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
 
 | Command | Checks | Language |
 | --- | --- | --- |
-| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Main keyword in intro and H2, keyword frequency | from the path: `uk/categories/` or `/uk/` in it → uk, else ru |
+| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Main keyword in intro and H2, keyword frequency | from the path: a `uk/` segment (`uk/categories/...` or `.../uk/...`) → uk, else ru |
 | `uv run llm-keywords-density <file.md> [--slug SLUG]` | Keyword density, stem groups, spam | `--lang ru\|uk`, default ru |
 | `uv run llm-keywords-audit-brands <file.md>` | Brands, cities, strict phrases, AI fluff | from the path |
 | `uv run llm-keywords-audit-water <file.md>` | Water, classic and academic nausea | `--lang ru\|uk`, default ru |
 | `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>" --with-analysis <slug>` | H1/H2 structure, keyword in H1 and intro, core and commercial coverage, water, blacklist, length, markdown lint, FAQ | `--lang ru\|uk`, default ru; also picks the RU or UK `_clean.json` for `<slug>` |
-| `uv run python -m llm_keywords_pipeline.validate.meta <meta.json> --keywords <_clean.json>` | Title and description length, primary keyword, producer and wholesale phrases | from the path, as check-seo, or `--lang ru\|uk` |
+| `uv run python -m llm_keywords_pipeline.validate.meta <meta.json> --keywords <_clean.json>` | Title and description length, primary keyword, producer and wholesale phrases | `--lang ru\|uk` if given, else from the path as check-seo (also under `--all`) |
 
 Pass the keyword source every time: without `--with-analysis` validate.content has no
 category keywords and reports coverage PASS on zero keywords; without `--keywords`

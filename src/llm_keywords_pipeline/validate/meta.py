@@ -735,9 +735,10 @@ def main():
     output_json = "--json" in sys.argv
     validate_all = "--all" in sys.argv
 
-    # Parse --lang argument
+    # Parse --lang argument; explicit --lang wins, else the language comes from the path
     lang = "ru"
-    if "--lang" in sys.argv:
+    explicit_lang = "--lang" in sys.argv
+    if explicit_lang:
         idx = sys.argv.index("--lang")
         if idx + 1 < len(sys.argv):
             lang = sys.argv[idx + 1]
@@ -755,8 +756,7 @@ def main():
 
         all_results = []
         for meta_path, keywords_path in meta_files:
-            # Auto-detect language from path
-            file_lang = "uk" if detect_language(meta_path) == "uk" else lang
+            file_lang = lang if explicit_lang else detect_language(meta_path)
             results = validate_meta_file(meta_path, keywords_path, lang=file_lang)
             all_results.append(results)
 
@@ -791,9 +791,8 @@ def main():
             if idx + 1 < len(sys.argv):
                 keywords_path = sys.argv[idx + 1]
 
-        # Auto-detect language from path if not explicitly set
-        if "--lang" not in sys.argv and detect_language(meta_path) == "uk":
-            lang = "uk"
+        if not explicit_lang:
+            lang = detect_language(meta_path)
 
         results = validate_meta_file(meta_path, keywords_path, lang=lang)
 

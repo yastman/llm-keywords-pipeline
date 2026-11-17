@@ -278,3 +278,11 @@ class TestMainLanguageFromPath:
         [result] = self._run_main(monkeypatch, capsys, [rel, "--lang", "ru"])
 
         assert result["lang"] == "ru"
+
+    def test_explicit_lang_wins_over_uk_path_with_all(self, tmp_path, monkeypatch, capsys):
+        self._write_meta(tmp_path, "uk/categories")
+        monkeypatch.chdir(tmp_path)
+
+        results = self._run_main(monkeypatch, capsys, ["--all", "--lang", "ru"])
+
+        assert {r["file"]: r["lang"] for r in results} == {"uk/categories/x/meta/x_meta.json": "ru"}
