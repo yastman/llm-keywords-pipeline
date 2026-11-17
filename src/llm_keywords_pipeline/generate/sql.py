@@ -13,11 +13,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 
 import markdown
 
-PROJECT_DIR = Path(__file__).resolve().parents[1]
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
+PROJECT_DIR = PROJECT_ROOT
 OUTPUT_FILE = PROJECT_DIR / "content_updates.sql"
 
 # Can be overridden in tests/usage.

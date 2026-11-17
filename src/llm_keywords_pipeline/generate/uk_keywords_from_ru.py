@@ -8,6 +8,7 @@ import json
 import sys
 from pathlib import Path
 
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 from llm_keywords_pipeline.extract.uk_keywords import translate_keyword
 
 
@@ -82,9 +83,8 @@ def get_category_name_uk(ru_name: str) -> str:
 
 
 def main():
-    project_root = Path(__file__).resolve().parents[1]
-    categories_dir = project_root / "categories"
-    output_file = project_root / "uk" / "data" / "uk_keywords.json"
+    categories_dir = PROJECT_ROOT / "categories"
+    output_file = PROJECT_ROOT / "uk" / "data" / "uk_keywords.json"
 
     # Find all _clean.json files
     clean_files = list(categories_dir.glob("**/data/*_clean.json"))

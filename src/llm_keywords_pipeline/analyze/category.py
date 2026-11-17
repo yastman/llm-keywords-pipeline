@@ -32,12 +32,12 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
 # =============================================================================
 # Configuration
 # =============================================================================
 
-SCRIPT_DIR = Path(__file__).parent
-PROJECT_ROOT = SCRIPT_DIR.parent
 SEMANTICS_CSV = PROJECT_ROOT / "Структура _Ultimate.csv"
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 
@@ -219,6 +219,7 @@ COMMERCIAL_MODIFIERS_UK = get_commercial_modifiers("uk")
 try:
     from llm_keywords_pipeline.core.config import get_guidelines_coverage_target
 except ImportError:
+
     def get_guidelines_coverage_target(keywords_count: int) -> int:
         return 70 if keywords_count <= 5 else 60 if keywords_count <= 15 else 50
 
@@ -639,7 +640,9 @@ def main():
         print("Example:")
         print("  uv run python -m llm_keywords_pipeline.analyze.category antibitum")
         print("  uv run python -m llm_keywords_pipeline.analyze.category aktivnaya-pena --json")
-        print("  uv run python -m llm_keywords_pipeline.analyze.category aktivnaya-pena --lang uk --json")
+        print(
+            "  uv run python -m llm_keywords_pipeline.analyze.category aktivnaya-pena --lang uk --json"
+        )
         sys.exit(1)
 
     if sys.argv[1] == "--list":

@@ -5,7 +5,9 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
+ROOT = PROJECT_ROOT
 CATEGORIES_DIR = ROOT / "categories"
 OUTPUT_FILE = ROOT / "tasks" / "active" / "KEYWORDS_SYNONYMS_TZ.md"
 
@@ -27,7 +29,8 @@ def analyze_category(clean_file: Path) -> dict:
 
     keywords = data.get("keywords", [])
     synonyms = data.get("synonyms", [])
-    entities = data.get("entities", [])
+    entity_dictionary = data.get("entity_dictionary") or {}
+    entities = [term for terms in entity_dictionary.values() for term in terms]
     micro_intents = data.get("micro_intents", [])
 
     # Разделяем synonyms
@@ -122,7 +125,7 @@ def generate_tz(results: list) -> str:
         f"| `keywords` | {REQUIREMENTS['keywords_min']}+ | ТОП ВЧ ключи → Title, H1 |",
         f"| `synonyms` | {REQUIREMENTS['synonyms_min']}+ | Вариации → H2, текст |",
         f"| `meta_only` | {REQUIREMENTS['synonyms_meta_only']}+ | Коммерческие (купить, цена) → Title хвост, Description |",
-        f"| `entities` | {REQUIREMENTS['entities_min']}+ | E-E-A-T термины → текст |",
+        f"| `entity_dictionary` | {REQUIREMENTS['entities_min']}+ | E-E-A-T термины → текст |",
         f"| `micro_intents` | {REQUIREMENTS['micro_intents_min']}+ | Вопросы → FAQ блоки |",
         "",
         "---",

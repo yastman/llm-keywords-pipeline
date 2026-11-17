@@ -17,8 +17,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-# Project root
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 
 def load_json(filepath: Path, silent: bool = False) -> dict | None:
