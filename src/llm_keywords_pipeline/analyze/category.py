@@ -8,7 +8,7 @@ analyze_category.py — Category Analysis for LLM (Google 2025 Approach)
 D+E Fallback Pattern:
 1. Сначала ищет _clean.json (12 clustered keywords)
 2. Затем ищет raw .json (52 keywords)
-3. Fallback на CSV если JSON нет
+3. Fallback на CSV если JSON нет (только ru; uk без CSV)
 
 Принцип (Google December 2025):
 - Depth over length
@@ -23,9 +23,13 @@ Output:
 Usage:
     uv run python -m llm_keywords_pipeline.analyze.category <slug>
     uv run python -m llm_keywords_pipeline.analyze.category <slug> --json
-    uv run python -m llm_keywords_pipeline.analyze.category --list
+    uv run python -m llm_keywords_pipeline.analyze.category <slug> --lang uk
+    uv run python -m llm_keywords_pipeline.analyze.category --list [--lang uk]
+
+For --lang uk only uk/categories JSON is read (no CSV fallback).
 """
 
+import argparse
 import csv
 import json
 import sys
@@ -65,7 +69,7 @@ def load_keywords_for_slug(slug: str, lang: str = "ru") -> tuple[list[dict], str
     Priority:
     1. {slug}_clean.json — clustered (12 keywords)
     2. {slug}.json — raw parsed (52 keywords)
-    3. CSV fallback
+    3. CSV fallback (ru only)
 
     Args:
         slug: Category slug
@@ -74,7 +78,7 @@ def load_keywords_for_slug(slug: str, lang: str = "ru") -> tuple[list[dict], str
     Returns:
         Tuple[List[Dict], str, Optional[Dict]]:
             - keywords list (normalized to {keyword, volume})
-            - source: "clean_json", "raw_json", or "csv"
+            - source: "clean_json", "raw_json", "csv", or "none" (uk, no JSON)
             - extra_data: seo_titles, entity_dictionary, content_rules (from clean.json)
     """
     categories_dir = get_categories_dir(lang)
@@ -127,7 +131,10 @@ def load_keywords_for_slug(slug: str, lang: str = "ru") -> tuple[list[dict], str
 
         return keywords, "raw_json", None
 
-    # 3. Fallback to CSV
+    # 3. Fallback to CSV (RU only: there is no uk semantics CSV)
+    if lang == "uk":
+        return [], "none", None
+
     l3_name = SLUG_TO_L3.get(slug)
     if not l3_name:
         return [], "csv", None
@@ -508,6 +515,13 @@ def analyze_category(slug: str, lang: str = "ru") -> dict:
     # Load keywords using D+E Fallback
     keywords_raw, source, extra_data = load_keywords_for_slug(slug, lang)
 
+    if not keywords_raw and lang == "uk":
+        data_dir = get_categories_dir(lang) / slug / "data"
+        return {
+            "error": f"No uk keywords for slug: {slug}. Missing {data_dir / f'{slug}_clean.json'} "
+            f"(or {data_dir / f'{slug}.json'})."
+        }
+
     if not keywords_raw:
         return {
             "error": f"No keywords found for slug: {slug} (lang={lang}). Run seo-clean or parse CSV first."
@@ -578,20 +592,37 @@ def analyze_category(slug: str, lang: str = "ru") -> dict:
 # =============================================================================
 
 
-def list_all_categories():
+def list_all_categories(lang: str = "ru"):
     """Показать все категории с анализом."""
     print("=" * 70)
     print("АНАЛИЗ ВСЕХ КАТЕГОРИЙ (Google 2025 Approach)")
     print("=" * 70)
     print()
 
-    categories = read_semantics_csv(str(SEMANTICS_CSV))
+    if lang == "uk":
+        # uk has no semantics CSV: list categories from uk/categories/*/data JSON
+        from llm_keywords_pipeline.core.seo import SLUG_TO_L3_UK
+
+        entries = []
+        categories_dir = get_categories_dir(lang)
+        slug_dirs = sorted(categories_dir.iterdir()) if categories_dir.is_dir() else []
+        for slug_dir in slug_dirs:
+            keywords, _, _ = load_keywords_for_slug(slug_dir.name, lang)
+            if keywords:
+                entries.append(
+                    (slug_dir.name, SLUG_TO_L3_UK.get(slug_dir.name, slug_dir.name), keywords)
+                )
+    else:
+        categories = read_semantics_csv(str(SEMANTICS_CSV))
+        entries = [
+            (L3_TO_SLUG.get(l3_name, "???"), l3_name, keywords)
+            for l3_name, keywords in categories.items()
+        ]
 
     # Analyze all
     results = []
-    for l3_name, keywords in categories.items():
-        slug = L3_TO_SLUG.get(l3_name, "???")
-        analysis = analyze_keywords(keywords)
+    for slug, l3_name, keywords in entries:
+        analysis = analyze_keywords(keywords, lang)
         results.append(
             {
                 "slug": slug,
@@ -629,35 +660,29 @@ def list_all_categories():
     print("  deep (16+ kw)    → comprehensive format, 400-600 words")
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage:")
-        print("  uv run python -m llm_keywords_pipeline.analyze.category <slug>")
-        print("  uv run python -m llm_keywords_pipeline.analyze.category <slug> --json")
-        print("  uv run python -m llm_keywords_pipeline.analyze.category <slug> --lang uk")
-        print("  uv run python -m llm_keywords_pipeline.analyze.category --list")
-        print()
-        print("Example:")
-        print("  uv run python -m llm_keywords_pipeline.analyze.category antibitum")
-        print("  uv run python -m llm_keywords_pipeline.analyze.category aktivnaya-pena --json")
-        print(
-            "  uv run python -m llm_keywords_pipeline.analyze.category aktivnaya-pena --lang uk --json"
-        )
-        sys.exit(1)
+def main(argv: list[str] | None = None):
+    parser = argparse.ArgumentParser(
+        prog="python -m llm_keywords_pipeline.analyze.category",
+        description="Category analysis for LLM content generation.",
+    )
+    parser.add_argument("slug", nargs="?", help="category slug")
+    parser.add_argument("--json", action="store_true", help="print the analysis as JSON")
+    parser.add_argument("--lang", choices=["ru", "uk"], default="ru", help="language (default ru)")
+    parser.add_argument(
+        "--list", action="store_true", help="list all categories of --lang with analysis"
+    )
+    args = parser.parse_args(argv)
 
-    if sys.argv[1] == "--list":
-        list_all_categories()
+    if args.list:
+        list_all_categories(args.lang)
         sys.exit(0)
 
-    slug = sys.argv[1]
-    output_json = "--json" in sys.argv
+    if not args.slug:
+        parser.error("a slug is required unless --list is given")
 
-    # Parse --lang parameter
-    lang = "ru"
-    if "--lang" in sys.argv:
-        lang_idx = sys.argv.index("--lang")
-        if lang_idx + 1 < len(sys.argv):
-            lang = sys.argv[lang_idx + 1]
+    slug = args.slug
+    output_json = args.json
+    lang = args.lang
 
     result = analyze_category(slug, lang)
 
