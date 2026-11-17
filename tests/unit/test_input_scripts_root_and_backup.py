@@ -1,4 +1,4 @@
-"""Input scripts: project root from core.config (audit A11), timestamped CSV backups (A14)."""
+"""Input scripts: project root from core.config (audit A11)."""
 
 import json
 import os
@@ -11,9 +11,6 @@ from llm_keywords_pipeline.core import config
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ROOT_MODULES = [
     "llm_keywords_pipeline.fix.missing_keywords:PROJECT_ROOT",
-    "llm_keywords_pipeline.fix.structure_legacy:PROJECT_ROOT",
-    "llm_keywords_pipeline.fix.structure_orphans:PROJECT_ROOT",
-    "llm_keywords_pipeline.sync.migrate_keywords:BASE_DIR",
 ]
 PROBE = (
     "import importlib, sys\n"
@@ -64,24 +61,6 @@ def test_ru_keywords_mapping_reads_and_writes_under_env_root(tmp_path):
     assert list(json.loads(out.read_text(encoding="utf-8"))) == ["cat"]
 
 
-def test_update_uk_clean_reads_and_writes_under_env_root(tmp_path):
-    root = tmp_path / "root"
-    (root / "uk" / "data").mkdir(parents=True)
-    source = {
-        "categories": {"cat": {"keywords": [{"keyword": "k", "volume": 600}], "total_volume": 600}}
-    }
-    (root / "uk" / "data" / "uk_keywords.json").write_text(json.dumps(source), encoding="utf-8")
-    cwd = tmp_path / "elsewhere"
-    cwd.mkdir()
-
-    code = "from llm_keywords_pipeline.sync import update_uk_clean as m; m.main()"
-    _run(code, [], cwd, str(root), check=False)
-
-    clean = root / "uk" / "categories" / "cat" / "data" / "cat_clean.json"
-    assert clean.is_file()
-    assert json.loads(clean.read_text(encoding="utf-8"))["total_volume"] == 600
-
-
 def test_scripts_default_root_is_config_root_not_cwd(tmp_path):
     roots = _roots(tmp_path, None)
     assert roots == [str(REPO_ROOT)] * (1 + len(ROOT_MODULES))
@@ -104,79 +83,3 @@ def test_match_cats_reads_dump_under_config_root(tmp_path, monkeypatch, capsys):
     assert capsys.readouterr().out == (
         f"Dump not found: {config.PROJECT_ROOT / 'sql_cats_dump.txt'}\n"
     )
-
-
-def _project(tmp_path: Path) -> Path:
-    """Temp project root: a git repo with this repo's .gitignore."""
-    root = tmp_path / "project"
-    root.mkdir()
-    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-    (root / ".gitignore").write_text(
-        (REPO_ROOT / ".gitignore").read_text(encoding="utf-8"), encoding="utf-8"
-    )
-    return root
-
-
-def _untracked(root: Path) -> list[str]:
-    result = subprocess.run(
-        ["git", "status", "--porcelain", "--untracked-files=all"],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return sorted(result.stdout.splitlines())
-
-
-def _backups(backup_dir: Path, csv_file: Path) -> list[Path]:
-    return sorted(backup_dir.glob(f"{csv_file.stem}_backup*{csv_file.suffix}"))
-
-
-def test_migrate_keywords_backs_up_into_ignored_backup_dir(tmp_path, monkeypatch):
-    from llm_keywords_pipeline.sync import migrate_keywords
-
-    root = _project(tmp_path)
-    csv_file = root / "structure.csv"
-    csv_file.write_text("L1: Cat,,\nkey,10,\n", encoding="utf-8")
-    registry = root / "registry.md"
-    registry.write_text("", encoding="utf-8")
-    backup_dir = root / "data" / "backups"
-    monkeypatch.setattr(migrate_keywords, "CSV_FILE", csv_file)
-    monkeypatch.setattr(migrate_keywords, "REGISTRY_FILE", registry)
-    monkeypatch.setattr(migrate_keywords, "BACKUP_DIR", backup_dir)
-    before = _untracked(root)
-
-    migrate_keywords.migrate_keywords()
-    migrate_keywords.migrate_keywords()
-
-    assert len(_backups(backup_dir, csv_file)) == 2
-    assert _untracked(root) == before
-
-
-def test_csv_structure_backs_up_into_ignored_backup_dir(tmp_path, monkeypatch):
-    from llm_keywords_pipeline.fix import csv_structure
-
-    root = _project(tmp_path)
-    csv_file = root / "structure.csv"
-    backup_dir = root / "data" / "backups"
-    monkeypatch.setattr(csv_structure, "SEMANTICS_CSV", csv_file)
-    monkeypatch.setattr(csv_structure, "BACKUP_DIR", backup_dir)
-
-    csv_file.write_text("key one,2,\n", encoding="utf-8")
-    before = _untracked(root)
-    csv_structure.fix_csv()
-    csv_file.write_text("key two,3,\n", encoding="utf-8")
-    csv_structure.fix_csv()
-
-    backups = _backups(backup_dir, csv_file)
-    assert [b.read_text(encoding="utf-8") for b in backups] == ["key one,2,\n", "key two,3,\n"]
-    assert _untracked(root) == before
-
-
-def test_backup_dirs_default_to_project_root_data_backups():
-    from llm_keywords_pipeline.fix import csv_structure
-    from llm_keywords_pipeline.sync import migrate_keywords
-
-    expected = config.PROJECT_ROOT / "data" / "backups"
-    assert migrate_keywords.BACKUP_DIR == expected
-    assert csv_structure.BACKUP_DIR == expected

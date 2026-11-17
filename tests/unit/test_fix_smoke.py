@@ -7,9 +7,6 @@ class TestFixPackageImports:
     def test_fix_importable(self):
         import llm_keywords_pipeline.fix  # noqa: F401
 
-    def test_csv_structure_importable(self):
-        from llm_keywords_pipeline.fix import csv_structure  # noqa: F401
-
     def test_keywords_order_importable(self):
         from llm_keywords_pipeline.fix import keywords_order  # noqa: F401
 
@@ -18,23 +15,6 @@ class TestFixPackageImports:
 
     def test_cleanup_misplaced_importable(self):
         from llm_keywords_pipeline.fix import cleanup_misplaced  # noqa: F401
-
-
-class TestIsExplicitMarker:
-    """csv_structure.is_explicit_marker must detect structural markers."""
-
-    def test_level_marker(self):
-        from llm_keywords_pipeline.fix.csv_structure import is_explicit_marker
-
-        # Typical structural markers in CSV
-        result = is_explicit_marker("Level1", "Level2")
-        assert isinstance(result, bool)
-
-    def test_empty_values(self):
-        from llm_keywords_pipeline.fix.csv_structure import is_explicit_marker
-
-        result = is_explicit_marker("", "")
-        assert isinstance(result, bool)
 
 
 class TestFixCategoryKeywordsOrder:
