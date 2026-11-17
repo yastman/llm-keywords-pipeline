@@ -29,7 +29,8 @@ content generation. They are public because they show how the pipeline was desig
 they are not standalone commands.
 
 To run an equivalent workflow, a user would need compatible project data, an LLM
-orchestrator, and the surrounding automation that is intentionally excluded here.
+endpoint, and their own runner: `src/llm_keywords_pipeline/automation/` holds the
+orchestrator, batch runner and LLM client as a library with no CLI.
 
 ## Docker Demo
 

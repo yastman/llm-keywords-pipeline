@@ -59,7 +59,8 @@ with one contract instead of spreadsheets.
 
 The project keeps several paths for that handoff:
 
-- raw category JSON, such as `categories/{slug}/data/{slug}.json`;
+- raw category JSON, such as `categories/{slug}/data/{slug}.json`: produced outside this
+  package (no module writes it); the pipeline only reads it;
 - clustered clean JSON, such as `categories/{slug}/data/{slug}_clean.json`;
 - master CSV sync into `_clean.json`;
 - CSV restore/compare utilities for drift, missing keywords, and changed volumes.
@@ -110,14 +111,27 @@ and optional research context before drafting or reviewing category content.
 
 ### 5. Validate the written text
 
-The validators check whether the final markdown actually satisfies the brief:
+The validators check whether the final markdown actually satisfies the brief. Entry
+points:
 
-- primary keyword in H1 and intro;
-- morphology-aware keyword coverage for Russian and Ukrainian;
-- split coverage for core and commercial keywords;
-- keyword density and stem-based over-spam detection;
-- water percentage, classic nausea, academic nausea, and lemma repetition;
-- H1/H2 structure, intro quality, blacklist terms, brand/city mentions, and meta sync.
+| Command | Checks | Language |
+| --- | --- | --- |
+| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword in intro and H2, keyword frequency. | From the path: `uk/categories/` → uk, else ru. |
+| `uv run llm-keywords-density <file.md>` | Keyword density, stem groups, category substrings, spam/warning thresholds. | `--lang ru\|uk`, default ru. |
+| `uv run llm-keywords-audit-brands <file.md>` | Blacklisted brands, city mentions, NER entities. | From the path, as check-seo. |
+| `uv run llm-keywords-audit-water <file.md>` | Water, classic nausea, academic nausea. | `--lang ru\|uk`, default ru. |
+| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>"` | H1/H2 structure, primary keyword in H1 and intro, core and commercial coverage, water/nausea, blacklist, length, content standards, markdown lint, FAQ. | `--lang ru\|uk`, default ru. |
+
+Morphology-aware for both Russian and Ukrainian (pymorphy3 lemmas): check-seo keyword
+matching, density keyword counts (keywords are counted by lemma n-grams), and core
+coverage in validate.content. Not morphology-aware: commercial coverage (exact match),
+density category substrings (Russian substrings, ru only), and density stem groups for ru
+(Snowball stems; uk groups by lemma). Water and nausea use natasha lemmas for ru and
+pymorphy3 for uk; the metrics are defined in [Capabilities](#capabilities).
+
+Markdown lint uses pymarkdownlnt and reports `SKIPPED` when it is not installed. No
+validator checks grammar or spelling: that is the LLM proofreading step in
+[prompts/deliver.md](prompts/deliver.md).
 
 ---
 
@@ -136,7 +150,10 @@ but the pipeline verifies coverage, structure, and over-optimization.
 ### For multilingual catalogs
 
 The code handles Russian and Ukrainian text with language-aware tokenization,
-stopwords, stemming, lemmatization, and morphology-aware keyword matching.
+stopwords, stemming, lemmatization, and morphology-aware keyword matching. Ukrainian
+apostrophe words (`м'який`, with `'`, `’` or `ʼ`) stay one token. natasha NER and
+morphology run only for Russian; for Ukrainian, audit-brands skips NER and the water audit
+lemmatizes with pymorphy3.
 
 ---
 
@@ -150,10 +167,10 @@ stopwords, stemming, lemmatization, and morphology-aware keyword matching.
 | Synonym cleanup | Detects near-duplicates and normalizes competing keyword variants. |
 | Research prompt workflow | Turns clustered keywords/entities/product insights into a research prompt contract; public docs preserve `RESEARCH_PROMPT.md` → `RESEARCH_DATA.md` as the brief workflow. |
 | Content validation | Checks H1, intro, headings, keyword coverage, meta sync, and language-specific rules. |
-| Density and spam | Finds exact, partial, stem, and substring overuse with warning/spam thresholds. |
-| Water and nausea | Calculates water (stop-word share, calibrated), classic nausea (√ of the top lemma frequency), academic nausea (top lemma's share of repeated significant lemmas), and lemma repetition. |
+| Density and spam | Counts keywords by lemma n-grams (exact) and single lemmas (partial), plus stem groups and category substrings, against warning/spam thresholds. |
+| Water and nausea | Calculates water (stop-word share, calibrated), classic nausea (√ of the top lemma frequency), academic nausea (top lemma share among repeated significant lemmas), and lemma repetition. |
 | Generation | Produces meta artifacts, SQL exports, semantic review files, catalog JSON, and checklists. |
-| Repair and sync | Updates volumes, restores clean JSON from CSV, merges master keyword data, and fixes ordering or misplaced terms. |
+| Repair and sync | Updates volumes, restores clean JSON from CSV, merges master keyword data (one row per category, type and phrase; the higher volume wins), and fixes ordering or misplaced terms. |
 
 ---
 
@@ -169,6 +186,7 @@ src/llm_keywords_pipeline/
   sync/         CSV/master-data synchronization and _clean.json repair
   fix/          focused cleanup utilities
   compare/      keyword distribution and dataset comparison helpers
+  automation/   prepare→produce→validate→deliver orchestrator, batch runner, LLM client (library, no CLI)
 tests/          pytest suite and public fixtures
 prompts/        prepare/produce/deliver LLM workflow templates
 docs/           architecture, testing, and public-version notes
@@ -194,6 +212,11 @@ uv run pytest
 The pre-commit hook runs ruff (check and format) and file hygiene checks on staged files;
 the pre-push hook runs `uv lock --check`, `uv run ruff check src tests`, `uv run mypy` and
 `uv run pytest -q --cov-fail-under=20`. There is no remote CI: these hooks are the only gate.
+
+`uv sync` installs the default groups `nlp`, `dev` and `test`. The `nlp` group holds
+pymorphy3 with its Russian and Ukrainian dictionaries, natasha, snowballstemmer and
+pymarkdownlnt. If a language's pymorphy3 dictionary is missing, lemmatization emits a
+`RuntimeWarning` once and falls back to Russian stemming, so Ukrainian lemmas are wrong.
 
 Run a public fixture through one of the packaged CLI tools:
 

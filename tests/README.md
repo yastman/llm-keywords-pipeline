@@ -14,6 +14,11 @@ uv run pytest
 uv build
 ```
 
+Git hooks (`.pre-commit-config.yaml`, the only gate; no remote CI): install with
+`uv run pre-commit install --hook-type pre-commit --hook-type pre-push`. Pre-commit runs
+ruff check, ruff format and file hygiene on staged files; pre-push runs `uv lock --check`,
+`uv run ruff check src tests`, `uv run mypy` and `uv run pytest -q --cov-fail-under=20`.
+
 Test layout:
 
 ```text
