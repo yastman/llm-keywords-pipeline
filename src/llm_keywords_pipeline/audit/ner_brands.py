@@ -37,7 +37,7 @@ except ImportError:
 
         NATASHA_FULL = False
     except ImportError:
-        print("❌ Natasha не установлена: pip install natasha")
+        print("❌ Natasha не установлена: uv sync --group nlp")
         NATASHA_FULL = False
 
 # Import blacklists from config if available
@@ -250,7 +250,20 @@ _CITY_PREPOSITIONS = {
 # Разделитель городов в списке: "Києві, Миколаєві", "Києві та Рівному", "Черкасах і Луцьку"
 _CITY_LIST_CONJUNCTIONS = {"та", "і", "й", "и"}
 _CITY_LIST_SEP_RE = re.compile(r"\s*,\s*(?:(?:та|і|й|и)\s+)?|\s+(?:та|і|й|и)\s+")
-_SENTENCE_END = ".!?…\n"
+# "|" — граница ячейки таблицы
+_SENTENCE_END = ".!?…\n|"
+# Сокращение "місто"/"город" перед названием: "у м. Києві", "в г. Киеве"
+_CITY_ABBREVIATIONS = {"м", "г"}
+
+
+def _is_city_abbreviation(text: str, dot: int) -> bool:
+    """True if the '.' at `dot` closes a one-letter 'м.'/'г.' ('у м. Києві')."""
+    return (
+        dot >= 1
+        and text[dot] == "."
+        and text[dot - 1].lower() in _CITY_ABBREVIATIONS
+        and (dot == 1 or not text[dot - 2].isalnum())
+    )
 
 
 def _starts_sentence(text: str, pos: int) -> bool:
@@ -258,6 +271,8 @@ def _starts_sentence(text: str, pos: int) -> bool:
     i = pos
     while i > 0 and not text[i - 1].isalnum() and text[i - 1] not in _SENTENCE_END:
         i -= 1
+    if i > 0 and _is_city_abbreviation(text, i - 1):
+        return False
     return i == 0 or text[i - 1] in _SENTENCE_END
 
 
@@ -310,15 +325,31 @@ def check_blacklist(text: str) -> dict:
     city_words = [(m, parsed) for m, parsed in zip(words, parses, strict=True) if parsed]
 
     # Предлог места прямо перед формой или перед первым городом списка
-    # ("у Києві, Миколаєві, Черкасах і Луцьку"), в любом регистре
+    # ("у Києві, Миколаєві, Черкасах і Луцьку"), в любом регистре; "м."/"г." между
+    # ними прозрачно ("у м. Києві"). Одно "на" перед строчной формой — не место
+    # ("на ровном месте", "на рівному майданчику").
     after_preposition = [False] * len(words)
     for k, m in enumerate(words):
         if not parses[k] or k == 0:
             continue
-        prev = words[k - 1]
-        if prev.group() in _CITY_PREPOSITIONS and text_lower[prev.end() : m.start()].isspace():
+        prep_k = k - 1
+        abbr = words[k - 1]
+        if (
+            k >= 2
+            and abbr.group() in _CITY_ABBREVIATIONS
+            and _is_city_abbreviation(text_lower, abbr.end())
+            and text_lower[abbr.end() + 1 : m.start()].isspace()
+        ):
+            prep_k = k - 2
+        prev = words[prep_k]
+        if (
+            prev.group() in _CITY_PREPOSITIONS
+            and text_lower[prev.end() : words[prep_k + 1].start()].isspace()
+            and not (prev.group() == "на" and not text[m.start()].isupper())
+        ):
             after_preposition[k] = True
             continue
+        prev = words[k - 1]
         j = k - 2 if prev.group() in _CITY_LIST_CONJUNCTIONS else k - 1
         if (
             j >= 0
@@ -345,8 +376,9 @@ def check_blacklist(text: str) -> dict:
     # Форма, которая читается и как обычное слово (рівному: рівне/рівний, сумах: суми/сума,
     # києві: київ/кий), — город, если (а) с заглавной буквы не в начале предложения
     # или (б) после предлога места / в списке после него. Строчная форма из
-    # FALSE_POSITIVE_CITIES, которая сама не название города ("у сумах до 1000 грн"),
-    # по (б) не считается; "в ровно" — город, как в is_false_positive_location.
+    # FALSE_POSITIVE_CITIES ("у сумах до 1000 грн", "до суми замовлення")
+    # по (б) не считается, кроме "ровно": "в ровно" — город, как в is_false_positive_location.
+    # Слово КАПСОМ ("## НАНЕСІТЬ РІВНИМ ШАРОМ") по (а) не считается.
     for k, match in enumerate(words):
         if not parses[k]:
             continue
@@ -354,8 +386,9 @@ def check_blacklist(text: str) -> dict:
         if ambiguous:
             word = match.group()
             upper = text[match.start()].isupper()
-            by_capital = upper and not _starts_sentence(text, match.start())
-            vetoed = not upper and word in _FALSE_POSITIVE_CITIES and word not in CITY_BLACKLIST
+            title_case = upper and not text[match.start() : match.end()].isupper()
+            by_capital = title_case and not _starts_sentence(text, match.start())
+            vetoed = not upper and word in _FALSE_POSITIVE_CITIES and word != "ровно"
             if not by_capital and not (after_preposition[k] and not vetoed):
                 continue
         start = max(0, match.start() - 30)

@@ -142,6 +142,32 @@ class TestCityBlacklist:
         assert [c["entity"] for c in check_blacklist("ціни у Сумах")["cities"]] == ["суми"]
         assert [c["entity"] for c in check_blacklist("Доставка в Сумах")["cities"]] == ["суми"]
 
+    def test_lowercase_form_after_na_not_city(self):
+        """'на' alone before a lowercase form is no place; capitalised forms after 'на' count."""
+        assert check_blacklist("на ровном месте")["cities"] == []
+        assert check_blacklist("Працюйте на рівному майданчику")["cities"] == []
+        assert [c["entity"] for c in check_blacklist("Доставка на Київ")["cities"]] == ["київ"]
+        assert [c["entity"] for c in check_blacklist("ДОСТАВКА НА РІВНЕ")["cities"]] == ["рівне"]
+
+    def test_lowercase_sumy_vetoed_after_preposition(self):
+        """Lowercase 'суми' after a preposition is an amount; 'в ровно' stays a city."""
+        assert check_blacklist("Знижка діє до суми замовлення 1000 грн")["cities"] == []
+        assert check_blacklist("на суми понад 500 грн")["cities"] == []
+        result = check_blacklist("поехал в ровно на машине")
+        assert [c["entity"] for c in result["cities"]] == ["ровно"]
+
+    def test_city_abbreviation_before_city(self):
+        """'м.'/'г.' is no sentence end and is transparent for the preposition."""
+        assert [c["entity"] for c in check_blacklist("Офіс у м. Києві")["cities"]] == ["київ"]
+        assert [c["entity"] for c in check_blacklist("офіс у м. києві")["cities"]] == ["київ"]
+        # 'кг.' is no one-letter abbreviation: it ends the sentence
+        assert check_blacklist("Ціна за кг. Рівним шаром нанесіть.")["cities"] == []
+
+    def test_all_caps_and_table_cell_not_city(self):
+        """An ALL-CAPS word is no capital-letter signal; '|' opens a table cell."""
+        assert check_blacklist("## НАНЕСІТЬ РІВНИМ ШАРОМ")["cities"] == []
+        assert check_blacklist("| Спосіб | Рівним шаром |")["cities"] == []
+
     def test_no_cities_in_clean_text(self):
         """Clean text should have no cities."""
         text = "Доставка по всей Украине"
