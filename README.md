@@ -188,10 +188,14 @@ git clone https://github.com/yastman/llm-keywords-pipeline.git
 cd llm-keywords-pipeline
 
 uv sync --frozen
+uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 uv run ruff check src tests
 uv run mypy
 uv run pytest
 ```
+
+The pre-commit hook runs ruff (check and format) and file hygiene checks on staged files;
+the pre-push hook runs `uv lock --check`, `uv run mypy` and `uv run pytest -q`.
 
 Run a public fixture through one of the packaged CLI tools:
 
