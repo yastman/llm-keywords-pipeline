@@ -21,7 +21,7 @@ from collections import Counter
 from pathlib import Path
 
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
-from llm_keywords_pipeline.core.text import clean_markdown, get_stopwords
+from llm_keywords_pipeline.core.text import clean_markdown, get_stopwords, split_words
 
 try:
     from natasha import Doc, MorphVocab, NewsEmbedding, NewsMorphTagger, Segmenter
@@ -125,28 +125,58 @@ def calculate_metrics_from_text(text: str, lang: str = "ru") -> dict | None:
     # Очистить от markdown
     clean_text = clean_markdown(text)
 
-    doc = Doc(clean_text)
-    doc.segment(segmenter)
+    if lang == "uk":
+        # razdel (natasha Segmenter) рвёт слова с апострофом (п'ять → п ' ять),
+        # а natasha-морфология — только русская: для uk свой split_words + pymorphy3 uk
+        words = [w for w in split_words(clean_text) if re.match(r"[а-яёіїєґ]+", w.lower())]
+        if not words:
+            print("❌ Текст не содержит кириллических слов")
+            return None
+        uk_morph = MorphAnalyzer("uk")
+        lemmas = [uk_morph.get_lemma(w) for w in words]
+    else:
+        doc = Doc(clean_text)
+        doc.segment(segmenter)
 
-    # Применяем морфологический анализ (если доступен полный Natasha)
-    if morph_tagger:
-        doc.tag_morph(morph_tagger)
+        # Применяем морфологический анализ (если доступен полный Natasha)
+        if morph_tagger:
+            doc.tag_morph(morph_tagger)
 
-    if not doc.tokens:
-        print("❌ Текст не содержит токенов")
-        return None
+        if not doc.tokens:
+            print("❌ Текст не содержит токенов")
+            return None
 
-    # Извлечь только кириллические слова
-    cyrillic_tokens = [
-        token for token in doc.tokens if re.match(r"[а-яёіїєґ]+", token.text.lower(), re.UNICODE)
-    ]
+        # Извлечь только кириллические слова
+        cyrillic_tokens = [
+            token
+            for token in doc.tokens
+            if re.match(r"[а-яёіїєґ]+", token.text.lower(), re.UNICODE)
+        ]
 
-    if not cyrillic_tokens:
-        print("❌ Текст не содержит кириллических слов")
-        return None
+        if not cyrillic_tokens:
+            print("❌ Текст не содержит кириллических слов")
+            return None
 
-    total_words = len(cyrillic_tokens)
-    words_lower = [token.text.lower() for token in cyrillic_tokens]
+        words = [token.text for token in cyrillic_tokens]
+
+        # ЛЕММАТИЗАЦИЯ (natasha — русская морфология)
+        lemmas = []
+        for token in cyrillic_tokens:
+            if morph_tagger and hasattr(token, "pos"):
+                token.lemmatize(morph_vocab)
+                if token.lemma:
+                    lemmas.append(token.lemma)
+                else:
+                    lemmas.append(token.text.lower())
+            else:
+                parsed = morph_vocab(token.text.lower())
+                if parsed:
+                    lemmas.append(parsed[0].normal)
+                else:
+                    lemmas.append(token.text.lower())
+
+    total_words = len(words)
+    words_lower = [word.lower() for word in words]
 
     # 1. ВОДА: стоп-слова
     # Калибровочный коэффициент для соответствия Адвего (Natasha ~22% → Адвего ~52%)
@@ -155,25 +185,6 @@ def calculate_metrics_from_text(text: str, lang: str = "ru") -> dict | None:
     water_count = sum(1 for word in words_lower if word in stopwords)
     water_percent_raw = (water_count / total_words) * 100
     water_percent = water_percent_raw * ADVEGO_MULTIPLIER
-
-    # 2. ЛЕММАТИЗАЦИЯ (natasha — только русская морфология; для uk — pymorphy3 uk)
-    lemmas = []
-    uk_morph = MorphAnalyzer("uk") if lang == "uk" else None
-    for token in cyrillic_tokens:
-        if uk_morph:
-            lemmas.append(uk_morph.get_lemma(token.text))
-        elif morph_tagger and hasattr(token, "pos"):
-            token.lemmatize(morph_vocab)
-            if token.lemma:
-                lemmas.append(token.lemma)
-            else:
-                lemmas.append(token.text.lower())
-        else:
-            parsed = morph_vocab(token.text.lower())
-            if parsed:
-                lemmas.append(parsed[0].normal)
-            else:
-                lemmas.append(token.text.lower())
 
     # 3. КЛАССИЧЕСКАЯ ТОШНОТА
     lemma_counts = Counter(lemmas)
