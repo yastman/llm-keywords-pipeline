@@ -57,6 +57,24 @@ class TestCheckNerBrands(unittest.TestCase):
         results2 = check_blacklist(text2)
         self.assertIn("одесса", [item["entity"] for item in results2["cities"]])
 
+    def test_city_parse_skips_language_without_morph(self):
+        """A language whose analyzer has no `_morph` is skipped, not dereferenced."""
+        from llm_keywords_pipeline.audit import ner_brands
+
+        real = ner_brands.MorphAnalyzer
+
+        class Stub:
+            def __init__(self, lang):
+                self._morph = None if lang == "uk" else real(lang)._morph
+
+        ner_brands._city_parse.cache_clear()
+        try:
+            with patch.object(ner_brands, "MorphAnalyzer", Stub):
+                self.assertIsNone(ner_brands._city_parse("києві"))
+                self.assertEqual(ner_brands._city_parse("киеву")[0], "киев")
+        finally:
+            ner_brands._city_parse.cache_clear()
+
     def test_check_blacklist_ai_fluff(self):
         # Test AI fluff detection
         text = "В заключение, стоит отметить, что этот товар уникален."
@@ -90,7 +108,9 @@ Frontmatter
     def test_analyze_file_safe_pass(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             temp_file = Path(tmpdir) / "safe.md"
-            temp_file.write_text("Хороший текст про полировку автомобиля. Без брендов.", encoding="utf-8")
+            temp_file.write_text(
+                "Хороший текст про полировку автомобиля. Без брендов.", encoding="utf-8"
+            )
 
             with patch("builtins.print"):
                 exit_code = analyze_file(str(temp_file))

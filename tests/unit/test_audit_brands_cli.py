@@ -1,5 +1,7 @@
 """Smoke tests for the llm-keywords-audit-brands CLI (ner_brands.main)."""
 
+import pytest
+
 from llm_keywords_pipeline.audit.ner_brands import main
 
 
@@ -31,6 +33,29 @@ def test_uk_locative_city_exits_nonzero(tmp_path, capsys):
     f.write_text("Доставка у Києві.", encoding="utf-8")
     assert main([str(f), "--json"]) != 0
     assert '"київ"' in capsys.readouterr().out
+
+
+def test_uk_lowercase_city_after_preposition_exits_nonzero(tmp_path, capsys):
+    f = tmp_path / "kyiv_lower.md"
+    f.write_text("доставка у києві", encoding="utf-8")
+    assert main([str(f), "--json"]) != 0
+    assert '"київ"' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Рівним шаром нанесіть засіб.",
+        "Нанесіть рівним шаром",
+        "У сумах до 1000 грн",
+        "різних сумах",
+    ],
+)
+def test_uk_common_word_homograph_exits_0(tmp_path, capsys, text):
+    f = tmp_path / "homograph.md"
+    f.write_text(text, encoding="utf-8")
+    assert main([str(f), "--json"]) == 0
+    assert '"CITY"' not in capsys.readouterr().out
 
 
 def test_uk_city_after_po_exits_nonzero(tmp_path, capsys):

@@ -107,13 +107,40 @@ class TestCityBlacklist:
         assert [c["entity"] for c in check_blacklist("магазин у харкові")["cities"]] == ["харків"]
 
     def test_uk_lowercase_common_word_not_city(self):
-        """'рівним/рівного' (adjective) and 'сумах' (amounts) in lowercase are not cities."""
+        """Lowercase 'рівним/рівного' (no location preposition) and 'у сумах' (vetoed) are not cities."""
         text = "Нанесіть рівним шаром на рівну поверхню, рівного кольору"
         assert check_blacklist(text)["cities"] == []
         assert check_blacklist("У сумах до 1000 грн")["cities"] == []
 
     def test_rovno_adverb_not_city(self):
         assert check_blacklist("Отрежьте ровно половину")["cities"] == []
+
+    def test_sentence_initial_homograph_not_city(self):
+        """A capital letter that only opens a sentence is no city signal."""
+        assert check_blacklist("Рівним шаром нанесіть засіб.")["cities"] == []
+        assert check_blacklist("Готово. Рівним шаром нанесіть засіб.")["cities"] == []
+        assert check_blacklist("- Рівним шаром нанесіть засіб.")["cities"] == []
+
+    def test_lowercase_city_after_preposition(self):
+        """A location preposition makes a lowercase ambiguous form a city."""
+        assert [c["entity"] for c in check_blacklist("доставка у києві")["cities"]] == ["київ"]
+        result = check_blacklist("поехал в ровно на машине")
+        assert [c["entity"] for c in result["cities"]] == ["ровно"]
+
+    def test_lowercase_city_list_after_preposition(self):
+        """Cities in a list after ',' / 'та' / 'і' inherit the preposition of the first."""
+        result = check_blacklist("доставка у києві та рівному")
+        assert sorted(c["entity"] for c in result["cities"]) == ["київ", "рівне"]
+        result = check_blacklist("доставка по києву, харкову та тернополю")
+        assert sorted(c["entity"] for c in result["cities"]) == ["київ", "тернопіль", "харків"]
+        # no preposition before the list: no city
+        assert check_blacklist("ціна києві та рівному")["cities"] == []
+
+    def test_lowercase_false_positive_form_vetoed_after_preposition(self):
+        """Lowercase 'сумах' (FALSE_POSITIVE_CITIES) after 'у' stays amounts; capitalised is the city."""
+        assert check_blacklist("ціни у сумах до 1000 грн")["cities"] == []
+        assert [c["entity"] for c in check_blacklist("ціни у Сумах")["cities"]] == ["суми"]
+        assert [c["entity"] for c in check_blacklist("Доставка в Сумах")["cities"]] == ["суми"]
 
     def test_no_cities_in_clean_text(self):
         """Clean text should have no cities."""
