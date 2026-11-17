@@ -201,9 +201,9 @@ def check_primary_keyword(text: str, primary_keyword: str, lang: str = "ru") -> 
         count += text_lower.count(all_forms.lower())
     results["frequency"]["count"] = count
 
-    if count < 2:
+    if count < QUALITY_THRESHOLDS["keyword_freq_min"]:
         results["frequency"]["status"] = "LOW"
-    elif count > 10:
+    elif count > QUALITY_THRESHOLDS["keyword_freq_max"]:
         results["frequency"]["status"] = "HIGH"
     else:
         results["frequency"]["status"] = "OK"

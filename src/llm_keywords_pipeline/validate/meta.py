@@ -6,10 +6,10 @@ validate_meta.py — Meta Tags Validation (v17.0)
 
 Перевірки:
 - Title містить primary keyword
-- Title довжина 40-60 chars
+- Title довжина 30-60 chars (core/config.py)
 - Title без двокрапки
 - Description містить primary keyword
-- Description довжина 120-150 chars
+- Description довжина 100-160 chars (core/config.py)
 - Description містить "виробника Ultimate" або "производителя Ultimate"
 - Description містить "опт"
 
@@ -32,6 +32,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from llm_keywords_pipeline.core.config import QUALITY_THRESHOLDS
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer, keyword_matches_text
 
 # Fix Windows encoding is moved to main() block to avoid pytest conflicts
@@ -41,11 +42,11 @@ from llm_keywords_pipeline.core.keywords import MorphAnalyzer, keyword_matches_t
 # Constants
 # =============================================================================
 
-# Soft limits (warnings, not failures)
-TITLE_MIN_LENGTH = 30
-TITLE_MAX_LENGTH = 60
-DESC_MIN_LENGTH = 100
-DESC_MAX_LENGTH = 160
+# Soft limits (warnings, not failures), from core/config.py
+TITLE_MIN_LENGTH = QUALITY_THRESHOLDS["title_min"]
+TITLE_MAX_LENGTH = QUALITY_THRESHOLDS["title_max"]
+DESC_MIN_LENGTH = QUALITY_THRESHOLDS["description_min"]
+DESC_MAX_LENGTH = QUALITY_THRESHOLDS["description_max"]
 
 # Patterns to detect
 COLON_PATTERN = re.compile(r":\s")
@@ -192,7 +193,7 @@ def validate_title(
     Validate meta title.
 
     Checks:
-    - Length 40-60 chars (before | Ultimate)
+    - Length TITLE_MIN_LENGTH-TITLE_MAX_LENGTH chars (before | Ultimate)
     - No colon
     - Contains primary keyword
     - No marketing fluff
@@ -299,7 +300,7 @@ def validate_description(
     Validate meta description.
 
     Checks:
-    - Length 120-150 chars
+    - Length DESC_MIN_LENGTH-DESC_MAX_LENGTH chars
     - Contains primary keyword
     - Contains "виробника Ultimate" or equivalent
     - Contains "опт" or wholesale indicator

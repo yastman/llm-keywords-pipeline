@@ -61,8 +61,8 @@ Create `categories/{slug}/content/{slug}_ru.md`.
 
 Create `categories/{slug}/meta/{slug}_meta.json`.
 
-* `title`: 50-70 chars. Must include "Купить", "Цена" or store name.
-* `description`: 140-160 chars. CTA + USP (Delivery, Warranty).
+* `title`: 30-60 chars. Must include "Купить", "Цена" or store name.
+* `description`: 100-160 chars. CTA + USP (Delivery, Warranty).
 * `h1`: Same as in Markdown.
 
 ### Phase 4: Self-Correction

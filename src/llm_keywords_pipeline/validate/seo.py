@@ -5,7 +5,7 @@ SEO Structure Check — проверка структурных SEO-требов
 Проверяет:
 1. Main keyword в первых 150 символах (INTRO)
 2. Keywords в H2 заголовках (минимум 2 из 4)
-3. Main keyword frequency (3-5 раз по тексту, не больше - антиспам)
+3. Main keyword frequency (3-7 раз по тексту, spam >10)
 
 Usage:
     uv run python -m llm_keywords_pipeline.validate.seo <file.md> "<main_keyword>"
@@ -20,6 +20,7 @@ import re
 import sys
 from pathlib import Path
 
+from llm_keywords_pipeline.core.config import QUALITY_THRESHOLDS
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 from llm_keywords_pipeline.core.text import _APOSTROPHES, extract_h2s
 
@@ -255,9 +256,9 @@ def check_keyword_frequency(text: str, keyword: str, lang: str = "ru") -> dict:
     count = count_keyword_lemma_ngrams(text, keyword, lang)
 
     # Оптимальный диапазон
-    min_freq = 3
-    max_freq = 7
-    spam_threshold = 10
+    min_freq = QUALITY_THRESHOLDS["keyword_freq_min"]
+    max_freq = QUALITY_THRESHOLDS["keyword_freq_max"]
+    spam_threshold = QUALITY_THRESHOLDS["keyword_freq_spam"]
 
     if count < min_freq:
         status = "LOW"

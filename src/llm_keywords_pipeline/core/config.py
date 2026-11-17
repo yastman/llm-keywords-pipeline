@@ -53,6 +53,15 @@ QUALITY_THRESHOLDS = {
     "nausea_academic_min": 7.0,
     "nausea_academic_max": 9.5,
     "nausea_academic_blocker": 12.0,
+    # Meta tags (chars) - soft limits
+    "title_min": 30,
+    "title_max": 60,
+    "description_min": 100,
+    "description_max": 160,
+    # Main keyword frequency (occurrences in text)
+    "keyword_freq_min": 3,
+    "keyword_freq_max": 7,
+    "keyword_freq_spam": 10,
     # Coverage (%) - adaptive by keywords count
     "coverage_shallow": 70,  # ≤5 keywords
     "coverage_medium": 60,  # 6-15 keywords

@@ -139,3 +139,69 @@ def test_ru_metrics_unchanged():
     assert result["total_significant"] == 5
     assert result["repeated_words_count"] == 7
     assert result["unique_lemmas"] == 20
+
+
+def _fake_metrics(water_percent):
+    return {
+        "total_words": 100,
+        "unique_lemmas": 60,
+        "water_percent": water_percent,
+        "water_percent_raw": water_percent / 2.4,
+        "water_count": 25,
+        "classic_nausea": 2.0,
+        "most_common_lemma": "пена",
+        "max_frequency": 4,
+        "academic_nausea": 8.0,
+        "most_common_significant": "пена",
+        "max_freq_significant": 4,
+        "total_significant": 50,
+        "lemma_repetition_index": 10.0,
+        "repeated_words_count": 10,
+    }
+
+
+def test_check_water_default_range_comes_from_config(monkeypatch, capsys):
+    """Default water target is config 40-65: 62% passes, not a WARNING."""
+    from llm_keywords_pipeline.audit import water
+
+    monkeypatch.setattr(water, "calculate_metrics", lambda *a, **k: _fake_metrics(62.0))
+
+    assert water.check_water("x.md") == 0
+    out = capsys.readouterr().out
+    assert "Цель: 40-65%" in out
+    assert "Превышение на" not in out
+
+
+def test_check_water_above_config_max_warns(monkeypatch, capsys):
+    from llm_keywords_pipeline.audit import water
+
+    monkeypatch.setattr(water, "calculate_metrics", lambda *a, **k: _fake_metrics(66.0))
+
+    assert water.check_water("x.md") == 0
+    assert "Превышение на 1.0%" in capsys.readouterr().out
+
+
+def test_check_water_excess_single_warning_without_tier(monkeypatch, capsys):
+    """Water above target_max: one WARNING message, no Tier wording (tiers are gone)."""
+    from llm_keywords_pipeline.audit import water
+
+    monkeypatch.setattr(water, "calculate_metrics", lambda *a, **k: _fake_metrics(68.0))
+
+    assert water.check_water("x.md") == 0
+    out = capsys.readouterr().out
+    assert "   ⚠️ WARNING: Превышение на 3.0%\n" in out
+    assert "Tier" not in out
+
+
+def test_cli_accepts_float_water_bounds(monkeypatch, tmp_path):
+    from llm_keywords_pipeline.audit import water
+
+    md = tmp_path / "a.md"
+    md.write_text("текст", encoding="utf-8")
+    seen = {}
+    monkeypatch.setattr(
+        water, "check_water", lambda p, lo, hi, lang: seen.update(lo=lo, hi=hi) or 0
+    )
+
+    assert water.main([str(md), "40", "62.5"]) == 0
+    assert seen == {"lo": 40.0, "hi": 62.5}

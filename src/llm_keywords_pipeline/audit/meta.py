@@ -21,18 +21,18 @@ import json
 from pathlib import Path
 from typing import Any
 
-from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, QUALITY_THRESHOLDS
 
 # Severity levels
 CRITICAL = "CRITICAL"
 WARNING = "WARNING"
 INFO = "INFO"
 
-# Length limits (from CONTENT_GUIDE.md)
-TITLE_MIN = 50
-TITLE_MAX = 60
-DESC_MIN = 120
-DESC_MAX = 160
+# Length limits (from core/config.py)
+TITLE_MIN = QUALITY_THRESHOLDS["title_min"]
+TITLE_MAX = QUALITY_THRESHOLDS["title_max"]
+DESC_MIN = QUALITY_THRESHOLDS["description_min"]
+DESC_MAX = QUALITY_THRESHOLDS["description_max"]
 
 
 def find_all_meta_files(base_path: Path | None = None) -> list[dict[str, Any]]:
@@ -75,7 +75,7 @@ def load_meta(meta_info: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def check_title_length(meta: dict) -> dict | None:
-    """Check title length is 50-60 chars."""
+    """Check title length is TITLE_MIN-TITLE_MAX chars."""
     title = meta.get("meta", {}).get("title", "")
     # Remove brand suffix for length check
     title_clean = title.split("|")[0].strip() if "|" in title else title
@@ -115,7 +115,7 @@ def check_title_no_colon(meta: dict) -> dict | None:
 
 
 def check_desc_length(meta: dict) -> dict | None:
-    """Check description length is 120-160 chars."""
+    """Check description length is DESC_MIN-DESC_MAX chars."""
     desc = meta.get("meta", {}).get("description", "")
     length = len(desc)
 
