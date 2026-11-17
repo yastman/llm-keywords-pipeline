@@ -38,6 +38,10 @@ if sys.platform == "win32":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 # Core imports from llm_keywords_pipeline
+from llm_keywords_pipeline.audit.ner_brands import check_blacklist
+from llm_keywords_pipeline.audit.water import (
+    calculate_metrics_from_text as calculate_water_and_nausea,
+)
 from llm_keywords_pipeline.core.config import CONTENT_STANDARDS, QUALITY_THRESHOLDS
 from llm_keywords_pipeline.core.keywords import (
     CoverageChecker,
@@ -52,19 +56,6 @@ from llm_keywords_pipeline.core.text import (
     extract_h2s,
     extract_intro,
 )
-
-# Optional audit modules.
-try:
-    from llm_keywords_pipeline.audit.water import (
-        calculate_metrics_from_text as calculate_water_and_nausea,
-    )
-except ImportError:
-    calculate_water_and_nausea = None
-
-try:
-    from llm_keywords_pipeline.audit.ner_brands import check_blacklist
-except ImportError:
-    check_blacklist = None
 
 # MD-Linting (pymarkdownlnt)
 try:
@@ -410,10 +401,6 @@ def check_quality(text: str, lang: str = "ru") -> dict:
         "overall": "UNKNOWN",
     }
 
-    if calculate_water_and_nausea is None:
-        results["note"] = "Water/Nausea check unavailable (missing natasha)"
-        return results
-
     try:
         clean_text = clean_markdown(text)
         metrics = calculate_water_and_nausea(clean_text, lang=lang)
@@ -467,7 +454,7 @@ def check_quality(text: str, lang: str = "ru") -> dict:
     return results
 
 
-def check_blacklist_phrases(text: str) -> dict:
+def check_blacklist_phrases(text: str, lang: str = "ru") -> dict:
     """
     Check for blacklisted phrases.
 
@@ -487,12 +474,8 @@ def check_blacklist_phrases(text: str) -> dict:
         "overall": "PASS",
     }
 
-    if check_blacklist is None:
-        results["note"] = "Blacklist check unavailable"
-        return results
-
     try:
-        blacklist_results = check_blacklist(text)
+        blacklist_results = check_blacklist(text, lang)
 
         results["strict_phrases"] = blacklist_results.get("strict_phrases", [])
         results["brands"] = blacklist_results.get("brands", [])
@@ -514,7 +497,7 @@ def check_blacklist_phrases(text: str) -> dict:
     return results
 
 
-def check_strict_blacklist_only(text: str) -> dict:
+def check_strict_blacklist_only(text: str, lang: str = "ru") -> dict:
     """
     Strict-only blacklist check (SEO mode).
 
@@ -532,12 +515,8 @@ def check_strict_blacklist_only(text: str) -> dict:
         "note": "SEO mode: only strict phrases are enforced.",
     }
 
-    if check_blacklist is None:
-        results["note"] = "Blacklist check unavailable"
-        return results
-
     try:
-        blacklist_results = check_blacklist(text)
+        blacklist_results = check_blacklist(text, lang)
         results["strict_phrases"] = blacklist_results.get("strict_phrases", [])
 
         # Keep for visibility, but don't use for overall.
@@ -869,10 +848,10 @@ def validate_content(
             "overall": "SKIPPED",
             "note": "SEO mode: Water/Nausea disabled.",
         }
-        blacklist = check_strict_blacklist_only(text)
+        blacklist = check_strict_blacklist_only(text, lang)
     else:
         quality = check_quality(text, lang=lang)
-        blacklist = check_blacklist_phrases(text)
+        blacklist = check_blacklist_phrases(text, lang)
     inferred_keywords_count: int | None = None
     if core_keywords is not None or commercial_keywords is not None:
         inferred_keywords_count = len(set((core_keywords or []) + (commercial_keywords or [])))

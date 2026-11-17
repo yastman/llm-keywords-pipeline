@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -126,6 +127,95 @@ Frontmatter
                 exit_code = analyze_file(str(temp_file))
 
         self.assertEqual(exit_code, 1)
+
+    def test_check_blacklist_uk_lists(self):
+        text = (
+            "У цій статті ви дізнаєтеся, як мити авто. Варто зазначити: "
+            "широкий асортимент є невід’ємною частиною магазину."
+        )
+        results = check_blacklist(text, "uk")
+
+        fluff_found = [item["entity"] for item in results["ai_fluff"]]
+        self.assertIn("у цій статті", fluff_found)
+        self.assertIn("ви дізнаєтеся", fluff_found)
+        self.assertIn("варто зазначити", fluff_found)
+        strict_found = [item["entity"] for item in results["strict_phrases"]]
+        self.assertEqual(strict_found, ["широкий асортимент", "є невід’ємною частиною"])
+
+    def test_check_blacklist_ru_lists_unchanged(self):
+        text = "В современном мире, стоит отметить, широкий ассортимент безусловно важен."
+        results = check_blacklist(text)
+
+        self.assertEqual(results, check_blacklist(text, "ru"))
+        self.assertEqual(
+            [item["entity"] for item in results["ai_fluff"]], ["стоит отметить", "безусловно"]
+        )
+        self.assertEqual(
+            [item["entity"] for item in results["strict_phrases"]],
+            ["в современном мире", "широкий ассортимент"],
+        )
+        # RU text is not checked against the UK lists.
+        uk_results = check_blacklist(text, "uk")
+        self.assertEqual(uk_results["ai_fluff"], [])
+        self.assertEqual(uk_results["strict_phrases"], [])
+
+    def test_analyze_file_uses_uk_lists_for_uk_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_file = Path(tmpdir) / "uk" / "categories" / "x" / "content.md"
+            temp_file.parent.mkdir(parents=True)
+            temp_file.write_text("Підбиваючи підсумки, засіб добре миє.", encoding="utf-8")
+
+            with patch("builtins.print"):
+                exit_code = analyze_file(str(temp_file))
+
+        self.assertEqual(exit_code, 1)
+
+    def test_check_blacklist_uk_fluff_both_reflexive_forms(self):
+        for text in ("Ви дізнаєтеся все.", "Ви дізнаєтесь все."):
+            fluff_found = [item["entity"] for item in check_blacklist(text, "uk")["ai_fluff"]]
+            self.assertEqual(fluff_found, [text.lower().removesuffix(" все.")])
+
+    def _analyze_uk_strict_only(self, output_json: bool) -> tuple[int, str]:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_file = Path(tmpdir) / "uk" / "categories" / "x" / "content.md"
+            temp_file.parent.mkdir(parents=True)
+            temp_file.write_text("Магазин пропонує широкий асортимент засобів.", encoding="utf-8")
+
+            with patch("builtins.print") as mock_print:
+                exit_code = analyze_file(str(temp_file), output_json=output_json)
+        printed = "\n".join(str(c.args[0]) for c in mock_print.call_args_list if c.args)
+        return exit_code, printed
+
+    def test_analyze_file_uk_strict_only_json(self):
+        exit_code, printed = self._analyze_uk_strict_only(output_json=True)
+
+        summary = json.loads(printed)["summary"]
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(summary["strict_count"], 1)
+        self.assertEqual(summary["total_issues"], 1)
+        self.assertEqual(summary["status"], "FAIL")
+
+    def test_analyze_file_fluff_without_strict_is_warning(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_file = Path(tmpdir) / "ru.md"
+            temp_file.write_text("В заключение, средство хорошо моет.", encoding="utf-8")
+
+            with patch("builtins.print") as mock_print:
+                exit_code = analyze_file(str(temp_file), output_json=True)
+        summary = json.loads(mock_print.call_args.args[0])["summary"]
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(summary["strict_count"], 0)
+        self.assertEqual(summary["status"], "WARNING")
+
+    def test_analyze_file_uk_strict_only_text(self):
+        exit_code, printed = self._analyze_uk_strict_only(output_json=False)
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("STRICT-ФРАЗЫ (1)", printed)
+        self.assertIn('"широкий асортимент"', printed)
+        self.assertIn("FAIL", printed)
+        self.assertNotIn("PASS", printed)
 
 
 if __name__ == "__main__":
