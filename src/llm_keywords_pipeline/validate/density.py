@@ -36,6 +36,7 @@ from typing import Any
 from llm_keywords_pipeline.core.config import get_data_path
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 from llm_keywords_pipeline.core.text import clean_markdown, get_stopwords, tokenize
+from llm_keywords_pipeline.validate.seo import count_keyword_occurrences, get_token_lemmas
 
 # Snowball Stemmer для группировки русских словоформ по корню.
 # Snowball не знает украинский: украинские словоформы группируются по лемме (MorphAnalyzer).
@@ -183,25 +184,16 @@ def count_substring_frequencies(words: list[str], substrings: list[str]) -> dict
 
 
 def check_keyword_density(text: str, keyword: str, lang: str = "ru") -> dict[str, Any]:
-    """Check density of a specific keyword (exact + partial match)."""
+    """Check density of a specific keyword (exact + partial match by whole-token lemmas)."""
     clean_text = clean_markdown(text)
     words = tokenize(clean_text, lang=lang, remove_stopwords=False)
     total_words = len(words)
 
-    # Exact match count
-    keyword_lower = keyword.lower()
-    keyword_words = tokenize(keyword, lang=lang, remove_stopwords=False)
-
-    # Single word keyword
-    if len(keyword_words) == 1:
-        exact_count = sum(1 for w in words if w == keyword_words[0])
-        partial_count = sum(1 for w in words if keyword_words[0] in w)
-    else:
-        # Multi-word phrase
-        text_lower = clean_text.lower()
-        exact_count = len(re.findall(re.escape(keyword_lower), text_lower))
-        # Partial: count if any word from phrase appears
-        partial_count = sum(sum(1 for w in words if kw in w) for kw in keyword_words)
+    # Exact: consecutive keyword lemmas in the text (inflected forms count, longer words do not)
+    exact_count = count_keyword_occurrences(clean_text, keyword, lang)
+    # Partial: text tokens whose lemma is one of the keyword's lemmas
+    keyword_lemmas = set(get_token_lemmas(keyword, lang))
+    partial_count = sum(1 for t in get_token_lemmas(clean_text, lang) if t in keyword_lemmas)
 
     exact_density = calculate_density(exact_count, total_words)
 
