@@ -10,6 +10,7 @@ import json
 import re
 from collections import defaultdict
 
+from llm_keywords_pipeline.core.clean_json import refresh_stats_totals
 from llm_keywords_pipeline.core.config import CATEGORIES_DIR
 
 # Правила что куда должно идти (строгие)
@@ -119,19 +120,7 @@ def remove_keywords_from_category(slug: str, keywords_to_remove: list[str]) -> i
         ]
         removed += original_len - len(kw_data[category])
 
-    # Update stats
-    total_kws = sum(
-        len(kw_data.get(cat, [])) for cat in ["primary", "secondary", "supporting", "commercial"]
-    )
-    total_vol = sum(
-        kw["volume"]
-        for cat in ["primary", "secondary", "supporting", "commercial"]
-        for kw in kw_data.get(cat, [])
-    )
-
-    if "stats" in data:
-        data["stats"]["after"] = total_kws
-        data["stats"]["total_volume"] = total_vol
+    refresh_stats_totals(data)
 
     with open(clean_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

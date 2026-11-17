@@ -176,6 +176,28 @@ class TestSyncStatsTotals:
         result = self._sync(tmp_path, data, rows)
         assert result["stats"] == {"before": 3, "after": 3, "total_volume": 135}
 
+    def test_after_follows_changed_keyword_count(self, tmp_path):
+        data = {
+            "id": "test-cat",
+            "keywords": {"primary": [{"keyword": "a", "volume": 10}]},
+            "stats": {"before": 1, "after": 1, "total_volume": 10},
+        }
+        rows = [
+            {"keyword": "a", "volume": 10, "type": "keyword", "use_in": ""},
+            {"keyword": "b", "volume": 5, "type": "keyword", "use_in": ""},
+        ]
+        result = self._sync(tmp_path, data, rows)
+        assert result["stats"] == {"before": 1, "after": 2, "total_volume": 15}
+
+    def test_stats_without_after_gets_none(self, tmp_path):
+        data = {
+            "id": "test-cat",
+            "keywords": {"primary": [{"keyword": "a", "volume": 10}]},
+            "stats": {"total_volume": 10},
+        }
+        rows = [{"keyword": "a", "volume": 20, "type": "keyword", "use_in": ""}]
+        assert self._sync(tmp_path, data, rows)["stats"] == {"total_volume": 20}
+
     def test_no_stats_not_added(self, tmp_path):
         data = {"id": "test-cat", "keywords": {"primary": [{"keyword": "a", "volume": 10}]}}
         rows = [{"keyword": "a", "volume": 100, "type": "keyword", "use_in": ""}]
