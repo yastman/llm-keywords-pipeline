@@ -39,6 +39,7 @@ repair or regenerate affected artifacts
 | `analyze` | Category, synonym, duplicate, order, and meta analysis. | Mostly diagnostic tooling. |
 | `compare` | Compares raw/clean/master keyword representations. | Data-layout dependent. |
 | `batch` | Batch helpers for multi-category workflows. | Orchestration layer, not a stable public CLI. |
+| `automation` | Prepare→produce→validate→deliver orchestrator, batch runner with checkpoints, provider-agnostic LLM client, validation report schema. | Library only, no CLI. |
 
 ## Supported Public Surface
 

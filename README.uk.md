@@ -60,7 +60,8 @@ Workflow починається з експорту ключів: CSV або с�
 
 У проєкті є кілька шляхів такого handoff:
 
-- raw category JSON, наприклад `categories/{slug}/data/{slug}.json`;
+- raw category JSON, наприклад `categories/{slug}/data/{slug}.json`: створюється поза
+  цим пакетом (жоден модуль його не пише), pipeline лише читає його;
 - кластеризований clean JSON, наприклад `categories/{slug}/data/{slug}_clean.json`;
 - синхронізація master CSV у `_clean.json`;
 - CSV restore/compare utilities для drift, missing keywords і змінених volumes.
@@ -115,12 +116,26 @@ content rules і optional research, потім підготувати або п�
 Валідатори відповідають на головне питання: текст справді покриває brief чи лише
 виглядає як SEO-текст?
 
-- primary keyword у H1 та intro;
-- morphology-aware coverage для української та російської;
-- окреме покриття core і commercial keywords;
-- keyword density і stem-based пошук переспаму;
-- вода, класична нудота, академічна нудота, повтор лем;
-- структура H1/H2, якість intro, blacklist terms, brand/city mentions і meta sync.
+Точки входу:
+
+| Команда | Що перевіряє | Мова |
+| --- | --- | --- |
+| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword в intro і H2, частота ключа. | За шляхом: шлях, що містить `/uk/` (наприклад `uk/categories/`) → uk, інакше ru. |
+| `uv run llm-keywords-density <file.md>` | Щільність ключів, stem-групи, category substrings, spam/warning thresholds. | `--lang ru\|uk`, за замовчуванням ru. |
+| `uv run llm-keywords-audit-brands <file.md>` | Blacklist брендів, згадки міст, NER-сутності. | За шляхом, як check-seo. |
+| `uv run llm-keywords-audit-water <file.md>` | Вода, класична та академічна нудота. | `--lang ru\|uk`, за замовчуванням ru. |
+| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>"` | Структура H1/H2, primary keyword в H1 та intro, core і commercial coverage, вода/нудота, blacklist, довжина, content standards, markdown lint, FAQ. | `--lang ru\|uk`, за замовчуванням ru. |
+
+Morphology-aware для української та російської (леми pymorphy3): matching ключів у
+check-seo, підрахунок ключів у density (ключі рахуються за n-грамами лем) і core coverage
+у validate.content. Не morphology-aware: commercial coverage (exact match), category
+substrings у density (російські підрядки, лише ru) і stem-групи density для ru (Snowball;
+для uk групування за лемою). Вода й нудота беруть леми natasha для ru і pymorphy3 для uk;
+метрики визначені в розділі [Можливості](#можливості).
+
+Markdown lint працює через pymarkdownlnt і повертає `SKIPPED`, якщо пакет не
+встановлено. Жоден валідатор не перевіряє граматику й орфографію: це крок LLM-вичитки
+в [prompts/deliver.md](prompts/deliver.md).
 
 ---
 
@@ -139,7 +154,12 @@ LLM може швидко написати чернетку, але пайпла
 ### Для RU/UK каталогів
 
 Перевірки враховують українську та російську мову: tokenization, stopwords, stemming,
-lemmatization і morphology-aware matching, а не лише exact string match.
+lemmatization і morphology-aware matching, а не лише exact string match. Спільний
+токенізатор (`core/text`) і water audit для української лишають слова з апострофом
+(`м'який`, з `'`, `’` або `ʼ`) одним токеном; токени лем у check-seo і density та
+matching ключів (coverage у validate.content) розбивають їх по апострофу. NER і
+морфологія natasha працюють лише для російської; для української audit-brands
+пропускає NER, а water audit лематизує через pymorphy3.
 
 ---
 
@@ -153,10 +173,10 @@ lemmatization і morphology-aware matching, а не лише exact string match.
 | Synonym cleanup | Знаходить near-duplicates і нормалізує конкуруючі варіанти ключів. |
 | Research prompt workflow | Перетворює clustered keywords/entities/product insights на research prompt contract; public docs зберігають workflow `RESEARCH_PROMPT.md` → `RESEARCH_DATA.md` → brief. |
 | Content validation | Перевіряє H1, intro, headings, keyword coverage, meta sync і мовні правила. |
-| Density and spam | Шукає exact, partial, stem і substring overuse з warning/spam thresholds. |
-| Water and nausea | Рахує воду, класичну нудоту, академічну нудоту і повтор лем. |
+| Density and spam | Рахує ключі за n-грамами лем (exact) і окремими лемами (partial), плюс stem-групи та category substrings, проти warning/spam thresholds. |
+| Water and nausea | Рахує воду (частка стоп-слів, калібрована), класичну нудоту (√ частоти топ-леми), академічну нудоту (частка топ-леми серед повторюваних значущих лем) і повтор лем. |
 | Generation | Генерує meta artifacts, SQL exports, semantic review files, catalog JSON і checklists. |
-| Repair and sync | Оновлює volumes, відновлює `_clean.json` із CSV, merge master keyword data і виправляє misplaced terms. |
+| Repair and sync | Оновлює volumes, відновлює `_clean.json` із CSV, merge master keyword data (один рядок на категорію, тип і фразу; перемагає більший volume) і виправляє misplaced terms. |
 
 ---
 
@@ -172,6 +192,7 @@ src/llm_keywords_pipeline/
   sync/         CSV/master-data synchronization і _clean.json repair
   fix/          сфокусовані cleanup utilities
   compare/      keyword distribution і dataset comparison helpers
+  automation/   orchestrator prepare→produce→validate→deliver, batch runner, LLM client (бібліотека, без CLI)
 tests/          pytest suite і public fixtures
 prompts/        prepare/produce/deliver LLM workflow templates
 docs/           architecture, testing і public-version notes
@@ -188,10 +209,20 @@ git clone https://github.com/yastman/llm-keywords-pipeline.git
 cd llm-keywords-pipeline
 
 uv sync --frozen
+uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 uv run ruff check src tests
 uv run mypy
 uv run pytest
 ```
+
+Pre-commit hook запускає ruff (check і format) і file hygiene checks на staged files;
+pre-push hook запускає `uv lock --check`, `uv run ruff check src tests`, `uv run mypy` і
+`uv run pytest -q --cov-fail-under=20`. Remote CI немає: ці hooks єдиний gate.
+
+`uv sync` ставить default groups `nlp`, `dev` і `test`. Група `nlp`: pymorphy3 з
+російським і українським словниками, natasha, snowballstemmer і pymarkdownlnt. Якщо
+словника pymorphy3 для мови немає, лематизація один раз видає `RuntimeWarning` і
+відкочується на російський stemming, тож українські леми будуть неправильними.
 
 Запуск public fixture через packaged CLI:
 

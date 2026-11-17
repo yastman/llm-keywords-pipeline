@@ -60,7 +60,8 @@ Workflow начинается с выгрузки ключей: CSV или ст�
 
 В проекте есть несколько путей такого handoff:
 
-- raw category JSON, например `categories/{slug}/data/{slug}.json`;
+- raw category JSON, например `categories/{slug}/data/{slug}.json`: создаётся вне
+  этого пакета (ни один модуль его не пишет), pipeline только читает его;
 - кластеризованный clean JSON, например `categories/{slug}/data/{slug}_clean.json`;
 - синхронизация master CSV в `_clean.json`;
 - CSV restore/compare utilities для drift, missing keywords и изменившихся volumes.
@@ -115,12 +116,26 @@ content rules и optional research, затем подготовить или п�
 Валидаторы отвечают на главный вопрос: текст реально покрывает brief или только
 выглядит как SEO-текст?
 
-- primary keyword в H1 и intro;
-- morphology-aware coverage для русского и украинского;
-- отдельное покрытие core и commercial keywords;
-- keyword density и stem-based поиск переспама;
-- вода, классическая тошнота, академическая тошнота, повтор лемм;
-- структура H1/H2, качество intro, blacklist terms, brand/city mentions и meta sync.
+Точки входа:
+
+| Команда | Что проверяет | Язык |
+| --- | --- | --- |
+| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword в intro и H2, частота ключа. | По пути: путь, содержащий `/uk/` (например `uk/categories/`) → uk, иначе ru. |
+| `uv run llm-keywords-density <file.md>` | Плотность ключей, stem-группы, category substrings, spam/warning thresholds. | `--lang ru\|uk`, по умолчанию ru. |
+| `uv run llm-keywords-audit-brands <file.md>` | Blacklist брендов, упоминания городов, NER-сущности. | По пути, как check-seo. |
+| `uv run llm-keywords-audit-water <file.md>` | Вода, классическая и академическая тошнота. | `--lang ru\|uk`, по умолчанию ru. |
+| `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>"` | Структура H1/H2, primary keyword в H1 и intro, core и commercial coverage, вода/тошнота, blacklist, длина, content standards, markdown lint, FAQ. | `--lang ru\|uk`, по умолчанию ru. |
+
+Morphology-aware для русского и украинского (леммы pymorphy3): matching ключей в
+check-seo, подсчёт ключей в density (ключи считаются по n-граммам лемм) и core coverage
+в validate.content. Не morphology-aware: commercial coverage (exact match), category
+substrings в density (русские подстроки, только ru) и stem-группы density для ru (Snowball;
+для uk группировка по лемме). Вода и тошнота берут леммы natasha для ru и pymorphy3 для uk;
+метрики определены в разделе [Возможности](#возможности).
+
+Markdown lint работает через pymarkdownlnt и возвращает `SKIPPED`, если пакет не
+установлен. Ни один валидатор не проверяет грамматику и орфографию: это шаг LLM-вычитки
+в [prompts/deliver.md](prompts/deliver.md).
 
 ---
 
@@ -139,7 +154,12 @@ LLM может быстро написать черновик, но пайпла
 ### Для RU/UK каталогов
 
 Проверки учитывают русский и украинский язык: tokenization, stopwords, stemming,
-lemmatization и morphology-aware matching, а не только exact string match.
+lemmatization и morphology-aware matching, а не только exact string match. Общий
+токенизатор (`core/text`) и water audit для украинского оставляют слова с апострофом
+(`м'який`, с `'`, `’` или `ʼ`) одним токеном; токены лемм в check-seo и density и
+matching ключей (coverage в validate.content) разбивают их по апострофу. NER и
+морфология natasha работают только для русского; для украинского audit-brands
+пропускает NER, а water audit лемматизирует через pymorphy3.
 
 ---
 
@@ -153,10 +173,10 @@ lemmatization и morphology-aware matching, а не только exact string ma
 | Synonym cleanup | Находит near-duplicates и нормализует конкурирующие варианты ключей. |
 | Research prompt workflow | Превращает clustered keywords/entities/product insights в research prompt contract; public docs сохраняют workflow `RESEARCH_PROMPT.md` → `RESEARCH_DATA.md` → brief. |
 | Content validation | Проверяет H1, intro, headings, keyword coverage, meta sync и языковые правила. |
-| Density and spam | Ищет exact, partial, stem и substring overuse с warning/spam thresholds. |
-| Water and nausea | Считает воду, классическую тошноту, академическую тошноту и повтор лемм. |
+| Density and spam | Считает ключи по n-граммам лемм (exact) и отдельным леммам (partial), плюс stem-группы и category substrings, против warning/spam thresholds. |
+| Water and nausea | Считает воду (доля стоп-слов, калиброванная), классическую тошноту (√ частоты топ-леммы), академическую тошноту (доля топ-леммы среди повторяющихся значимых лемм) и повтор лемм. |
 | Generation | Генерирует meta artifacts, SQL exports, semantic review files, catalog JSON и checklists. |
-| Repair and sync | Обновляет volumes, восстанавливает `_clean.json` из CSV, merge master keyword data и чинит misplaced terms. |
+| Repair and sync | Обновляет volumes, восстанавливает `_clean.json` из CSV, merge master keyword data (одна строка на категорию, тип и фразу; побеждает больший volume) и чинит misplaced terms. |
 
 ---
 
@@ -172,6 +192,7 @@ src/llm_keywords_pipeline/
   sync/         CSV/master-data synchronization и _clean.json repair
   fix/          точечные cleanup utilities
   compare/      keyword distribution и dataset comparison helpers
+  automation/   orchestrator prepare→produce→validate→deliver, batch runner, LLM client (библиотека, без CLI)
 tests/          pytest suite и public fixtures
 prompts/        prepare/produce/deliver LLM workflow templates
 docs/           architecture, testing и public-version notes
@@ -188,10 +209,20 @@ git clone https://github.com/yastman/llm-keywords-pipeline.git
 cd llm-keywords-pipeline
 
 uv sync --frozen
+uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 uv run ruff check src tests
 uv run mypy
 uv run pytest
 ```
+
+Pre-commit hook запускает ruff (check и format) и file hygiene checks на staged files;
+pre-push hook запускает `uv lock --check`, `uv run ruff check src tests`, `uv run mypy` и
+`uv run pytest -q --cov-fail-under=20`. Remote CI нет: эти hooks единственный gate.
+
+`uv sync` ставит default groups `nlp`, `dev` и `test`. Группа `nlp`: pymorphy3 с
+русским и украинским словарями, natasha, snowballstemmer и pymarkdownlnt. Если словаря
+pymorphy3 для языка нет, лемматизация один раз выдаёт `RuntimeWarning` и откатывается на
+русский stemming, так что украинские леммы будут неверными.
 
 Запуск публичного fixture через packaged CLI:
 
