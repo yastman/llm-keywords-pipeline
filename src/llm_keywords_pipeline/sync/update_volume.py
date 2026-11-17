@@ -28,8 +28,11 @@ def update_category(clean_file: Path, volumes: dict) -> tuple[int, int]:
     updated = 0
     total = 0
 
-    # Обновляем keywords
-    for kw in data.get("keywords", []):
+    # Обновляем keywords: плоский список или dict групп (primary/secondary/...)
+    keywords = data.get("keywords", [])
+    if isinstance(keywords, dict):
+        keywords = [kw for group in keywords.values() for kw in group]
+    for kw in keywords:
         total += 1
         keyword = kw["keyword"]
         if keyword in volumes:

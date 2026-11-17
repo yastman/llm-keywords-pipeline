@@ -11,7 +11,9 @@ class TestUpdateCategory:
     def test_updates_keyword_volumes(self, tmp_path):
         """Should update keyword volumes from volumes dict."""
         clean_file = tmp_path / "test_clean.json"
-        data = {"keywords": [{"keyword": "тест", "volume": 0}, {"keyword": "проверка", "volume": 50}]}
+        data = {
+            "keywords": [{"keyword": "тест", "volume": 0}, {"keyword": "проверка", "volume": 50}]
+        }
         clean_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
         volumes = {"тест": 100, "проверка": 50}  # проверка unchanged
@@ -58,3 +60,25 @@ class TestUpdateCategory:
 
         assert updated == 0
         assert total == 1
+
+    def test_updates_dict_grouped_keywords_and_keeps_shape(self, tmp_path):
+        """Should update volumes when keywords is a dict of groups and keep the dict."""
+        clean_file = tmp_path / "test_clean.json"
+        data = {
+            "keywords": {
+                "primary": [{"keyword": "a", "volume": 0}],
+                "secondary": [{"keyword": "b", "volume": 5}],
+                "supporting": [],
+                "commercial": [{"keyword": "c", "volume": 0}],
+            }
+        }
+        clean_file.write_text(json.dumps(data), encoding="utf-8")
+
+        updated, total = update_category(clean_file, {"a": 10, "b": 5, "c": 30})
+
+        assert (updated, total) == (2, 3)
+        result = json.loads(clean_file.read_text(encoding="utf-8"))
+        assert result["keywords"]["primary"] == [{"keyword": "a", "volume": 10}]
+        assert result["keywords"]["secondary"] == [{"keyword": "b", "volume": 5}]
+        assert result["keywords"]["supporting"] == []
+        assert result["keywords"]["commercial"] == [{"keyword": "c", "volume": 30}]
