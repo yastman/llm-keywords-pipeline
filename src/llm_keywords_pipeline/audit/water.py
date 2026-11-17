@@ -40,11 +40,24 @@ except ImportError:
 _NLP_CACHE: dict = {}
 
 
+def _make_morph_vocab():
+    """MorphVocab с явным путём к словарю.
+
+    MorphVocab() ищет словарь pymorphy2 через pkg_resources, которого нет в setuptools>=81.
+    """
+    import pymorphy2_dicts_ru
+    from natasha.morph.vocab import MorphForm, PymorphyAnalyzer
+
+    vocab = MorphVocab.__new__(MorphVocab)
+    PymorphyAnalyzer.__init__(vocab, path=pymorphy2_dicts_ru.get_path(), result_type=MorphForm)
+    return vocab
+
+
 def get_nlp_pipeline():
     """Singleton для NLP объектов Natasha."""
     if "initialized" not in _NLP_CACHE:
         _NLP_CACHE["segmenter"] = Segmenter()
-        _NLP_CACHE["morph_vocab"] = MorphVocab()
+        _NLP_CACHE["morph_vocab"] = _make_morph_vocab()
         if NATASHA_FULL:
             emb = NewsEmbedding()
             _NLP_CACHE["morph_tagger"] = NewsMorphTagger(emb)
@@ -327,8 +340,12 @@ def main(argv: list[str] | None = None) -> int:
         description="Аудит водности и тошноты текста.",
     )
     parser.add_argument("file_path", help="Путь к .md файлу")
-    parser.add_argument("target_min", nargs="?", type=int, default=40, help="Мин. % воды (default: 40)")
-    parser.add_argument("target_max", nargs="?", type=int, default=60, help="Макс. % воды (default: 60)")
+    parser.add_argument(
+        "target_min", nargs="?", type=int, default=40, help="Мин. % воды (default: 40)"
+    )
+    parser.add_argument(
+        "target_max", nargs="?", type=int, default=60, help="Макс. % воды (default: 60)"
+    )
     parser.add_argument("--lang", choices=["ru", "uk"], default="ru", help="Язык (default: ru)")
 
     args = parser.parse_args(argv)

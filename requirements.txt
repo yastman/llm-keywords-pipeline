@@ -8,4 +8,4 @@ toml>=0.10
 pandas>=2.2
 markdown>=3.8
 openpyxl>=3.1
-setuptools<71
+setuptools>=84.1.0

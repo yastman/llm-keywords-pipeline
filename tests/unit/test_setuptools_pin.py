@@ -5,6 +5,7 @@ from pymorphy2 (pulled in by natasha). Since PR #25 already adds a targeted
 filterwarnings entry for pymorphy2, the pin is no longer needed and blocks
 future updates.
 """
+
 from pathlib import Path
 
 PYPROJECT = Path(__file__).parents[2] / "pyproject.toml"
@@ -25,6 +26,13 @@ class TestSetuptoolsPin:
         """audit.water must import successfully (no ModuleNotFoundError)."""
         import llm_keywords_pipeline.audit.water  # noqa: F401
 
-    def test_pkg_resources_importable(self):
-        """pkg_resources must be importable (setuptools is a declared dependency)."""
-        import pkg_resources  # noqa: F401
+    def test_water_lemmatizes_without_pkg_resources(self, monkeypatch):
+        """audit.water must not need pkg_resources (gone from setuptools>=81)."""
+        import sys
+
+        from llm_keywords_pipeline.audit import water
+
+        monkeypatch.setitem(sys.modules, "pkg_resources", None)
+        monkeypatch.setattr(water, "_NLP_CACHE", {})
+        vocab = water.get_nlp_pipeline()["morph_vocab"]
+        assert vocab("столы")[0].normal == "стол"
