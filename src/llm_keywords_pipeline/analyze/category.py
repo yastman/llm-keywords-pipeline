@@ -36,7 +36,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from llm_keywords_pipeline.core.config import PROJECT_ROOT
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, get_guidelines_coverage_target
 from llm_keywords_pipeline.core.seo import (
     L3_TO_SLUG,
     SLUG_TO_L3,
@@ -150,14 +150,6 @@ def load_keywords_for_slug(slug: str, lang: str = "ru") -> tuple[list[dict], str
 # Backwards-compatible exports for tests/legacy imports.
 COMMERCIAL_MODIFIERS = get_commercial_modifiers("ru")
 COMMERCIAL_MODIFIERS_UK = get_commercial_modifiers("uk")
-
-# Coverage targets (SSOT)
-try:
-    from llm_keywords_pipeline.core.config import get_guidelines_coverage_target
-except ImportError:
-
-    def get_guidelines_coverage_target(keywords_count: int) -> int:
-        return 70 if keywords_count <= 5 else 60 if keywords_count <= 15 else 50
 
 
 # =============================================================================
