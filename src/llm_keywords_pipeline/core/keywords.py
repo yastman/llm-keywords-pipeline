@@ -520,9 +520,6 @@ def get_adaptive_coverage_target(keyword_count: int) -> float:
 def keyword_matches_text(keyword: str, text: str, lang: str = "ru") -> bool:
     """
     Backward-compatible function.
-
-    Replaces:
-    - validate_meta.py: keyword_matches()
     """
     matcher = KeywordMatcher(lang)
     found, _ = matcher.find_in_text(keyword, text)

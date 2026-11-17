@@ -41,6 +41,7 @@ from llm_keywords_pipeline.core.seo import (
     L3_TO_SLUG,
     SLUG_TO_L3,
     get_commercial_modifiers,
+    get_mappings_for_lang,
 )
 
 # =============================================================================
@@ -426,10 +427,6 @@ def analyze_category(slug: str, lang: str = "ru") -> dict:
         lang: Language code ("ru" or "uk")
     """
     # Get L3 name for display (use correct mapping for lang)
-    try:
-        from llm_keywords_pipeline.core.seo import get_mappings_for_lang
-    except ImportError:
-        return None
     _, slug_to_l3 = get_mappings_for_lang(lang)
     l3_name = slug_to_l3.get(slug, slug)
 
