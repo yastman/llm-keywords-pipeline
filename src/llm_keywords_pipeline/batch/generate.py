@@ -228,7 +228,8 @@ def run_analyze(slug: str) -> tuple[bool, dict]:
             except json.JSONDecodeError:
                 return True, {"output": result.stdout}
         else:
-            return False, {"error": result.stderr}
+            # analyze.category prints its errors to stdout
+            return False, {"error": result.stderr or result.stdout}
 
     except subprocess.TimeoutExpired:
         return False, {"error": "Timeout"}

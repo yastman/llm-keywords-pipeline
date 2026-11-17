@@ -69,15 +69,22 @@ def get_keyword_variations(keyword: str) -> list[str]:
     return variations
 
 
-def get_text_lemmas(text: str, lang: str = "ru") -> set[str]:
-    """Множество лемм всех слов текста (для сравнения со словами keyword)."""
+def get_token_lemmas(text: str, lang: str = "ru") -> list[str]:
+    """Токены текста по порядку: леммы кириллических слов длиннее 2 букв и латиница/цифры ([a-z0-9]+) как есть."""
     morph = MorphAnalyzer("uk" if lang == "uk" else "ru")
-    return {morph.get_lemma(w) for w in re.findall(r"[а-яёїієґ]+", text.lower())}
+    tokens = []
+    for word in re.findall(r"[а-яёїієґ]+|[a-z0-9]+", text.lower()):
+        if word.isascii():
+            tokens.append(word)
+        elif len(word) > 2:
+            tokens.append(morph.get_lemma(word))
+    return tokens
 
 
 def contains_keyword(text: str, keyword: str, lang: str = "ru") -> bool:
-    """True, если лемма каждого слова keyword есть среди лемм текста (падежи допустимы)."""
-    return set(get_word_stems(keyword, lang)) <= get_text_lemmas(text, lang)
+    """True, если каждый токен keyword (лемма или латиница/цифры) есть в тексте; пустой keyword не найден."""
+    keyword_tokens = set(get_token_lemmas(keyword, lang))
+    return bool(keyword_tokens) and keyword_tokens <= set(get_token_lemmas(text, lang))
 
 
 def check_keyword_in_intro(text: str, keyword: str, limit: int = 150, lang: str = "ru") -> dict:
@@ -219,7 +226,7 @@ def check_keywords_in_h2(text: str, keyword: str, lang: str = "ru") -> dict:
     }
 
 
-def check_keyword_frequency(text: str, keyword: str) -> dict:
+def check_keyword_frequency(text: str, keyword: str, lang: str = "ru") -> dict:
     """
     Проверка 3: Частота main keyword (антиспам)
 
@@ -228,15 +235,20 @@ def check_keyword_frequency(text: str, keyword: str) -> dict:
     Args:
         text: Полный текст
         keyword: Main keyword
+        lang: 'ru' или 'uk' для лемматизации
 
     Returns:
         Dict с результатами
     """
-    keyword_lower = normalize_keyword(keyword)
-    text_lower = text.lower()
-
-    # Считаем точные вхождения
-    count = text_lower.count(keyword_lower)
+    # Считаем вхождения подряд идущих токенов keyword (падежи допустимы, как в contains_keyword)
+    keyword_tokens = get_token_lemmas(keyword, lang)
+    text_tokens = get_token_lemmas(text, lang)
+    n = len(keyword_tokens)
+    count = (
+        sum(text_tokens[i : i + n] == keyword_tokens for i in range(len(text_tokens) - n + 1))
+        if n
+        else 0
+    )
 
     # Оптимальный диапазон
     min_freq = 3
@@ -289,7 +301,7 @@ def check_seo_structure(file_path: str, keyword: str) -> tuple[str, dict]:
     # Запускаем проверки
     intro_check = check_keyword_in_intro(text, keyword, lang=lang)
     h2_check = check_keywords_in_h2(text, keyword, lang)
-    freq_check = check_keyword_frequency(text, keyword)
+    freq_check = check_keyword_frequency(text, keyword, lang)
 
     results = {"intro": intro_check, "h2": h2_check, "frequency": freq_check}
 

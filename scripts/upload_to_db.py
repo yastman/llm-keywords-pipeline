@@ -7,6 +7,7 @@ the rest of the package works without it.
 Usage:
     uv run python scripts/upload_to_db.py <file.sql>
 """
+
 from __future__ import annotations
 
 import os
@@ -31,8 +32,7 @@ def connect(config: dict):
         import mysql.connector  # noqa: PLC0415 (lazy import by design)
     except ImportError as exc:
         raise ImportError(
-            "mysql-connector-python is required for DB upload. "
-            "Install it with: uv sync --group dev"
+            "mysql-connector-python is required for DB upload. Install it with: uv sync --group dev"
         ) from exc
     return mysql.connector.connect(**config)
 
@@ -61,7 +61,12 @@ def split_statements(sql: str) -> list[str]:
             start = i + 1
         i += 1
     statements.append(sql[start:])
-    return [s.strip() for s in statements if s.strip()]
+    # A chunk of only `--` comment lines (e.g. "-- Нет контента") is not a statement.
+    return [
+        s.strip()
+        for s in statements
+        if any(line.strip() and not line.strip().startswith("--") for line in s.splitlines())
+    ]
 
 
 def execute_sql_file(conn, sql_path: Path) -> int:

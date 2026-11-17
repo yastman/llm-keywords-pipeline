@@ -4,6 +4,7 @@ The bug: tests/unit/test_upload_to_db.py caused ImportError because
 scripts/upload_to_db.py had a top-level `import mysql.connector`.
 Fix: defer the import to the connect() function (lazy import).
 """
+
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -30,6 +31,7 @@ class TestImportDoesNotRequireMysql:
         try:
             # Re-import must succeed — mysql import is lazy
             import importlib
+
             importlib.reload(upload_to_db)
         except ImportError as exc:
             pytest.fail(f"upload_to_db import failed without mysql: {exc}")
@@ -61,12 +63,14 @@ class TestConnect:
 
     def test_raises_import_error_if_mysql_missing(self, monkeypatch):
         """When mysql.connector cannot be imported, connect() raises ImportError."""
+
         def bad_import(name, *args, **kwargs):
             if name == "mysql.connector":
                 raise ImportError("No module named 'mysql'")
             return original_import(name, *args, **kwargs)
 
         import builtins
+
         original_import = builtins.__import__
         monkeypatch.setattr(builtins, "__import__", bad_import)
 
@@ -82,7 +86,13 @@ class TestConnect:
         mock_mysql.connector = mock_connector
 
         with patch.dict(sys.modules, {"mysql": mock_mysql, "mysql.connector": mock_connector}):
-            config = {"host": "localhost", "port": 3306, "database": "db", "user": "u", "password": "p"}
+            config = {
+                "host": "localhost",
+                "port": 3306,
+                "database": "db",
+                "user": "u",
+                "password": "p",
+            }
             upload_to_db.connect(config)
 
         mock_connector.connect.assert_called_once_with(**config)
@@ -118,9 +128,32 @@ class TestExecuteSqlFile:
     def test_split_statements_quote_forms(self, sql, expected):
         assert upload_to_db.split_statements(sql) == expected
 
+    def test_split_statements_drops_comment_only_last_chunk(self, tmp_path, monkeypatch):
+        from llm_keywords_pipeline.generate import sql as sql_mod
+
+        monkeypatch.setattr(sql_mod, "PROJECT_DIR", tmp_path)
+        content = tmp_path / "categories" / "a" / "content"
+        content.mkdir(parents=True)
+        (content / "a_ru.md").write_text("# H1\n\nText\n", encoding="utf-8")
+        sql = "\n".join(
+            [
+                "SET NAMES utf8mb4;",
+                sql_mod.generate_update_sql("a", 1),
+                sql_mod.generate_update_sql("empty", 2),  # no content → comments only
+            ]
+        )
+
+        statements = upload_to_db.split_statements(sql)
+
+        assert len(statements) == 2
+        assert statements[0] == "SET NAMES utf8mb4"
+        assert "UPDATE `oc_category_description`" in statements[1]
+
     def test_returns_statement_count(self, tmp_path):
         sql_path = tmp_path / "test.sql"
-        sql_path.write_text("INSERT INTO t VALUES (1);\nINSERT INTO t VALUES (2);", encoding="utf-8")
+        sql_path.write_text(
+            "INSERT INTO t VALUES (1);\nINSERT INTO t VALUES (2);", encoding="utf-8"
+        )
 
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -146,7 +179,9 @@ class TestMain:
         sql_path = tmp_path / "test.sql"
         sql_path.write_text("SELECT 1;", encoding="utf-8")
 
-        with patch.object(upload_to_db, "connect", side_effect=ImportError("mysql-connector-python is required")):
+        with patch.object(
+            upload_to_db, "connect", side_effect=ImportError("mysql-connector-python is required")
+        ):
             result = upload_to_db.main([str(sql_path)])
         assert result == 1
 

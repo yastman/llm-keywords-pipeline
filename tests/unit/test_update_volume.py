@@ -82,3 +82,37 @@ class TestUpdateCategory:
         assert result["keywords"]["secondary"] == [{"keyword": "b", "volume": 5}]
         assert result["keywords"]["supporting"] == []
         assert result["keywords"]["commercial"] == [{"keyword": "c", "volume": 30}]
+
+
+class TestStatsTotalVolume:
+    """stats.total_volume follows updated keyword volumes (both keyword shapes)."""
+
+    def _run(self, tmp_path, data, volumes):
+        clean_file = tmp_path / "x_clean.json"
+        clean_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        update_category(clean_file, volumes)
+        return json.loads(clean_file.read_text(encoding="utf-8"))
+
+    def test_flat_keywords_recompute_total_volume(self, tmp_path):
+        data = {
+            "keywords": [{"keyword": "a", "volume": 10}, {"keyword": "b", "volume": 5}],
+            "synonyms": [{"keyword": "s", "volume": 1}],
+            "stats": {"before": 2, "after": 2, "total_volume": 15},
+        }
+        result = self._run(tmp_path, data, {"a": 100, "s": 7})
+        assert result["stats"] == {"before": 2, "after": 2, "total_volume": 105}
+
+    def test_grouped_keywords_recompute_total_volume(self, tmp_path):
+        data = {
+            "keywords": {
+                "primary": [{"keyword": "a", "volume": 10}],
+                "secondary": [{"keyword": "b", "volume": 5}],
+            },
+            "stats": {"total_volume": 15},
+        }
+        result = self._run(tmp_path, data, {"b": 50})
+        assert result["stats"]["total_volume"] == 60
+
+    def test_no_stats_not_added(self, tmp_path):
+        data = {"keywords": [{"keyword": "a", "volume": 10}]}
+        assert "stats" not in self._run(tmp_path, data, {"a": 20})

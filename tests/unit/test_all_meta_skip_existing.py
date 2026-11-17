@@ -47,3 +47,12 @@ def test_missing_meta_generated_without_force(tree):
     generated, _, _ = all_meta.process_categories(lang="ru")
     assert generated == 1
     assert tree.exists()
+
+
+def test_types_read_from_entity_dictionary():
+    data = {"entity_dictionary": {"types": ["pad", "compound"], "brands": ["Koch polish"]}}
+    assert all_meta.get_types_from_entities(data) == ["pad", "compound"]
+
+
+def test_types_fall_back_to_old_entities_list():
+    assert all_meta.get_types_from_entities({"entities": ["pad", "Rupes pad"]}) == ["pad"]

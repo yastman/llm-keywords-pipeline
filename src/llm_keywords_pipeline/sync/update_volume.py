@@ -56,6 +56,9 @@ def update_category(clean_file: Path, volumes: dict) -> tuple[int, int]:
                 updated += 1
 
     if updated > 0:
+        # stats.total_volume = sum of keyword volumes (as restore_csv writes it)
+        if isinstance(data.get("stats"), dict):
+            data["stats"]["total_volume"] = sum(kw.get("volume", 0) for kw in keywords)
         clean_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     return updated, total

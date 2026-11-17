@@ -76,3 +76,9 @@ class TestAnalyzeCategory:
         assert change["winner"]["keyword"] == "шампунь для ручной мойки"  # Higher volume
         assert len(change["losers"]) == 1
         assert change["losers"][0]["keyword"] == "шампунь ручной мойки"
+
+
+def test_report_file_lives_under_config_tasks_dir():
+    from llm_keywords_pipeline.core import config, synonyms
+
+    assert synonyms.REPORT_FILE == config.TASKS_DIR / "synonym_cleanup_report.md"

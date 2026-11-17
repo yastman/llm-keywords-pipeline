@@ -28,6 +28,24 @@ def test_run_analyze_invokes_analyze_category_module(monkeypatch):
     assert data == {"ok": 1}
 
 
+def test_run_analyze_error_falls_back_to_stdout(monkeypatch):
+    def run(cmd, **kwargs):
+        return subprocess.CompletedProcess(cmd, 1, stdout="Category not found: x\n", stderr="")
+
+    monkeypatch.setattr(generate.subprocess, "run", run)
+
+    assert generate.run_analyze("x") == (False, {"error": "Category not found: x\n"})
+
+
+def test_run_analyze_error_prefers_stderr(monkeypatch):
+    def run(cmd, **kwargs):
+        return subprocess.CompletedProcess(cmd, 1, stdout="out", stderr="Traceback")
+
+    monkeypatch.setattr(generate.subprocess, "run", run)
+
+    assert generate.run_analyze("x") == (False, {"error": "Traceback"})
+
+
 def test_run_validate_invokes_validate_content_module(monkeypatch, tmp_path):
     content_file = tmp_path / "aksessuary" / "content" / "aksessuary_ru.md"
     content_file.parent.mkdir(parents=True)

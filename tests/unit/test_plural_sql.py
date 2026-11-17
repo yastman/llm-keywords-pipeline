@@ -34,6 +34,21 @@ def test_uk_values_escaped_with_escape_sql(tmp_path, monkeypatch):
     ]
 
 
+@pytest.mark.parametrize(
+    "meta",
+    [
+        {"h1": "H", "meta": {"title": "T"}},  # nested shape
+        {"h1": "H", "title": "T", "description": "D"},  # top-level shape (prompts/produce.md)
+    ],
+)
+def test_uk_title_read_from_both_meta_shapes(tmp_path, monkeypatch, meta):
+    _setup(tmp_path, monkeypatch, {"s": 5}, uk_meta={"s": meta})
+    assert generate_plural_sql() == [
+        "UPDATE oc_category_description SET meta_h1='H', meta_title='T' "
+        "WHERE category_id=5 AND language_id=1;"
+    ]
+
+
 def test_ru_values_escaped_with_escape_sql(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch, {"s": 5}, plural_ru={"s": "abc\\"})
     lines = generate_plural_sql()
