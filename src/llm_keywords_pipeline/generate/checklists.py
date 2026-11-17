@@ -18,7 +18,8 @@ Modes:
 import argparse
 import os
 import re
-from pathlib import Path
+
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 # ============================================================================
 # Transliteration (SSOT)
@@ -83,7 +84,7 @@ def slugify(text):
 # ============================================================================
 # Paths
 # ============================================================================
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = PROJECT_ROOT
 STRUCTURE_FILE = BASE_DIR / "data/STRUCTURE.md"
 TASKS_DIR = BASE_DIR / "data/tasks/categories"
 MASTER_CHECKLIST_FILE = BASE_DIR / "data/tasks/MASTER_CHECKLIST.md"

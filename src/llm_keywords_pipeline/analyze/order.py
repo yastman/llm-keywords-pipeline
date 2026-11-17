@@ -5,7 +5,9 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
+ROOT = PROJECT_ROOT
 CATEGORIES_DIR = ROOT / "categories"
 OUTPUT_FILE = ROOT / "tasks" / "active" / "KEYWORDS_CLEANUP_TZ.md"
 

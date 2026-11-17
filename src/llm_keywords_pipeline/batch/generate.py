@@ -29,14 +29,13 @@ import json
 import subprocess
 import sys
 from datetime import UTC, datetime
-from pathlib import Path
+
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 # =============================================================================
 # Configuration
 # =============================================================================
 
-SCRIPT_DIR = Path(__file__).parent
-PROJECT_ROOT = SCRIPT_DIR.parent
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 TASKS_DIR = PROJECT_ROOT / "data" / "tasks"
 BATCH_LOG = TASKS_DIR / "batch_log.json"
