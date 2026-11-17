@@ -6,6 +6,8 @@ Generate SQL for plural meta update.
 import json
 from pathlib import Path
 
+from llm_keywords_pipeline.generate.sql import escape_sql
+
 
 def generate_plural_sql(
     mapping_file: Path = Path("data/opencart_mapping.json"),
@@ -33,11 +35,11 @@ def generate_plural_sql(
         with open(meta_file) as f:
             meta = json.load(f)
 
-        h1 = meta.get("h1", "").replace("'", "\\'")
-        title = meta.get("meta", {}).get("title", "").replace("'", "\\'")
+        h1 = escape_sql(meta.get("h1", ""))
+        title = escape_sql(meta.get("meta", {}).get("title", ""))
 
         sql_lines.append(
-            f"UPDATE oc_category_description SET meta_h1='{h1}', meta_title='{title}' WHERE category_id={cat_id} AND language_id=1;"
+            f"UPDATE oc_category_description SET meta_h1='{h1}', meta_title='{title}' WHERE category_id={int(cat_id)} AND language_id=1;"
         )
 
     # RU (language_id=3) - from plural mapping directly
@@ -46,11 +48,11 @@ def generate_plural_sql(
         if not cat_id:
             continue
 
-        h1_escaped = new_h1.replace("'", "\\'")
-        title = f"{new_h1} — купить, цены | Ultimate".replace("'", "\\'")
+        h1_escaped = escape_sql(new_h1)
+        title = escape_sql(f"{new_h1} — купить, цены | Ultimate")
 
         sql_lines.append(
-            f"UPDATE oc_category_description SET meta_h1='{h1_escaped}', meta_title='{title}' WHERE category_id={cat_id} AND language_id=3;"
+            f"UPDATE oc_category_description SET meta_h1='{h1_escaped}', meta_title='{title}' WHERE category_id={int(cat_id)} AND language_id=3;"
         )
 
     output_file.write_text("\n".join(sql_lines) + "\n")
