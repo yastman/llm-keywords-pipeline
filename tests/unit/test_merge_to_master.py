@@ -127,8 +127,46 @@ class TestMergeKeywords:
         assert result[0]["category"] == "uncategorized"
         assert result[0]["type"] == "keyword"
 
-    def test_deduplicates_by_keyword(self):
-        """Should keep keyword with higher volume on duplicate."""
+    def test_updates_volume_for_every_row_of_keyword(self):
+        """Excel volume should apply to the keyword in every category and type."""
+        existing = [
+            {"keyword": "ключ", "volume": 50, "category": "cat1", "type": "keyword", "use_in": ""},
+            {"keyword": "Ключ", "volume": 60, "category": "cat2", "type": "keyword", "use_in": ""},
+            {"keyword": "ключ", "volume": 70, "category": "cat1", "type": "synonym", "use_in": ""},
+        ]
+
+        result = merge_keywords(existing, {"ключ": 100})
+
+        assert len(result) == 3
+        assert [r["volume"] for r in result] == [100, 100, 100]
+
+    def test_deduplicates_within_category_and_type(self):
+        """Should keep keyword with higher volume on duplicate in the same category and type."""
+        existing = [
+            {"keyword": "ключ", "volume": 50, "category": "cat1", "type": "keyword", "use_in": ""},
+            {"keyword": "Ключ", "volume": 100, "category": "cat1", "type": "keyword", "use_in": ""},
+        ]
+
+        result = merge_keywords(existing, {})
+
+        assert len(result) == 1
+        assert result[0]["volume"] == 100
+
+    def test_dedup_treats_null_volume_as_zero(self):
+        """A null volume on a duplicate should lose to a real volume, no crash."""
+        existing = [
+            {"keyword": "ключ", "volume": None, "category": "cat1", "type": "keyword", "use_in": ""},
+            {"keyword": "ключ", "volume": 10, "category": "cat1", "type": "keyword", "use_in": ""},
+            {"keyword": "ключ", "volume": None, "category": "cat1", "type": "keyword", "use_in": ""},
+        ]
+
+        result = merge_keywords(existing, {})
+
+        assert len(result) == 1
+        assert result[0]["volume"] == 10
+
+    def test_keeps_same_phrase_in_two_categories(self):
+        """The same phrase in two categories should yield one row each."""
         existing = [
             {"keyword": "ключ", "volume": 50, "category": "cat1", "type": "keyword", "use_in": ""},
             {"keyword": "ключ", "volume": 100, "category": "cat2", "type": "keyword", "use_in": ""},
@@ -136,8 +174,18 @@ class TestMergeKeywords:
 
         result = merge_keywords(existing, {})
 
-        assert len(result) == 1
-        assert result[0]["volume"] == 100
+        assert sorted((r["category"], r["volume"]) for r in result) == [("cat1", 50), ("cat2", 100)]
+
+    def test_keeps_phrase_as_keyword_and_synonym(self):
+        """The same phrase as keyword and synonym in one category should yield both rows."""
+        existing = [
+            {"keyword": "ключ", "volume": 100, "category": "cat1", "type": "keyword", "use_in": ""},
+            {"keyword": "ключ", "volume": 50, "category": "cat1", "type": "synonym", "use_in": ""},
+        ]
+
+        result = merge_keywords(existing, {})
+
+        assert sorted(r["type"] for r in result) == ["keyword", "synonym"]
 
 
 class TestSaveMasterCsv:
@@ -159,3 +207,17 @@ class TestSaveMasterCsv:
         assert len(lines) == 4  # header + 3 rows
         assert "cat1" in lines[1]  # cat1 first (alphabetically)
         assert "200" in lines[1]  # highest volume first
+
+    def test_null_volume_sorts_as_zero(self, tmp_path):
+        """A null volume from _clean.json should sort as 0, no crash."""
+        rows = [
+            {"keyword": "a", "volume": None, "category": "cat1", "type": "keyword", "use_in": ""},
+            {"keyword": "b", "volume": 5, "category": "cat1", "type": "keyword", "use_in": ""},
+        ]
+        csv_path = tmp_path / "master.csv"
+
+        save_master_csv(rows, csv_path)
+
+        lines = csv_path.read_text(encoding="utf-8").strip().split("\n")
+        assert lines[1].startswith("b,5,")
+        assert lines[2].startswith("a,,")
