@@ -763,12 +763,14 @@ def check_grammar(text: str, lang: str = "ru") -> dict:
 
     try:
         tool = language_tool_python.LanguageTool("uk-UA" if lang == "uk" else "ru-RU")
+        try:
+            # Clean markdown for grammar check
+            clean_text = clean_markdown(text)
 
-        # Clean markdown for grammar check
-        clean_text = clean_markdown(text)
-
-        # Check grammar
-        matches = tool.check(clean_text)
+            # Check grammar
+            matches = tool.check(clean_text)
+        finally:
+            tool.close()
 
         if not matches:
             results["overall"] = "PASS"
@@ -792,8 +794,6 @@ def check_grammar(text: str, lang: str = "ru") -> dict:
         else:
             results["overall"] = "PASS"
 
-        tool.close()
-
     except Exception as e:
         results["note"] = f"Grammar check error: {str(e)}"
         results["overall"] = "ERROR"
@@ -813,7 +813,7 @@ def check_markdown_lint(file_path: str) -> dict:
     results = {"violations": [], "violation_count": 0, "overall": "UNKNOWN", "note": None}
 
     if not MDLINT_AVAILABLE:
-        results["note"] = "MD-Lint check unavailable (install: pip install pymarkdownlnt)"
+        results["note"] = "MD-Lint check unavailable (install: uv add pymarkdownlnt)"
         results["overall"] = "SKIPPED"
         return results
 

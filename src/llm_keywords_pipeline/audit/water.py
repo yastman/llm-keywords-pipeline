@@ -34,7 +34,7 @@ except ImportError:
         NATASHA_FULL = False
     except ImportError as e:
         print(f"❌ Ошибка импорта: {e}")
-        print("\nУстановите зависимости: pip install natasha")
+        print("\nУстановите зависимости: uv sync --group nlp")
         NATASHA_FULL = False
 
 # Кэш для тяжёлых объектов Natasha
