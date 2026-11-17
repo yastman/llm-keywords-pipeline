@@ -7,6 +7,7 @@ find_orphan_keywords.py — Находит ключи из CSV, которых �
 3. Находит "сирот" и предлагает категории для них
 """
 
+import argparse
 import csv
 import json
 import re
@@ -252,7 +253,19 @@ def suggest_category(keyword: str) -> tuple[str, int]:
     return best_slug, best_priority
 
 
-def main():
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Find CSV keywords missing from _clean.json files.", allow_abbrev=False
+    )
+    parser.add_argument(
+        "--distribute", action="store_true", help="distribute orphans to categories"
+    )
+    parser.add_argument("--apply", action="store_true", help="write changes (default: dry run)")
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
     print("📖 Парсинг всех ключей из CSV...")
     csv_keywords = parse_all_csv_keywords()
     print(f"   Найдено {len(csv_keywords)} ключей с volume > 0")
@@ -306,8 +319,16 @@ def main():
         if len(unassigned) > 10:
             print(f"   ... и ещё {len(unassigned) - 10}")
 
-    # Return data for potential auto-fix
-    return by_category, unassigned
+    if args.distribute:
+        dry_run = not args.apply
+        print("\n" + "=" * 60)
+        if dry_run:
+            print("🔍 Режим dry-run (добавьте --apply для записи)")
+        else:
+            print("📝 Применяем изменения...")
+
+        added = distribute_orphans(by_category, dry_run=dry_run)
+        print(f"\n{'Будет добавлено' if dry_run else 'Добавлено'}: {added} ключей")
 
 
 def distribute_orphans(by_category: dict[str, list], dry_run: bool = True) -> int:
@@ -427,19 +448,4 @@ def distribute_orphans(by_category: dict[str, list], dry_run: bool = True) -> in
 
 
 if __name__ == "__main__":
-    import sys
-
-    distribute_mode = "--distribute" in sys.argv
-    dry_run = "--apply" not in sys.argv
-
-    by_category, unassigned = main()
-
-    if distribute_mode:
-        print("\n" + "=" * 60)
-        if dry_run:
-            print("🔍 Режим dry-run (добавьте --apply для записи)")
-        else:
-            print("📝 Применяем изменения...")
-
-        added = distribute_orphans(by_category, dry_run=dry_run)
-        print(f"\n{'Будет добавлено' if dry_run else 'Добавлено'}: {added} ключей")
+    main()

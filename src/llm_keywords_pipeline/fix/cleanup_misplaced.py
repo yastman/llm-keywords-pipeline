@@ -5,6 +5,7 @@ cleanup_misplaced.py — Чистит неправильно распредел�
 Находит ключи которые попали не в ту категорию и перемещает их.
 """
 
+import argparse
 import json
 import re
 from collections import defaultdict
@@ -139,7 +140,16 @@ def remove_keywords_from_category(slug: str, keywords_to_remove: list[str]) -> i
     return removed
 
 
-def main():
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Remove misplaced keywords from categories.", allow_abbrev=False
+    )
+    parser.add_argument("--fix", action="store_true", help="remove misplaced keywords")
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
     print("🔍 Анализ неправильно размещённых ключей...\n")
 
     all_misplaced = defaultdict(list)
@@ -163,10 +173,7 @@ def main():
     print(f"Всего категорий с ошибками: {len(all_misplaced)}")
     print(f"Всего неправильных ключей: {sum(len(v) for v in all_misplaced.values())}")
 
-    # Fix mode
-    import sys
-
-    if "--fix" in sys.argv:
+    if args.fix:
         print("\n🔧 Исправление...")
         for slug, misplaced in all_misplaced.items():
             keywords = [m["keyword"] for m in misplaced]
