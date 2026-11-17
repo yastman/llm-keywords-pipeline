@@ -24,6 +24,11 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
+from llm_keywords_pipeline.core.config import (
+    AI_FLUFF_PATTERNS,
+    FALSE_POSITIVE_CITIES,
+    STRICT_BLACKLIST_PHRASES,
+)
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 from llm_keywords_pipeline.core.text import clean_markdown
 from llm_keywords_pipeline.validate.seo import detect_language
@@ -40,18 +45,6 @@ except ImportError:
     except ImportError:
         print("❌ Natasha не установлена: uv sync --group nlp")
         NATASHA_FULL = False
-
-# Import blacklists from config if available
-try:
-    from llm_keywords_pipeline.core.config import (
-        AI_FLUFF_PATTERNS,
-        FALSE_POSITIVE_CITIES,
-        STRICT_BLACKLIST_PHRASES,
-    )
-except ImportError:
-    AI_FLUFF_PATTERNS = []
-    FALSE_POSITIVE_CITIES = set()
-    STRICT_BLACKLIST_PHRASES = []
 
 # Blacklist брендов (явные упоминания)
 BRAND_BLACKLIST = {
@@ -186,38 +179,6 @@ CITY_BLACKLIST = {
 # FIX v8.5: Whitelist для false positives
 _FALSE_POSITIVE_CITIES = FALSE_POSITIVE_CITIES or {"ровно", "суми", "сумах"}
 
-# Strict Blacklist (Фразы-паразиты)
-_STRICT_PHRASES = STRICT_BLACKLIST_PHRASES or [
-    "в современном мире",
-    "широкий ассортимент",
-    "высокое качество по доступной цене",
-    "является неотъемлемой частью",
-]
-
-# AI-fluff фразы
-_AI_FLUFF_PATTERNS = AI_FLUFF_PATTERNS or [
-    r"в этой статье",
-    r"давайте разберёмся",
-    r"давайте разберемся",
-    r"в данной статье",
-    r"мы рассмотрим",
-    r"вы узнаете",
-    r"в заключение",
-    r"подводя итоги",
-    r"как было сказано выше",
-    r"как мы уже говорили",
-    r"не секрет, что",
-    r"ни для кого не секрет",
-    r"стоит отметить",
-    r"важно отметить",
-    r"следует отметить",
-    r"необходимо отметить",
-    r"нельзя не отметить",
-    r"безусловно",
-    r"несомненно",
-    r"очевидно, что",
-]
-
 # Предлоги для географического контекста
 LOCATION_PREPOSITIONS = {"в", "из", "до", "на", "під", "под", "у", "із", "з"}
 
@@ -309,8 +270,8 @@ def _city_parse(word: str) -> tuple[str, bool] | None:
     return None
 
 
-def check_blacklist(text: str) -> dict:
-    """Проверяет текст на наличие запрещённых слов."""
+def check_blacklist(text: str, lang: str = "ru") -> dict:
+    """Проверяет текст на наличие запрещённых слов; strict и AI-fluff — списки языка lang (ru/uk)."""
     text_lower = text.lower()
 
     found_brands = []
@@ -409,7 +370,7 @@ def check_blacklist(text: str) -> dict:
         found_cities.append({"entity": lemma, "type": "CITY", "context": f"...{context}..."})
 
     # Проверка Strict Phrases (FAIL)
-    for phrase in _STRICT_PHRASES:
+    for phrase in STRICT_BLACKLIST_PHRASES[lang]:
         if phrase in text_lower:
             for match in re.finditer(re.escape(phrase), text_lower):
                 start = max(0, match.start() - 30)
@@ -420,7 +381,7 @@ def check_blacklist(text: str) -> dict:
                 )
 
     # Проверка AI-fluff
-    for pattern in _AI_FLUFF_PATTERNS:
+    for pattern in AI_FLUFF_PATTERNS[lang]:
         matches = re.finditer(pattern, text_lower)
         for match in matches:
             start = max(0, match.start() - 20)
@@ -481,7 +442,7 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
     """
     Анализирует файл на наличие запрещённых сущностей.
 
-    Язык — по пути файла (detect_language: /uk/ → uk); natasha NER только для ru.
+    Язык — по пути файла (detect_language: /uk/ → uk): списки strict/AI-fluff этого языка; natasha NER только для ru.
 
     Returns:
         0 = PASS, 1 = WARNING (found issues)
@@ -493,8 +454,9 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
 
     text = path.read_text(encoding="utf-8")
 
-    blacklist_results = check_blacklist(text)
-    ner_results = check_ner(text, detect_language(str(path)))
+    lang = detect_language(str(path))
+    blacklist_results = check_blacklist(text, lang)
+    ner_results = check_ner(text, lang)
 
     results = {
         "file": str(path),

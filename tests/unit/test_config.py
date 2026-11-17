@@ -45,9 +45,9 @@ def test_path_helpers():
 
 def test_blacklist_patterns():
     """Verify blacklist structure."""
-    assert isinstance(config.AI_FLUFF_PATTERNS, list)
-    assert len(config.AI_FLUFF_PATTERNS) > 0
-    assert isinstance(config.STRICT_BLACKLIST_PHRASES, list)
+    for lists in (config.AI_FLUFF_PATTERNS, config.STRICT_BLACKLIST_PHRASES):
+        assert set(lists) == {"ru", "uk"}
+        assert all(isinstance(items, list) and items for items in lists.values())
 
 
 def test_quality_thresholds_logic():

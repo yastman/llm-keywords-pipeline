@@ -127,6 +127,48 @@ Frontmatter
 
         self.assertEqual(exit_code, 1)
 
+    def test_check_blacklist_uk_lists(self):
+        text = (
+            "У цій статті ви дізнаєтеся, як мити авто. Варто зазначити: "
+            "широкий асортимент є невід’ємною частиною магазину."
+        )
+        results = check_blacklist(text, "uk")
+
+        fluff_found = [item["entity"] for item in results["ai_fluff"]]
+        self.assertIn("у цій статті", fluff_found)
+        self.assertIn("ви дізнаєтеся", fluff_found)
+        self.assertIn("варто зазначити", fluff_found)
+        strict_found = [item["entity"] for item in results["strict_phrases"]]
+        self.assertEqual(strict_found, ["широкий асортимент", "є невід’ємною частиною"])
+
+    def test_check_blacklist_ru_lists_unchanged(self):
+        text = "В современном мире, стоит отметить, широкий ассортимент безусловно важен."
+        results = check_blacklist(text)
+
+        self.assertEqual(results, check_blacklist(text, "ru"))
+        self.assertEqual(
+            [item["entity"] for item in results["ai_fluff"]], ["стоит отметить", "безусловно"]
+        )
+        self.assertEqual(
+            [item["entity"] for item in results["strict_phrases"]],
+            ["в современном мире", "широкий ассортимент"],
+        )
+        # RU text is not checked against the UK lists.
+        uk_results = check_blacklist(text, "uk")
+        self.assertEqual(uk_results["ai_fluff"], [])
+        self.assertEqual(uk_results["strict_phrases"], [])
+
+    def test_analyze_file_uses_uk_lists_for_uk_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_file = Path(tmpdir) / "uk" / "categories" / "x" / "content.md"
+            temp_file.parent.mkdir(parents=True)
+            temp_file.write_text("Підбиваючи підсумки, засіб добре миє.", encoding="utf-8")
+
+            with patch("builtins.print"):
+                exit_code = analyze_file(str(temp_file))
+
+        self.assertEqual(exit_code, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
