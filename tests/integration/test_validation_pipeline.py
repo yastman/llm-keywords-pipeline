@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.real_data import UK_FIXTURE_CONTENT, UK_FIXTURE_META
+
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
@@ -31,15 +33,19 @@ def find_ru_clean(slug: str) -> Path | None:
 
 
 def find_uk_content(slug: str) -> Path | None:
-    """Find UK content file in uk/categories."""
+    """Find UK content file in uk/categories, else the hand-written fixture."""
     path = PROJECT_ROOT / "uk" / "categories" / slug / "content" / f"{slug}_uk.md"
-    return path if path.exists() else None
+    if path.exists():
+        return path
+    return UK_FIXTURE_CONTENT if slug == "aktivnaya-pena" else None
 
 
 def find_uk_meta(slug: str) -> Path | None:
-    """Find UK meta file in uk/categories."""
+    """Find UK meta file in uk/categories, else the hand-written fixture."""
     path = PROJECT_ROOT / "uk" / "categories" / slug / "meta" / f"{slug}_meta.json"
-    return path if path.exists() else None
+    if path.exists():
+        return path
+    return UK_FIXTURE_META if slug == "aktivnaya-pena" else None
 
 
 def find_uk_clean(slug: str) -> Path | None:

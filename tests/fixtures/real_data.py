@@ -8,6 +8,11 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 UK_CATEGORIES_DIR = PROJECT_ROOT / "uk" / "categories"
 
+# Hand-written UK fixture (aktivnaya-pena) used when real UK data is absent
+UK_FIXTURE_DIR = Path(__file__).parent / "uk"
+UK_FIXTURE_CONTENT = UK_FIXTURE_DIR / "aktivnaya-pena_uk.md"
+UK_FIXTURE_META = UK_FIXTURE_DIR / "aktivnaya-pena_meta.json"
+
 # Sample RU categories for testing
 SAMPLE_RU_CATEGORIES = [
     "aktivnaya-pena",
