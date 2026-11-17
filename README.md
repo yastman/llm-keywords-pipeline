@@ -118,7 +118,7 @@ points:
 | --- | --- | --- |
 | `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword in intro and H2, keyword frequency. | From the path: a path containing `/uk/` (e.g. `uk/categories/`) → uk, else ru. |
 | `uv run llm-keywords-density <file.md>` | Keyword density, stem groups, category substrings, spam/warning thresholds. | `--lang ru\|uk`, default ru. |
-| `uv run llm-keywords-audit-brands <file.md>` | Blacklisted brands, city mentions, NER entities, AI fluff; strict phrases give FAIL (exit 1, as any finding). Strict and AI-fluff lists follow the text language. | From the path, as check-seo. |
+| `uv run llm-keywords-audit-brands <file.md>` | Blacklisted brands, city mentions, NER entities, AI fluff. Strict phrases give FAIL; any brand, city, AI-fluff or strict hit gives exit 1; NER entities are info only (no exit 1). Strict and AI-fluff lists follow the file's language (from the path). | From the path, as check-seo. |
 | `uv run llm-keywords-audit-water <file.md>` | Water, classic nausea, academic nausea. | `--lang ru\|uk`, default ru. |
 | `uv run python -m llm_keywords_pipeline.validate.content <file.md> "<primary_keyword>"` | H1/H2 structure, primary keyword in H1 and intro, core and commercial coverage, water/nausea, blacklist, length, content standards, markdown lint, FAQ. | `--lang ru\|uk`, default ru; the blacklist check uses the same language. |
 
