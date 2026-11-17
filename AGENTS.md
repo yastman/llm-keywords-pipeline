@@ -89,7 +89,7 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
 
 | Command | Checks | Language |
 | --- | --- | --- |
-| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Main keyword in intro and H2, keyword frequency | from the path: a `uk/` segment (`uk/categories/...` or `.../uk/...`) → uk, else ru |
+| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Main keyword in intro and H2, keyword frequency | from the path: a path starting with `uk/categories/` or containing `/uk/` → uk, else ru |
 | `uv run llm-keywords-density <file.md> [--slug SLUG]` | Keyword density, stem groups, spam | `--lang ru\|uk`, default ru |
 | `uv run llm-keywords-audit-brands <file.md>` | Brands, cities, strict phrases, AI fluff | from the path |
 | `uv run llm-keywords-audit-water <file.md>` | Water, classic and academic nausea | `--lang ru\|uk`, default ru |
@@ -127,9 +127,9 @@ never from a prompt or this file. No validator checks grammar or spelling: proof
    it). No file is an empty config: no client rule applies and generic rules stay on. An
    invalid file raises `ProjectConfigError` naming the file and the key.
 3. Set only the keys the client needs. A command that cannot run without a key stops
-   with `<root>/project.toml: <key> is not set`: `[paths] semantics_csv` for
-   `batch.generate`, `[opencart]` for `generate.sql` (ru) and `generate.plural_sql` (uk
-   and ru).
+   before it writes anything, with `<root>/project.toml: <key> is not set; this command
+   needs it`: `[paths] semantics_csv` for `batch.generate`, `[opencart]` for
+   `generate.sql` (ru) and `generate.plural_sql` (uk and ru).
 
 Every section, commented (a B2B sweets shop as the example):
 

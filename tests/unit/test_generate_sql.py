@@ -148,3 +148,33 @@ class TestGenerateUpdateSqlOpencart:
             self._sql(tmp_path, monkeypatch, project_toml)
         assert key in str(exc.value)
         assert "project.toml" in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    ("project_toml", "key"),
+    [
+        (None, "[opencart] table_prefix"),
+        ("[opencart]\nlanguage_ids = { ru = 3 }\n", "[opencart] table_prefix"),
+        ('[opencart]\ntable_prefix = "oc_"\nlanguage_ids = { uk = 1 }\n', "language_ids.ru"),
+    ],
+)
+def test_cli_without_opencart_key_stops_before_writing(tmp_path, project_toml, key):
+    """The shipped empty CATEGORY_MAP still checks [opencart] and writes no file."""
+    import os
+    import subprocess
+    import sys
+
+    if project_toml is not None:
+        (tmp_path / "project.toml").write_text(project_toml, encoding="utf-8")
+    env = {**os.environ, "LLM_KEYWORDS_PROJECT_ROOT": str(tmp_path)}
+
+    result = subprocess.run(
+        [sys.executable, "-m", "llm_keywords_pipeline.generate.sql"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert key in result.stderr
+    assert not (tmp_path / "content_updates.sql").exists()

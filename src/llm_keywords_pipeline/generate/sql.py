@@ -166,6 +166,8 @@ def _header_sql() -> str:
 
 
 def main() -> None:
+    # Check [opencart] before writing anything, even with no category to update
+    opencart_target(PROJECT_DIR, "ru")
     chunks: list[str] = [_header_sql()]
     for slug, category_id in CATEGORY_MAP.items():
         chunks.append(generate_update_sql(slug, category_id))
