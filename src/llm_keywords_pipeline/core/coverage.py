@@ -20,7 +20,7 @@ def normalize_text(text: str) -> str:
     Normalize text for NORM-matching:
     - casefold (unicode-aware lowercase)
     - NFKC normalization
-    - Unify apostrophes: ʼ ' ʹ ′ ` → '
+    - Unify apostrophes: ʼ ' ʹ ′ ` ’ ‘ → '
     - ё → е (for RU)
     - Preserve hyphens and digits (for TOKENIZATION diagnostics)
     """
@@ -28,7 +28,7 @@ def normalize_text(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
 
     # Unify apostrophes
-    for a in "ʼ'ʹ′`":
+    for a in "ʼ'ʹ′`’‘":
         text = text.replace(a, "'")
 
     # ё → е
