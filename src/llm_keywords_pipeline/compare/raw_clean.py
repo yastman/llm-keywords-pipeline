@@ -15,6 +15,7 @@ import argparse
 import csv
 import json
 
+from llm_keywords_pipeline.core.clean_json import refresh_stats_totals
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 # Paths
@@ -330,19 +331,7 @@ def fix_clean_json(
 
         kw_data[category] = new_list
 
-    # Update stats
-    total_kws = sum(
-        len(kw_data.get(cat, [])) for cat in ["primary", "secondary", "supporting", "commercial"]
-    )
-    total_vol = sum(
-        kw["volume"]
-        for cat in ["primary", "secondary", "supporting", "commercial"]
-        for kw in kw_data.get(cat, [])
-    )
-
-    if "stats" in clean_data:
-        clean_data["stats"]["after"] = total_kws
-        clean_data["stats"]["total_volume"] = total_vol
+    refresh_stats_totals(clean_data)
 
     if not changes:
         return False, "No changes needed"

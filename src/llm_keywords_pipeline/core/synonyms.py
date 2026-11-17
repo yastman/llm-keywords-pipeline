@@ -18,6 +18,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
+from llm_keywords_pipeline.core.clean_json import refresh_stats_totals
 from llm_keywords_pipeline.core.config import PROJECT_ROOT, TASKS_DIR
 from llm_keywords_pipeline.core.coverage import keyword_key
 
@@ -245,18 +246,7 @@ def apply_cleanup(category_path: Path):
     # Update data
     data["keywords"] = new_keywords_section
 
-    # Recalculate stats
-    total_vol = 0
-    total_count = 0
-    for section in new_keywords_section:
-        for k in new_keywords_section[section]:
-            total_vol += k.get("volume", 0)
-            total_count += 1
-
-    if "stats" not in data:
-        data["stats"] = {}
-    data["stats"]["after"] = total_count
-    data["stats"]["total_volume"] = total_vol
+    refresh_stats_totals(data)
 
     # Save
     with open(result["clean_json_path"], "w", encoding="utf-8") as f:

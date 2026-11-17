@@ -13,6 +13,7 @@ import json
 import re
 from collections import defaultdict
 
+from llm_keywords_pipeline.core.clean_json import refresh_stats_totals
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
 
 SEMANTICS_CSV = PROJECT_ROOT / "Структура _Ultimate.csv"
@@ -414,20 +415,7 @@ def distribute_orphans(by_category: dict[str, list], dry_run: bool = True) -> in
             # Sort by volume
             kw_data[cat].sort(key=lambda x: x["volume"], reverse=True)
 
-        # Update stats
-        total_kws = sum(
-            len(kw_data.get(cat, []))
-            for cat in ["primary", "secondary", "supporting", "commercial"]
-        )
-        total_vol = sum(
-            kw["volume"]
-            for cat in ["primary", "secondary", "supporting", "commercial"]
-            for kw in kw_data.get(cat, [])
-        )
-
-        if "stats" in data:
-            data["stats"]["after"] = total_kws
-            data["stats"]["total_volume"] = total_vol
+        refresh_stats_totals(data)
 
         added_count = sum(len(v) for v in added.values())
         total_added += added_count

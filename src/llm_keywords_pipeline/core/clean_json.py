@@ -40,12 +40,17 @@ def keyword_entries(data: dict[str, Any]) -> list[dict]:
 
 
 def refresh_stats_totals(data: dict[str, Any]) -> None:
-    """Recompute ``stats.total_volume`` as the sum of keyword volumes (as restore_csv writes it).
+    """Recompute ``stats`` totals from the keyword entries (as restore_csv writes them).
 
-    A file without a ``stats`` dict gets none added.
+    ``total_volume`` is the sum of keyword volumes; ``after``, when the key exists, is the
+    keyword entry count. A file without a ``stats`` dict gets none added.
     """
-    if isinstance(data.get("stats"), dict):
-        data["stats"]["total_volume"] = sum(kw.get("volume", 0) for kw in keyword_entries(data))
+    stats = data.get("stats")
+    if isinstance(stats, dict):
+        entries = keyword_entries(data)
+        stats["total_volume"] = sum(kw.get("volume", 0) for kw in entries)
+        if "after" in stats:
+            stats["after"] = len(entries)
 
 
 def set_keyword_groups(data: dict[str, Any], groups: dict[str, list[dict]]) -> None:

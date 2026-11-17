@@ -128,7 +128,8 @@ def sync_category(
 
     CSV задаёт состав ключей и синонимов и их volume/use_in; всё прочее в файле
     (группы keywords, поля ключей вроде intent, meta и др.) сохраняется;
-    stats.total_volume пересчитывается по новым ключам, если stats есть.
+    stats.total_volume и stats.after (если ключ есть) пересчитываются по новым ключам,
+    если stats есть.
     """
     clean_path = find_clean_json_path(category, categories_dir)
 
