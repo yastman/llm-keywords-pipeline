@@ -1,9 +1,8 @@
 import json
-import os
 import re
-from pathlib import Path
 
-PROJECT_ROOT = Path(os.environ.get("LLM_KEYWORDS_PROJECT_ROOT", ".")).resolve()
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
 STRUCTURE_MD_PATH = PROJECT_ROOT / "data" / "generated" / "STRUCTURE.md"
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 

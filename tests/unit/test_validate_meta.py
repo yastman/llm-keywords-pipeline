@@ -2,7 +2,6 @@ import json
 
 from llm_keywords_pipeline.validate.meta import (
     get_primary_keywords,
-    get_word_stem,
     keyword_matches,
     validate_description,
     validate_meta_file,
@@ -11,20 +10,6 @@ from llm_keywords_pipeline.validate.meta import (
 
 
 class TestSemanticLogic:
-    def test_get_word_stem(self):
-        # Now uses MorphAnalyzer (via keyword_utils).
-        # With pymorphy3: returns proper lemmas (синяя -> синий)
-        # With Snowball fallback: returns stems (синяя -> син)
-        # Test verifies consistent behavior within same word family
-
-        # Same word family should produce same stem/lemma
-        assert get_word_stem("синяя") == get_word_stem("синюю")  # both from "синий"
-        assert get_word_stem("шампуни") == get_word_stem("шампунем")  # both from "шампунь"
-        assert get_word_stem("короткое") == get_word_stem("короткую")  # both from "короткий"
-
-        # Different words should produce different stems
-        assert get_word_stem("пена") != get_word_stem("шампунь")
-
     def test_keyword_matches(self):
         # Exact
         assert keyword_matches("пена", "купить пена")

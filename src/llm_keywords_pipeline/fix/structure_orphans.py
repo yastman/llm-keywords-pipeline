@@ -3,7 +3,8 @@ import os
 import shutil
 from pathlib import Path
 
-PROJECT_ROOT = Path(os.environ.get("LLM_KEYWORDS_PROJECT_ROOT", ".")).resolve()
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 
 MIGRATIONS = [

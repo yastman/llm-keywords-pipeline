@@ -2,6 +2,8 @@ import json
 import os
 from pathlib import Path
 
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
 
 def load_dump(dump_file: Path) -> dict[str, int]:
     mapping = {}
@@ -17,7 +19,7 @@ def load_dump(dump_file: Path) -> dict[str, int]:
 
 
 def main() -> None:
-    root = Path(os.environ.get("LLM_KEYWORDS_PROJECT_ROOT", ".")).resolve()
+    root = PROJECT_ROOT
     cat_dir = root / "categories"
     dump_file = root / "sql_cats_dump.txt"
 

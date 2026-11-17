@@ -2,13 +2,13 @@ import csv
 import re
 import shutil
 from collections import OrderedDict
+from datetime import datetime
 from pathlib import Path
 
 # Paths
 BASE_DIR = Path(__file__).resolve().parents[3]
 REGISTRY_FILE = BASE_DIR / "data/reports/KEYWORD_MIGRATION_REGISTRY.md"
 CSV_FILE = BASE_DIR / "Структура _Ultimate.csv"
-BACKUP_CSV = BASE_DIR / "Структура _Ultimate_backup.csv"
 
 
 def parse_registry(file_path):
@@ -129,8 +129,11 @@ def migrate_keywords():
         print("CSV file not found!")
         return
 
-    shutil.copy2(CSV_FILE, BACKUP_CSV)
-    print(f"Backup created at {BACKUP_CSV.name}")
+    backup_csv = CSV_FILE.with_name(
+        f"{CSV_FILE.stem}_backup_{datetime.now():%Y%m%d_%H%M%S_%f}{CSV_FILE.suffix}"
+    )
+    shutil.copy2(CSV_FILE, backup_csv)
+    print(f"Backup created at {backup_csv.name}")
 
     category_map = load_csv(CSV_FILE)
 
