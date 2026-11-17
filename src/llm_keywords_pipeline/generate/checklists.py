@@ -188,6 +188,9 @@ def parse_structure(file_path):
                     clean_name = m.group(1)
 
             slug = slugify(clean_name)
+            if current_l3:
+                # Same-name clusters under different L3 must not share a slug.
+                slug = f"{current_l3['slug']}-{slug}"
             parent = (
                 current_l3["slug"] if current_l3 else (current_l2["slug"] if current_l2 else "root")
             )
