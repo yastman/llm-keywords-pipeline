@@ -64,15 +64,8 @@ categories/{slug}/
 
 ### Step 3: Generate Keywords JSON
 
-Запустить скрипт парсинга. В текущей структуре пакета используйте модули из
-`llm_keywords_pipeline`:
-
-```bash
-uv run python -c "
-from llm_keywords_pipeline.extract.ru_keywords_list import ...
-# адаптируйте под нужный модуль пайплайна
-"
-```
+Получить файл внешним парсингом выгрузки ключей: ни один модуль `llm_keywords_pipeline`
+его не пишет, пакет только читает его.
 
 **Output:** `categories/{slug}/data/{slug}.json`
 
