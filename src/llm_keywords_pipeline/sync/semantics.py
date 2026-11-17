@@ -10,6 +10,7 @@ from llm_keywords_pipeline.core.clean_json import (
     FLAT_GROUP,
     keyword_entries,
     keyword_groups,
+    refresh_stats_totals,
     set_keyword_groups,
 )
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
@@ -126,7 +127,8 @@ def sync_category(
     """Синхронизирует одну категорию. Возвращает статистику.
 
     CSV задаёт состав ключей и синонимов и их volume/use_in; всё прочее в файле
-    (группы keywords, поля ключей вроде intent, meta и др.) сохраняется.
+    (группы keywords, поля ключей вроде intent, meta и др.) сохраняется;
+    stats.total_volume пересчитывается по новым ключам, если stats есть.
     """
     clean_path = find_clean_json_path(category, categories_dir)
 
@@ -154,6 +156,7 @@ def sync_category(
         updated["synonyms"] = merge_entries(
             {FLAT_GROUP: existing.get("synonyms", [])}, new_synonyms, FLAT_GROUP
         ).get(FLAT_GROUP, [])
+    refresh_stats_totals(updated)
 
     stats = {
         "category": category,
