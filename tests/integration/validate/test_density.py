@@ -147,3 +147,43 @@ class TestCountStemFrequencies:
         result = count_stem_frequencies(words, lang="uk")
 
         assert len(result) > 0
+
+    def test_ukrainian_forms_grouped_by_lemma(self):
+        """UK word forms of one lemma form one group (audit C4)."""
+        from llm_keywords_pipeline.validate.density import count_stem_frequencies
+
+        result = count_stem_frequencies(["піна", "піну", "піною"], lang="uk")
+
+        assert {k: v["count"] for k, v in result.items()} == {"піна": 3}
+        assert result["піна"]["forms"] == {"піна", "піну", "піною"}
+
+
+class TestSubstringAnalysisLang:
+    """CATEGORY_KEYWORDS holds Russian substrings: run them only for ru (audit C10)."""
+
+    def test_uk_text_skips_russian_substrings(self):
+        from llm_keywords_pipeline.validate.density import analyze_text
+
+        result = analyze_text("Активна піна для миття авто.", slug="aktivnaya-pena", lang="uk")
+
+        assert result["substring_analysis"] is None
+
+    def test_ru_text_keeps_substrings(self):
+        from llm_keywords_pipeline.validate.density import analyze_text
+
+        result = analyze_text("Активная пена для мойки авто.", slug="aktivnaya-pena", lang="ru")
+
+        assert result["substring_analysis"]["primary"]["пен"]["count"] == 1
+
+    def test_uk_file_report_has_no_substring_line(self, tmp_path, capsys):
+        from llm_keywords_pipeline.validate.density import main
+
+        md = tmp_path / "aktivnaya-pena" / "content" / "aktivnaya-pena_uk.md"
+        md.parent.mkdir(parents=True)
+        md.write_text("Активна піна для миття авто.", encoding="utf-8")
+
+        main([str(md), "--lang", "uk"])
+
+        out = capsys.readouterr().out
+        assert "Substring Analysis" not in out
+        assert "'пен*'" not in out
