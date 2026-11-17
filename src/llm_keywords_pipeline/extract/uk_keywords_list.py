@@ -16,6 +16,8 @@ Usage:
 import json
 from pathlib import Path
 
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
 
 def extract_keywords_from_file(file_path: Path) -> set[str]:
     """Извлекает все ключи из _clean.json файла."""
@@ -56,7 +58,7 @@ def extract_keywords_from_file(file_path: Path) -> set[str]:
 
 
 def main():
-    project_root = Path(__file__).parent.parent
+    project_root = PROJECT_ROOT
     uk_categories_dir = project_root / "uk" / "categories"
     output_dir = project_root / "data" / "generated"
 

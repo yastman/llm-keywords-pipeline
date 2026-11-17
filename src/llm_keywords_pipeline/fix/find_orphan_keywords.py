@@ -12,10 +12,9 @@ import csv
 import json
 import re
 from collections import defaultdict
-from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).parent
-PROJECT_ROOT = SCRIPT_DIR.parent
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
+
 SEMANTICS_CSV = PROJECT_ROOT / "Структура _Ultimate.csv"
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 
