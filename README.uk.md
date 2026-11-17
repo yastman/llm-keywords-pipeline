@@ -120,7 +120,7 @@ content rules і optional research, потім підготувати або п�
 
 | Команда | Що перевіряє | Мова |
 | --- | --- | --- |
-| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword в intro і H2, частота ключа. | За шляхом: `uk/categories/` → uk, інакше ru. |
+| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword в intro і H2, частота ключа. | За шляхом: шлях, що містить `/uk/` (наприклад `uk/categories/`) → uk, інакше ru. |
 | `uv run llm-keywords-density <file.md>` | Щільність ключів, stem-групи, category substrings, spam/warning thresholds. | `--lang ru\|uk`, за замовчуванням ru. |
 | `uv run llm-keywords-audit-brands <file.md>` | Blacklist брендів, згадки міст, NER-сутності. | За шляхом, як check-seo. |
 | `uv run llm-keywords-audit-water <file.md>` | Вода, класична та академічна нудота. | `--lang ru\|uk`, за замовчуванням ru. |
@@ -154,8 +154,10 @@ LLM може швидко написати чернетку, але пайпла
 ### Для RU/UK каталогів
 
 Перевірки враховують українську та російську мову: tokenization, stopwords, stemming,
-lemmatization і morphology-aware matching, а не лише exact string match. Українські
-слова з апострофом (`м'який`, з `'`, `’` або `ʼ`) лишаються одним токеном. NER і
+lemmatization і morphology-aware matching, а не лише exact string match. Спільний
+токенізатор (`core/text`) і water audit для української лишають слова з апострофом
+(`м'який`, з `'`, `’` або `ʼ`) одним токеном; токени лем у check-seo і density та
+matching ключів (coverage у validate.content) розбивають їх по апострофу. NER і
 морфологія natasha працюють лише для російської; для української audit-brands
 пропускає NER, а water audit лематизує через pymorphy3.
 

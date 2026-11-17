@@ -116,7 +116,7 @@ points:
 
 | Command | Checks | Language |
 | --- | --- | --- |
-| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword in intro and H2, keyword frequency. | From the path: `uk/categories/` → uk, else ru. |
+| `uv run llm-keywords-check-seo <file.md> "<main_keyword>"` | Primary keyword in intro and H2, keyword frequency. | From the path: a path containing `/uk/` (e.g. `uk/categories/`) → uk, else ru. |
 | `uv run llm-keywords-density <file.md>` | Keyword density, stem groups, category substrings, spam/warning thresholds. | `--lang ru\|uk`, default ru. |
 | `uv run llm-keywords-audit-brands <file.md>` | Blacklisted brands, city mentions, NER entities. | From the path, as check-seo. |
 | `uv run llm-keywords-audit-water <file.md>` | Water, classic nausea, academic nausea. | `--lang ru\|uk`, default ru. |
@@ -150,8 +150,10 @@ but the pipeline verifies coverage, structure, and over-optimization.
 ### For multilingual catalogs
 
 The code handles Russian and Ukrainian text with language-aware tokenization,
-stopwords, stemming, lemmatization, and morphology-aware keyword matching. Ukrainian
-apostrophe words (`м'який`, with `'`, `’` or `ʼ`) stay one token. natasha NER and
+stopwords, stemming, lemmatization, and morphology-aware keyword matching. The shared
+tokenizer (`core/text`) and the Ukrainian water audit keep apostrophe words (`м'який`,
+with `'`, `’` or `ʼ`) as one token; check-seo and density lemma tokens and keyword
+matching (validate.content coverage) split them at the apostrophe. natasha NER and
 morphology run only for Russian; for Ukrainian, audit-brands skips NER and the water audit
 lemmatizes with pymorphy3.
 
