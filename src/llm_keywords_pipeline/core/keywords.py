@@ -32,72 +32,6 @@ from llm_keywords_pipeline.core.text import _APOSTROPHES
 _LETTER_WORD_RE = re.compile(r"[а-яёїієґa-z]+(?:'[а-яёїієґa-z]+)*")
 
 # =============================================================================
-# Constants (SSOT - Single Source of Truth)
-# =============================================================================
-
-COMMERCIAL_MARKERS_RU = [
-    "купить",
-    "цена",
-    "стоимость",
-    "заказать",
-    "доставка",
-    "интернет-магазин",
-    "каталог",
-    "в наличии",
-    "со скидкой",
-    "недорого",
-    "дёшево",
-    "оптом",
-]
-
-COMMERCIAL_MARKERS_UK = [
-    "купити",
-    "ціна",
-    "вартість",
-    "замовити",
-    "доставка",
-    "інтернет-магазин",
-    "каталог",
-    "в наявності",
-    "зі знижкою",
-    "недорого",
-    "дешево",
-    "оптом",
-]
-
-STOPLIST_PHRASES_RU = [
-    "лучший",
-    "самый лучший",
-    "номер один",
-    "№1",
-    "гарантируем",
-    "100%",
-    "обещаем",
-    "безусловно лучший",
-]
-
-STOPLIST_PHRASES_UK = [
-    "найкращий",
-    "номер один",
-    "№1",
-    "гарантуємо",
-    "100%",
-    "обіцяємо",
-    "безумовно найкращий",
-]
-
-
-def get_commercial_markers(lang: str = "ru") -> list[str]:
-    """Get commercial markers for language (SSOT)."""
-    return COMMERCIAL_MARKERS_UK if lang == "uk" else COMMERCIAL_MARKERS_RU
-
-
-def get_stoplist_phrases(lang: str = "ru") -> list[str]:
-    """Get stoplist phrases for language (SSOT)."""
-    return STOPLIST_PHRASES_UK if lang == "uk" else STOPLIST_PHRASES_RU
-
-
-# =============================================================================
 # Morphology Backend
 # =============================================================================
 
@@ -594,16 +528,3 @@ def keyword_matches_text(keyword: str, text: str, lang: str = "ru") -> bool:
     matcher = KeywordMatcher(lang)
     found, _ = matcher.find_in_text(keyword, text)
     return found
-
-
-def find_keyword_form(keyword: str, text: str, lang: str = "ru") -> str | None:
-    """
-    Find which form of keyword appears in text.
-
-    Example:
-        find_keyword_form("щётка для мытья", text)
-        → "щётку для мытья"
-    """
-    matcher = KeywordMatcher(lang)
-    found, form = matcher.find_in_text(keyword, text)
-    return form if found else None

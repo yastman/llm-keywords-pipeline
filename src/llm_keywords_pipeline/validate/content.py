@@ -42,7 +42,6 @@ from llm_keywords_pipeline.core.config import CONTENT_STANDARDS, QUALITY_THRESHO
 from llm_keywords_pipeline.core.keywords import (
     CoverageChecker,
     KeywordMatcher,
-    keyword_matches_text,
 )
 from llm_keywords_pipeline.core.seo import get_adaptive_requirements
 from llm_keywords_pipeline.core.text import (
@@ -331,22 +330,6 @@ def check_keyword_coverage(text: str, keywords: list[str], lang: str = "ru") -> 
         "found_keywords": found_kw_strings[:10],  # First 10
         "missing_keywords": result["missing_keywords"][:10],  # First 10
     }
-
-
-def keyword_matches_semantic(keyword: str, text: str, lang: str = "ru") -> bool:
-    """
-    Check if keyword matches text semantically.
-
-    Uses morphology-aware matching via keyword_utils.
-
-    Args:
-        keyword: Keyword to find
-        text: Text to search in
-
-    Returns:
-        True if keyword matches (exact or morphological)
-    """
-    return keyword_matches_text(keyword, text, lang=lang)
 
 
 def check_keyword_coverage_split(

@@ -2,33 +2,7 @@
 
 import pytest
 
-from llm_keywords_pipeline.core.keywords import (
-    MorphAnalyzer,
-    get_commercial_markers,
-    get_stoplist_phrases,
-)
-
-
-class TestConstants:
-    """Test constant functions."""
-
-    def test_commercial_markers_ru(self):
-        markers = get_commercial_markers("ru")
-        assert "купить" in markers
-        assert "ціна" not in markers
-
-    def test_commercial_markers_uk(self):
-        markers = get_commercial_markers("uk")
-        assert "купити" in markers
-        assert "цена" not in markers
-
-    def test_stoplist_phrases_ru(self):
-        phrases = get_stoplist_phrases("ru")
-        assert "лучший" in phrases
-
-    def test_stoplist_phrases_uk(self):
-        phrases = get_stoplist_phrases("uk")
-        assert "найкращий" in phrases
+from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 
 
 class TestMorphAnalyzer:
@@ -260,7 +234,6 @@ class TestKeywordMatcher:
 
 from llm_keywords_pipeline.core.keywords import (
     CoverageChecker,
-    find_keyword_form,
     get_adaptive_coverage_target,
     keyword_matches_text,
 )
@@ -357,16 +330,6 @@ class TestBackwardCompatibleFunctions:
     def test_keyword_matches_text_not_found(self):
         """keyword_matches_text returns False when not found."""
         assert keyword_matches_text("губка", "используйте щётку", "ru") is False
-
-    def test_find_keyword_form_found(self):
-        """find_keyword_form returns matched form."""
-        form = find_keyword_form("щётка", "используйте щётку", "ru")
-        assert form == "щётку"
-
-    def test_find_keyword_form_not_found(self):
-        """find_keyword_form returns None when not found."""
-        form = find_keyword_form("губка", "используйте щётку", "ru")
-        assert form is None
 
 
 class TestMorphAnalyzerPlural:

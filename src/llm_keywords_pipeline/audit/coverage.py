@@ -333,32 +333,6 @@ def write_details_csv(results: list[dict], lang: str) -> Path:
     return filename
 
 
-def audit_category_coverage(slug: str, lang: str = "uk") -> dict:
-    """
-    Audit a single category's keyword coverage.
-
-    Args:
-        slug: Category slug
-        lang: Language code ('ru' or 'uk')
-
-    Returns:
-        Coverage report dict with keys:
-        - coverage_percent: float
-        - covered: int
-        - total: int
-        - results: list of keyword results
-    """
-    data = load_category_data(slug, lang)
-    if data is None:
-        return {"error": f"Category {slug} ({lang}) not found", "coverage_percent": 0}
-
-    keywords, synonyms, content = data
-    result = audit_category(keywords, synonyms, content, lang)
-    result["slug"] = slug
-    result["lang"] = lang
-    return result
-
-
 def main():
     parser = argparse.ArgumentParser(description="Audit keyword coverage")
     parser.add_argument("--slug", help="Single category slug")

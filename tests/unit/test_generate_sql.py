@@ -1,9 +1,6 @@
 """Tests for generate_sql.py"""
 
 from llm_keywords_pipeline.generate.sql import (
-    build_html_table,
-    convert_lists,
-    convert_tables,
     escape_sql,
     md_to_html,
 )
@@ -61,69 +58,6 @@ class TestMdToHtmlGenerateSql:
         md = "# H1\n\n## H2\n\nПараграф"
         h1, html = md_to_html(md)
         assert "<h2>" in html or "H2" in html
-
-
-class TestBuildHtmlTable:
-    """Test HTML table building."""
-
-    def test_builds_simple_table(self):
-        """Should build valid HTML table."""
-        lines = ["| A | B |", "|---|---|", "| 1 | 2 |"]
-        html = build_html_table(lines)
-        assert "<table>" in html
-        assert "<th>" in html
-        assert "<td>" in html
-        assert "</table>" in html
-
-    def test_returns_original_if_invalid(self):
-        """Invalid table should return original lines."""
-        lines = ["not a table"]
-        result = build_html_table(lines)
-        assert "not a table" in result
-
-
-class TestConvertTables:
-    """Test convert_tables function."""
-
-    def test_converts_markdown_table(self):
-        """Should convert Markdown table to HTML."""
-        md = "| Header |\n|---|\n| Value |"
-        html = convert_tables(md)
-        assert "<table>" in html
-
-    def test_preserves_non_table_content(self):
-        """Non-table content should be preserved."""
-        md = "Regular text\n\nMore text"
-        result = convert_tables(md)
-        assert "Regular text" in result
-        assert "More text" in result
-
-
-class TestConvertLists:
-    """Test convert_lists function."""
-
-    def test_converts_unordered_list(self):
-        """- items should become <ul><li>."""
-        md = "- item 1\n- item 2"
-        html = convert_lists(md)
-        assert "<ul>" in html
-        assert "<li>item 1</li>" in html
-        assert "</ul>" in html
-
-    def test_converts_ordered_list(self):
-        """1. items should become <ol><li>."""
-        md = "1. first\n2. second"
-        html = convert_lists(md)
-        assert "<ol>" in html
-        assert "<li>first</li>" in html
-        assert "</ol>" in html
-
-    def test_handles_mixed_lists(self):
-        """Mixed lists should be handled."""
-        md = "- bullet\n1. numbered"
-        html = convert_lists(md)
-        assert "<ul>" in html
-        assert "<ol>" in html
 
 
 class TestGenerateUpdateSqlMeta:

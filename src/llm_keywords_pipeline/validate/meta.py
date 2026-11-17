@@ -65,13 +65,11 @@ PRODUCER_PATTERNS_UK = [
     r"в інтернет-магазині ultimate",
 ]
 
-# Combined patterns (default - for backwards compatibility)
-PRODUCER_PATTERNS = PRODUCER_PATTERNS_RU + PRODUCER_PATTERNS_UK
 
 # Wholesale patterns by language
 WHOLESALE_PATTERNS_RU = [r"опт\b", r"розница", r"оптом"]
 WHOLESALE_PATTERNS_UK = [r"опт\b", r"роздріб", r"оптом"]
-WHOLESALE_PATTERNS = WHOLESALE_PATTERNS_RU + WHOLESALE_PATTERNS_UK
+
 
 MARKETING_FLUFF = [
     r"без разводов",
@@ -147,22 +145,6 @@ def get_primary_keywords(keywords_data: dict[str, Any]) -> list[str]:
         # Format 2: Old format with {"primary": [...]}
         elif isinstance(kw_section, dict) and "primary" in kw_section:
             for item in kw_section["primary"]:
-                if isinstance(item, dict):
-                    keywords.append(item.get("keyword", "").lower())
-                else:
-                    keywords.append(str(item).lower())
-
-    return keywords
-
-
-def get_commercial_keywords(keywords_data: dict[str, Any]) -> list[str]:
-    """Extract commercial keywords from keywords JSON."""
-    keywords = []
-
-    if "keywords" in keywords_data:
-        kw_section = keywords_data["keywords"]
-        if "commercial" in kw_section:
-            for item in kw_section["commercial"]:
                 if isinstance(item, dict):
                     keywords.append(item.get("keyword", "").lower())
                 else:
@@ -551,7 +533,6 @@ def validate_meta_file(
                 primary_keywords = [keywords_data["category_title"].lower()]
             else:
                 primary_keywords = get_primary_keywords(keywords_data)
-            # commercial_keywords = get_commercial_keywords(keywords_data)
         except Exception as e:
             results["errors"].append(f"Cannot load keywords file: {e}")
 

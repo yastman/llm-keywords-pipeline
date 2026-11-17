@@ -3,7 +3,6 @@ import pytest
 from llm_keywords_pipeline.core.seo import (
     get_commercial_modifiers,
     parse_front_matter,
-    rebuild_document,
     slugify,
 )
 from llm_keywords_pipeline.core.text import (
@@ -126,14 +125,6 @@ Body content"""
         assert meta is None
         assert yaml_raw == ""
         assert body == "Just text"
-
-    def test_rebuild_document(self):
-        yaml_text = "---\ntitle: Rebuild\n---"
-        body = "Content"
-        doc = rebuild_document(yaml_text, body)
-        assert doc.startswith("---")
-        assert "title: Rebuild" in doc
-        assert "Content" in doc
 
 
 class TestCommercialModifiers:

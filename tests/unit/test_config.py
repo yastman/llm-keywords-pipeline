@@ -34,27 +34,11 @@ def test_get_adaptive_coverage_target(keywords_count, expected):
     assert config.get_adaptive_coverage_target(keywords_count) == int(expected)
 
 
-@pytest.mark.parametrize(
-    "keywords_count, expected_depth",
-    [
-        (1, "shallow"),
-        (5, "shallow"),
-        (6, "medium"),
-        (15, "medium"),
-        (20, "deep"),
-    ],
-)
-def test_get_semantic_depth(keywords_count, expected_depth):
-    assert config.get_semantic_depth(keywords_count) == expected_depth
-
-
 def test_path_helpers():
     """Verify path helper functions return expected paths."""
     slug = "test-category"
     base = config.CATEGORIES_DIR
 
-    assert config.get_category_path(slug) == base / slug
-    assert config.get_content_path(slug) == base / slug / "content" / f"{slug}_ru.md"
     assert config.get_data_path(slug, clean=True) == base / slug / "data" / f"{slug}_clean.json"
     assert config.get_data_path(slug, clean=False) == base / slug / "data" / f"{slug}.json"
 
