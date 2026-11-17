@@ -55,6 +55,15 @@ class TestCalculateMetrics:
         assert result is not None
         assert result["total_words"] > 0
 
+    def test_uk_forms_share_one_lemma(self):
+        """UK forms піна/піну/піною must be lemmatized by Ukrainian morphology."""
+        text = "Активна піна для мийки. Наносимо піну на кузов. Кузов покритий піною."
+        result = calculate_metrics_from_text(text, lang="uk")
+
+        assert result is not None
+        assert result["most_common_lemma"] == "піна"
+        assert result["max_frequency"] == 3
+
 
 class TestWaterCalculation:
     """Tests for water percentage calculation."""

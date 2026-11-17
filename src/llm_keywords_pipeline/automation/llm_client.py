@@ -6,11 +6,11 @@ Keys are read from environment; never logged.
 from __future__ import annotations
 
 import os
+import re
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from string import Template
 from typing import Any
 
 
@@ -106,13 +106,23 @@ class HttpLlmClient(LlmClient):
             "messages": [{"role": "user", "content": prompt}],
             **kwargs,
         }
+        requests = self._requests
         last_exc: Exception | None = None
         for attempt in range(self.max_retries):
             try:
                 t0 = time.monotonic()
-                resp = self._requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
+                resp = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
                 latency = int((time.monotonic() - t0) * 1000)
                 resp.raise_for_status()
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                last_exc = exc
+            except requests.HTTPError as exc:
+                status = exc.response.status_code
+                if status != 429 and status < 500:
+                    raise
+                last_exc = exc
+            else:
+                # Not retried: a paid 200 with an unexpected shape would only be billed again.
                 data = resp.json()
                 text = data["choices"][0]["message"]["content"]
                 usage_data = data.get("usage", {})
@@ -125,14 +135,11 @@ class HttpLlmClient(LlmClient):
                     model=self.model,
                     latency_ms=latency,
                 )
-            except Exception as exc:
-                last_exc = exc
-                if attempt < self.max_retries - 1:
-                    time.sleep(2 ** attempt)
+            if attempt < self.max_retries - 1:
+                time.sleep(2 ** attempt)
         raise RuntimeError(f"LLM request failed after {self.max_retries} attempts") from last_exc
 
-
 def render_prompt_template(template_path: Path, variables: dict) -> str:
-    """Substitute {placeholders} in a prompt template file."""
+    """Substitute {name} placeholders in a prompt template file; unknown {keys} stay as is."""
     raw = template_path.read_text(encoding="utf-8")
-    return Template(raw).safe_substitute(variables)
+    return re.sub(r"\{(\w+)\}", lambda m: str(variables[m[1]]) if m[1] in variables else m[0], raw)

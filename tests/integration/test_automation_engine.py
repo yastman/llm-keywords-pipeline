@@ -218,7 +218,7 @@ class TestLlmClient:
     def test_render_prompt_template(self, tmp_path):
         from llm_keywords_pipeline.automation.llm_client import render_prompt_template
         tmpl = tmp_path / "tmpl.md"
-        tmpl.write_text("Hello ${name}, write about ${topic}.", encoding="utf-8")
+        tmpl.write_text("Hello {name}, write about {topic}.", encoding="utf-8")
         result = render_prompt_template(tmpl, {"name": "World", "topic": "SEO"})
         assert result == "Hello World, write about SEO."
 

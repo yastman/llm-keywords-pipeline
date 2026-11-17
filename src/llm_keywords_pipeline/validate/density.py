@@ -34,31 +34,19 @@ from typing import Any
 
 # Import from core
 from llm_keywords_pipeline.core.config import get_data_path
+from llm_keywords_pipeline.core.keywords import MorphAnalyzer
 from llm_keywords_pipeline.core.text import clean_markdown, get_stopwords, tokenize
 
-# Snowball Stemmer для группировки словоформ по корню
+# Snowball Stemmer для группировки русских словоформ по корню.
+# Snowball не знает украинский: украинские словоформы группируются по лемме (MorphAnalyzer).
 try:
     from snowballstemmer import stemmer as snowball_stemmer
 
     STEMMER_RU = snowball_stemmer("russian")
-    # Ukrainian stemmer: try Ukrainian, fall back to Russian (similar morphology)
-    try:
-        STEMMER_UK = snowball_stemmer("ukrainian")
-    except KeyError:
-        # Snowball doesn't have Ukrainian, use Russian as fallback
-        STEMMER_UK = STEMMER_RU
     HAS_STEMMER = True
 except ImportError:
     HAS_STEMMER = False
     STEMMER_RU = None
-    STEMMER_UK = None
-
-
-def get_stemmer(lang: str = "ru"):
-    """Return stemmer for specified language."""
-    if lang == "uk":
-        return STEMMER_UK
-    return STEMMER_RU
 
 
 # Fix Windows encoding
@@ -115,18 +103,24 @@ def count_word_frequencies(words: list[str], top_n: int = 30) -> list[tuple[str,
 
 def count_stem_frequencies(words: list[str], lang: str = "ru") -> dict[str, dict]:
     """
-    Count frequencies by stem (root) using Snowball Stemmer.
+    Count frequencies by stem (root): Snowball Stemmer for ru, lemma (MorphAnalyzer) for uk.
 
     Returns dict: {stem: {'count': N, 'forms': set(), 'example': str}}
 
     v3.0: Count ALL words (including stopwords) for accurate density.
     Stopwords are only excluded from stem grouping display, not from counting.
     """
-    stemmer = get_stemmer(lang)
     stopwords = get_stopwords(lang)
 
-    if HAS_STEMMER and stemmer:
-        # Новый метод: полный стемминг всех слов
+    if lang == "uk":
+        group_key = MorphAnalyzer("uk").get_lemma
+    elif HAS_STEMMER and STEMMER_RU:
+        group_key = STEMMER_RU.stemWord
+    else:
+        group_key = None
+
+    if group_key:
+        # Новый метод: группировка всех слов по стему/лемме
         stem_groups: dict[str, dict] = {}
 
         for word in words:
@@ -134,7 +128,7 @@ def count_stem_frequencies(words: list[str], lang: str = "ru") -> dict[str, dict
             if len(word) < 3:
                 continue
 
-            stem = stemmer.stemWord(word)
+            stem = group_key(word)
 
             # Не группируем стоп-слова в отчёт, но они уже учтены в total_words
             if word in stopwords:
@@ -255,9 +249,10 @@ def analyze_text(
     # Stem frequencies
     stem_freq = count_stem_frequencies(all_words, lang)
 
-    # Substring analysis (user's methodology) - if slug provided
+    # Substring analysis (user's methodology) - if slug provided.
+    # CATEGORY_KEYWORDS holds Russian substrings: only meaningful for ru text.
     substring_analysis = None
-    if slug and slug in CATEGORY_KEYWORDS:
+    if lang == "ru" and slug and slug in CATEGORY_KEYWORDS:
         primary_subs, anti_subs = CATEGORY_KEYWORDS[slug]
         primary_counts = count_substring_frequencies(all_words, primary_subs)
         anti_counts = count_substring_frequencies(all_words, anti_subs)
@@ -406,7 +401,7 @@ def format_report(analysis: dict[str, Any], keywords_check: list[dict] | None = 
     # Stem analysis (most important for spam detection)
     lines.append("\n🌿 Stem Frequencies (grouped by root):")
     if HAS_STEMMER:
-        lines.append("   ✅ Snowball Stemmer active — все словоформы сгруппированы")
+        lines.append("   ✅ Словоформы сгруппированы (ru: Snowball stem, uk: лемма)")
     else:
         lines.append("   ⚠️  Fallback mode — только захардкоженные паттерны")
 

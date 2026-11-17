@@ -11,9 +11,9 @@ Features:
 - Resume from last failed category
 
 Workflow per category:
-1. analyze_category.py → context for LLM
+1. llm_keywords_pipeline.analyze.category → context for LLM
 2. (External) LLM generation
-3. validate_content.py → quality check
+3. llm_keywords_pipeline.validate.content → quality check
 4. If FAIL → retry with fixes
 
 Usage:
@@ -213,12 +213,10 @@ def get_category_status(slug: str, log: dict) -> dict:
 
 
 def run_analyze(slug: str) -> tuple[bool, dict]:
-    """Run analyze_category.py for a slug."""
-    script = SCRIPT_DIR / "analyze_category.py"
-
+    """Run llm_keywords_pipeline.analyze.category for a slug."""
     try:
         result = subprocess.run(  # noqa: S603
-            ["python3", str(script), slug, "--json"],  # noqa: S607
+            [sys.executable, "-m", "llm_keywords_pipeline.analyze.category", slug, "--json"],
             capture_output=True,
             text=True,
             timeout=60,
@@ -240,12 +238,11 @@ def run_analyze(slug: str) -> tuple[bool, dict]:
 
 
 def run_validate(slug: str, primary_keyword: str) -> tuple[bool, dict]:
-    """Run validate_content.py for a slug.
+    """Run llm_keywords_pipeline.validate.content for a slug.
 
     FIX v8.5: Использует --json для надёжного парсинга результата
     вместо поиска строки "PASS" в output.
     """
-    script = SCRIPT_DIR / "validate_content.py"
     content_file = CATEGORIES_DIR / slug / "content" / f"{slug}_ru.md"
 
     if not content_file.exists():
@@ -254,11 +251,18 @@ def run_validate(slug: str, primary_keyword: str) -> tuple[bool, dict]:
     try:
         # FIX: Используем --json для structured output
         result = subprocess.run(  # noqa: S603
-            ["python3", str(script), str(content_file), primary_keyword, "--json"],  # noqa: S607
+            [
+                sys.executable,
+                "-m",
+                "llm_keywords_pipeline.validate.content",
+                str(content_file),
+                primary_keyword,
+                "--json",
+            ],
             capture_output=True,
             text=True,
             timeout=120,
-        )  # noqa: S603, S607
+        )
 
         # Пытаемся распарсить JSON output
         try:
@@ -381,7 +385,7 @@ def generate_fix_prompt(slug: str, issues: list[str], content: str) -> str:
 
 ### Текущий контент:
 ```markdown
-{content[:2000]}...
+{content}
 ```
 
 ### Инструкции:

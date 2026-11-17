@@ -745,9 +745,9 @@ def check_content_standards(text: str, lang: str = "ru") -> dict:
     return results
 
 
-def check_grammar(text: str) -> dict:
+def check_grammar(text: str, lang: str = "ru") -> dict:
     """
-    Check grammar using language_tool_python.
+    Check grammar using language_tool_python (uk-UA for lang 'uk', else ru-RU).
 
     WARNING only (not blocker) - grammar issues don't stop workflow.
 
@@ -757,13 +757,12 @@ def check_grammar(text: str) -> dict:
     results = {"errors": [], "error_count": 0, "overall": "UNKNOWN", "note": None}
 
     if not GRAMMAR_AVAILABLE:
-        results["note"] = "Grammar check unavailable (install: pip install language-tool-python)"
+        results["note"] = "Grammar check unavailable (install: uv add language-tool-python)"
         results["overall"] = "SKIPPED"
         return results
 
     try:
-        # Initialize LanguageTool for Russian
-        tool = language_tool_python.LanguageTool("ru-RU")
+        tool = language_tool_python.LanguageTool("uk-UA" if lang == "uk" else "ru-RU")
 
         # Clean markdown for grammar check
         clean_text = clean_markdown(text)
@@ -996,7 +995,7 @@ def validate_content(
             "violation_count": 0,
         }
     else:
-        grammar = check_grammar(text)
+        grammar = check_grammar(text, lang=lang)
         md_lint = check_markdown_lint(file_path)
 
     # Determine overall status

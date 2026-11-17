@@ -130,7 +130,8 @@ def run_category(
         usage = asdict(draft_response.usage)
 
         report: ValidationReport | None = None
-        for attempt in range(1, max_retries + 1):
+        # max_retries=0 still validates the draft once, with no revise.
+        for attempt in range(1, max(max_retries, 1) + 1):
             report = _validate_content(content, category)
             if report.status != ReportStatus.FAIL:
                 break

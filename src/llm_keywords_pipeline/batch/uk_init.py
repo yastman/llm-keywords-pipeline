@@ -320,7 +320,7 @@ def process_category(slug: str, ru_meta_path: str) -> dict:
 - 1+ table, 1+ warning
 
 ## RU Research
-See: {ru_meta_path.replace("/meta/", "/research/").replace("_meta.json", "/RESEARCH_DATA.md")}
+See: {(Path(ru_meta_path).parent.parent / "research" / "RESEARCH_DATA.md").as_posix()}
 
 ## Next Steps
 1. Copy RESEARCH_DATA.md from RU (if exists)
