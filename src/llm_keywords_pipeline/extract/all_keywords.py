@@ -25,13 +25,8 @@ def extract_from_file(clean_file: Path) -> list[dict]:
         # Keywords: dict of groups {"primary": [...], "synonyms_base": [...], ...} or flat list
         for group_name, items in keyword_groups(data).items():
             for kw in items:
-                # Determine type based on group name
-                if group_name in ("primary", FLAT_GROUP):
-                    source_type = "keyword"
-                elif "commercial" in group_name:
-                    source_type = "synonym"  # commercial = meta_only synonyms
-                else:
-                    source_type = "synonym"  # all other groups are synonyms
+                # primary and a flat list are keywords; every other group is synonyms
+                source_type = "keyword" if group_name in ("primary", FLAT_GROUP) else "synonym"
 
                 rows.append(
                     {

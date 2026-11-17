@@ -90,6 +90,8 @@ def merge_entries(
     A matched entry stays in its group with its other fields (intent, ...); keyword,
     volume and use_in come from the CSV. An entry the CSV lacks is dropped; a CSV entry
     the file lacks goes to new_group. Each group is sorted by volume DESC.
+    A key the file holds in two groups matches only its first entry; the copy in the
+    second group is dropped on sync.
     """
     positions: dict[str, tuple[str, int]] = {}
     for group, items in old_groups.items():

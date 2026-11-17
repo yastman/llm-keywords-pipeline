@@ -30,8 +30,13 @@ def keyword_groups(data: dict[str, Any]) -> dict[str, list[dict]]:
 
 
 def keyword_entries(data: dict[str, Any]) -> list[dict]:
-    """All keyword entries in file order (groups in their order, primary first)."""
-    return [kw for items in keyword_groups(data).values() for kw in items]
+    """All keyword entries: ``primary`` first, then the other groups in file order.
+
+    Callers take entry [0] as the main keyword, so ``primary`` leads whatever its JSON position.
+    """
+    groups = keyword_groups(data)
+    rest = [kw for group, items in groups.items() if group != "primary" for kw in items]
+    return [*groups.get("primary", []), *rest]
 
 
 def set_keyword_groups(data: dict[str, Any], groups: dict[str, list[dict]]) -> None:

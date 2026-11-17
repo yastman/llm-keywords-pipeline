@@ -8,11 +8,16 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 from llm_keywords_pipeline.analyze import duplicates as analyze_duplicates
+from llm_keywords_pipeline.analyze import meta as analyze_meta
 from llm_keywords_pipeline.analyze import order as analyze_order
+from llm_keywords_pipeline.analyze import synonyms as analyze_synonyms
 from llm_keywords_pipeline.core.clean_json import keyword_entries, keyword_groups
 from llm_keywords_pipeline.extract import all_keywords, ru_keywords_list, uk_keywords
 from llm_keywords_pipeline.fix import keywords_order
+from llm_keywords_pipeline.generate import regenerate_meta
 from llm_keywords_pipeline.generate.all_meta import get_primary_keyword
 from llm_keywords_pipeline.sync import merge_master, update_volume
 from llm_keywords_pipeline.sync.semantics import group_by_category, load_master_csv, sync_category
@@ -53,6 +58,17 @@ class TestHelper:
 
     def test_flat_list(self):
         assert keyword_entries(FLAT_DATA) == FLAT_DATA["keywords"]
+
+    def test_primary_first_then_file_order(self):
+        data = {
+            "keywords": {
+                "secondary": [{"keyword": "s"}],
+                "commercial": [{"keyword": "c"}],
+                "primary": [{"keyword": "p"}],
+                "supporting": [{"keyword": "u"}],
+            }
+        }
+        assert [kw["keyword"] for kw in keyword_entries(data)] == ["p", "s", "c", "u"]
 
     def test_missing_and_non_list_group(self):
         assert keyword_entries({}) == []
@@ -190,6 +206,69 @@ class TestReadersAcceptDict:
         ]
         flat_rows = all_keywords.extract_from_file(write_clean(tmp_path, FLAT_DATA))
         assert [r["source_type"] for r in flat_rows] == ["keyword", "keyword"]
+
+
+SHAPES = pytest.mark.parametrize("data", [DICT_DATA, FLAT_DATA], ids=["dict", "flat"])
+
+
+class TestReaderCallers:
+    """Each reader called on a dict and a flat file returns the same keywords."""
+
+    @SHAPES
+    def test_analyze_meta(self, tmp_path, monkeypatch, data):
+        monkeypatch.setattr(analyze_meta, "ROOT", tmp_path)
+        clean = write_clean(tmp_path, data)
+        meta = clean.parent.parent / "meta" / "cat_meta.json"
+        meta.parent.mkdir()
+        meta_data = {"meta": {"title": "Главный", "description": "главный"}, "h1": "Главный"}
+        meta.write_text(json.dumps(meta_data, ensure_ascii=False), encoding="utf-8")
+        result = analyze_meta.analyze_category(clean.parent.parent)
+        assert result is not None
+        assert (result["main_keyword"], result["main_volume"]) == ("главный", 100)
+        assert [kw["keyword"] for kw in result["keywords_top3"]] == ["главный", "второй"]
+        assert result["issues"] == []
+
+    @SHAPES
+    def test_analyze_synonyms(self, tmp_path, monkeypatch, data):
+        monkeypatch.setattr(analyze_synonyms, "ROOT", tmp_path)
+        result = analyze_synonyms.analyze_category(write_clean(tmp_path, data))
+        assert result["keywords_count"] == 2
+        assert [kw["keyword"] for kw in result["keywords"]] == ["главный", "второй"]
+
+    @SHAPES
+    def test_regenerate_meta(self, tmp_path, monkeypatch, data):
+        monkeypatch.chdir(tmp_path)
+        clean = write_clean(tmp_path, data)
+        meta = clean.parent.parent / "meta" / "cat_meta.json"
+        meta.parent.mkdir()
+        meta.write_text(json.dumps({"meta": {}}), encoding="utf-8")
+        assert regenerate_meta.regenerate_meta(meta) is True
+        written = read(meta)
+        assert written["keywords_in_content"]["primary"] == ["главный", "второй"]
+        assert written["meta"]["title"] == regenerate_meta.generate_title("главный")
+        assert written["h1"] == regenerate_meta.generate_h1("главный")
+
+    @SHAPES
+    def test_analyze_duplicates(self, tmp_path, data):
+        data = copy.deepcopy(data)
+        last_group = (
+            data["keywords"]
+            if isinstance(data["keywords"], list)
+            else data["keywords"]["secondary"]
+        )
+        last_group.append({"keyword": "Главный", "volume": 1})
+        result = analyze_duplicates.analyze_category(write_clean(tmp_path, data))
+        assert result is not None
+        assert [len(d["variants"]) for d in result["duplicates"]] == [2]
+        assert len(result["all_keywords"]) == 3
+
+    def test_analyze_order_flat(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(analyze_order, "ROOT", tmp_path)
+        result = analyze_order.analyze_category(write_clean(tmp_path, FLAT_DATA))
+        assert (result["keywords_order_wrong"], result["keywords_zero"]) == (False, [])
+        data = {"keywords": [{"keyword": "a", "volume": 0}, {"keyword": "b", "volume": 5}]}
+        result = analyze_order.analyze_category(write_clean(tmp_path, data))
+        assert (result["keywords_order_wrong"], result["keywords_zero"]) == (True, ["a"])
 
 
 class TestSourcePrecedence:
