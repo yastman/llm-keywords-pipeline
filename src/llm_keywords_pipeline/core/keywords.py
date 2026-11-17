@@ -522,7 +522,6 @@ def keyword_matches_text(keyword: str, text: str, lang: str = "ru") -> bool:
     Backward-compatible function.
 
     Replaces:
-    - validate_content.py: keyword_matches_semantic()
     - validate_meta.py: keyword_matches()
     """
     matcher = KeywordMatcher(lang)
