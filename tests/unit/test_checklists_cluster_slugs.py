@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sys
 
+import pytest
+
 from llm_keywords_pipeline.generate import checklists
 
 STRUCTURE = """\
@@ -127,3 +129,42 @@ def test_reset_writes_task_and_status_row_per_filter(tmp_path, monkeypatch):
     pipeline = (tmp_path / "PIPELINE.md").read_text(encoding="utf-8")
     assert "- shampoo-red (Meta)" in pipeline
     assert "- wax-red (Meta)" in pipeline
+
+
+CLUSTER_FILTER_SAME_NAME = """\
+##### \U0001f3f7️ L3: Shampoo (Vol: 100)
+###### \U0001f4e6 Cluster: Red (Vol: 10)
+###### ⚡ Filter: Red (Vol: 5)
+"""
+
+L2_L3_SAME_NAME = """\
+#### \U0001f4c1 L2: Care (Vol: 200)
+##### \U0001f3f7️ L3: Care (Vol: 100)
+"""
+
+
+@pytest.mark.parametrize(
+    ("structure", "slug", "first", "second"),
+    [
+        (CLUSTER_FILTER_SAME_NAME, "shampoo-red", "Cluster 'Red'", "Filter 'Red'"),
+        (L2_L3_SAME_NAME, "care", "L2 'Care'", "L3 'Care'"),
+    ],
+    ids=["cluster-filter", "l2-l3"],
+)
+@pytest.mark.parametrize("mode", ["--reset", "--sync"])
+def test_duplicate_slug_fails_before_writing(
+    tmp_path, monkeypatch, structure, slug, first, second, mode
+):
+    _, tasks = _setup(tmp_path, monkeypatch, structure)
+    monkeypatch.setattr(sys, "argv", ["checklists", mode])
+
+    with pytest.raises(SystemExit) as exc:
+        checklists.main()
+
+    message = str(exc.value.code)
+    assert f"Duplicate slug '{slug}'" in message
+    assert first in message
+    assert second in message
+    assert not tasks.exists()
+    assert not (tmp_path / "MASTER.md").exists()
+    assert not (tmp_path / "PIPELINE.md").exists()

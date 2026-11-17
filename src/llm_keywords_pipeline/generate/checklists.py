@@ -18,6 +18,7 @@ Modes:
 import argparse
 import os
 import re
+import sys
 from datetime import date
 
 from llm_keywords_pipeline.core.config import PROJECT_ROOT
@@ -619,6 +620,17 @@ def main():
     print(f"Parsing {STRUCTURE_FILE}...")
     nodes = parse_structure(STRUCTURE_FILE)
     print(f"Found {len(nodes)} nodes.")
+
+    # Two nodes with one slug would share a task file and a status row.
+    seen: dict[str, dict] = {}
+    for node in nodes:
+        other = seen.setdefault(node["slug"], node)
+        if other is not node:
+            sys.exit(
+                f"Duplicate slug '{node['slug']}': "
+                f"{other['type']} '{other['name']}' (parent {other['parent']}) and "
+                f"{node['type']} '{node['name']}' (parent {node['parent']})"
+            )
 
     # Build statuses
     statuses = {}
