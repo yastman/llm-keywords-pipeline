@@ -69,7 +69,18 @@ def get_keyword_variations(keyword: str) -> list[str]:
     return variations
 
 
-def check_keyword_in_intro(text: str, keyword: str, limit: int = 150) -> dict:
+def get_text_lemmas(text: str, lang: str = "ru") -> set[str]:
+    """Множество лемм всех слов текста (для сравнения со словами keyword)."""
+    morph = MorphAnalyzer("uk" if lang == "uk" else "ru")
+    return {morph.get_lemma(w) for w in re.findall(r"[а-яёїієґ]+", text.lower())}
+
+
+def contains_keyword(text: str, keyword: str, lang: str = "ru") -> bool:
+    """True, если лемма каждого слова keyword есть среди лемм текста (падежи допустимы)."""
+    return set(get_word_stems(keyword, lang)) <= get_text_lemmas(text, lang)
+
+
+def check_keyword_in_intro(text: str, keyword: str, limit: int = 150, lang: str = "ru") -> dict:
     """
     Проверка 1: Main keyword в первых N символах (INTRO)
 
@@ -77,6 +88,7 @@ def check_keyword_in_intro(text: str, keyword: str, limit: int = 150) -> dict:
         text: Полный текст
         keyword: Main keyword
         limit: Лимит символов для проверки (default 150)
+        lang: 'ru' или 'uk' для лемматизации
 
     Returns:
         Dict с результатами
@@ -91,7 +103,7 @@ def check_keyword_in_intro(text: str, keyword: str, limit: int = 150) -> dict:
             found_h1 = True
             continue
         if found_h1 and line.strip():
-            intro_text = line.strip()
+            intro_text = line.strip()[:limit]
             break
 
     # Если не нашли структуру с H1, берём первые N символов
@@ -101,15 +113,12 @@ def check_keyword_in_intro(text: str, keyword: str, limit: int = 150) -> dict:
         clean_text = re.sub(r"\*\*(.+?)\*\*", r"\1", clean_text)
         intro_text = clean_text.strip()[:limit]
 
-    intro_lower = intro_text.lower()
-    keyword_lower = normalize_keyword(keyword)
-
-    # Проверяем наличие keyword
-    found = keyword_lower in intro_lower
+    # Проверяем наличие keyword (с учётом падежей)
+    found = contains_keyword(intro_text, keyword, lang)
 
     # Проверяем позицию (в первом предложении)
     first_sentence = intro_text.split(".")[0] if "." in intro_text else intro_text
-    in_first_sentence = keyword_lower in first_sentence.lower()
+    in_first_sentence = contains_keyword(first_sentence, keyword, lang)
 
     return {
         "passed": found,
@@ -169,8 +178,8 @@ def check_keywords_in_h2(text: str, keyword: str, lang: str = "ru") -> dict:
     """
     Проверка 2: Keywords в H2 заголовках
 
-    Требование: минимум 2 из H2 должны содержать keyword или вариацию
-    Учитывает падежи через стемминг (RU или UK).
+    Требование: минимум 2 из H2 должны содержать keyword.
+    H2 засчитывается, если в нём есть лемма каждого слова keyword (падежи допустимы, RU или UK).
 
     Args:
         text: Полный текст
@@ -183,27 +192,11 @@ def check_keywords_in_h2(text: str, keyword: str, lang: str = "ru") -> dict:
     # Находим все H2 (используем text_utils SSOT)
     h2_matches = extract_h2s(text)
 
-    keyword_lower = normalize_keyword(keyword)
-    keyword_words = keyword_lower.split()
-    keyword_stems = get_word_stems(keyword, lang)
-
     h2_with_keyword = []
     h2_without_keyword = []
 
     for h2 in h2_matches:
-        h2_lower = h2.lower()
-
-        # Проверяем полное совпадение
-        has_exact = keyword_lower in h2_lower
-
-        # Проверяем по основам слов (для падежей)
-        # Требуем наличие ВСЕХ основ ключевого слова
-        has_stems = all(stem in h2_lower for stem in keyword_stems if len(stem) > 2)
-
-        # Проверяем частичное (любое значимое слово из keyword)
-        has_partial = any(word in h2_lower for word in keyword_words if len(word) > 4)
-
-        if has_exact or has_stems or has_partial:
+        if contains_keyword(h2, keyword, lang):
             h2_with_keyword.append(h2)
         else:
             h2_without_keyword.append(h2)
@@ -294,7 +287,7 @@ def check_seo_structure(file_path: str, keyword: str) -> tuple[str, dict]:
         text = f.read()
 
     # Запускаем проверки
-    intro_check = check_keyword_in_intro(text, keyword)
+    intro_check = check_keyword_in_intro(text, keyword, lang=lang)
     h2_check = check_keywords_in_h2(text, keyword, lang)
     freq_check = check_keyword_frequency(text, keyword)
 
@@ -321,10 +314,11 @@ def main(argv: list[str] | None = None) -> int:
     """CLI entry point (returns exit code)."""
     argv = sys.argv[1:] if argv is None else argv
 
-    if len(argv) < 2:
-        print('Usage: python3 check_seo_structure.py <file.md> "<main_keyword>"')
-        print('Example: python3 check_seo_structure.py content.md "активная пена"')
-        return 2
+    help_requested = bool(argv) and argv[0] in ("-h", "--help")
+    if help_requested or len(argv) < 2:
+        print('Usage: llm-keywords-check-seo <file.md> "<main_keyword>"')
+        print('Example: llm-keywords-check-seo content.md "активная пена"')
+        return 0 if help_requested else 2
 
     file_path = argv[0]
     keyword = argv[1]
