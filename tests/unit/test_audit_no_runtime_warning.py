@@ -2,8 +2,10 @@
 
 The fix replaces the global `--disable-warnings` flag in pytest.ini with
 specific `filterwarnings` entries so new warnings from project code surface
-in CI, while known third-party warnings (pymorphy2, runpy) stay suppressed.
+in local pytest runs and the pre-push hook, while known third-party warnings
+(pymorphy2, runpy) stay suppressed.
 """
+
 from pathlib import Path
 
 PYTEST_INI = Path(__file__).parents[2] / "pytest.ini"

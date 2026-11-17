@@ -9,9 +9,6 @@
 **Turns a raw keyword list into clustered SEO groups, LLM-ready briefs, and measurable content checks: coverage, density, spam, wateriness, and nausea.**
 
 <p>
-  <a href="https://github.com/yastman/llm-keywords-pipeline/actions/workflows/ci.yml">
-    <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/yastman/llm-keywords-pipeline/ci.yml?branch=main&label=tests&style=for-the-badge">
-  </a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white">
   <img alt="uv" src="https://img.shields.io/badge/package%20manager-uv-6E56CF?style=for-the-badge">
   <img alt="Ruff" src="https://img.shields.io/badge/lint-ruff-46A758?style=for-the-badge">
@@ -195,7 +192,8 @@ uv run pytest
 ```
 
 The pre-commit hook runs ruff (check and format) and file hygiene checks on staged files;
-the pre-push hook runs `uv lock --check`, `uv run mypy` and `uv run pytest -q`.
+the pre-push hook runs `uv lock --check`, `uv run ruff check src tests`, `uv run mypy` and
+`uv run pytest -q --cov-fail-under=20`. There is no remote CI: these hooks are the only gate.
 
 Run a public fixture through one of the packaged CLI tools:
 
@@ -226,7 +224,7 @@ production deployment recipe.
 | Doc | What's in it |
 | --- | --- |
 | [Architecture](docs/architecture.md) | Package map, workflow boundaries, and supported public surface. |
-| [Testing](docs/testing.md) | Test tiers, default commands, CI parity, data-required skips. |
+| [Testing](docs/testing.md) | Test tiers, default commands, local git hooks, data-required skips. |
 | [Research Workflow](docs/research-workflow.md) | How clustered keywords became `RESEARCH_PROMPT.md`, `RESEARCH_DATA.md`, and a content brief. |
 | [Public Version](docs/public-version.md) | What is included, what is omitted, and why prompts remain public. |
 | [Prompt Templates](prompts/README.md) | Prepare/produce/deliver LLM workflow templates. |

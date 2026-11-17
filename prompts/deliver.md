@@ -26,7 +26,7 @@ external orchestration.
 
 > **Note:** The table below is the prompt-side guidance. Actual spam/warning thresholds
 > enforced by `validate/density.py` are `SPAM_THRESHOLD = 3.0%` and `WARNING_THRESHOLD = 2.5%`
-> (no adaptive logic by keyword count). These values in the code are the ground truth for CI.
+> (no adaptive logic by keyword count). These values in the code are the ground truth for the validator.
 
 | Keywords | Density Blocker | Density Warning |
 |----------|-----------------|-----------------|
