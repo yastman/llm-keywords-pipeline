@@ -24,3 +24,10 @@ def test_uk_city_case_forms_exit_nonzero(tmp_path, capsys):
     f = tmp_path / "uk_city.md"
     f.write_text("Доставка по Києву, Харкову та Тернополю.", encoding="utf-8")
     assert main([str(f)]) != 0
+
+
+def test_uk_locative_city_exits_nonzero(tmp_path, capsys):
+    f = tmp_path / "kyiv.md"
+    f.write_text("Доставка у Києві.", encoding="utf-8")
+    assert main([str(f), "--json"]) != 0
+    assert '"київ"' in capsys.readouterr().out

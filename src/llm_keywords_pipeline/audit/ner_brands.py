@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 from llm_keywords_pipeline.core.keywords import MorphAnalyzer
@@ -227,14 +228,30 @@ def is_false_positive_location(word: str, context: str) -> bool:
     if word_lower not in _FALSE_POSITIVE_CITIES:
         return False
 
+    return not _after_location_preposition(word_lower, context)
+
+
+def _after_location_preposition(word: str, context: str) -> bool:
+    """True if `word` stands right after a location preposition in `context`."""
     context_lower = context.lower()
+    return any(
+        re.search(rf"\b{prep}\s+{re.escape(word.lower())}\b", context_lower)
+        for prep in LOCATION_PREPOSITIONS
+    )
 
-    for prep in LOCATION_PREPOSITIONS:
-        pattern = rf"\b{prep}\s+{re.escape(word_lower)}\b"
-        if re.search(pattern, context_lower):
-            return False
 
-    return True
+@lru_cache(maxsize=10000)
+def _city_parse(word: str) -> tuple[str, bool] | None:
+    """City lemma of `word` from any UK/RU parse, and whether the word has non-city parses too.
+
+    Every parse counts, not only the first: 'києві' parses as 'кий' first, 'київ' third.
+    """
+    for lang in ("uk", "ru"):
+        forms = [p.normal_form for p in MorphAnalyzer(lang)._morph.parse(word)]
+        cities = [f for f in forms if f in CITY_BLACKLIST]
+        if cities:
+            return cities[0], len(cities) < len(forms)
+    return None
 
 
 def check_blacklist(text: str) -> dict:
@@ -271,22 +288,23 @@ def check_blacklist(text: str) -> dict:
 
                 found_cities.append({"entity": city, "type": "CITY", "context": f"...{context}..."})
 
-    # UK падежи (Києву, Харкову, Тернополю) не содержат основу из списка — ищем по лемме
-    morph_uk, morph_ru = MorphAnalyzer("uk"), MorphAnalyzer("ru")
+    # UK падежи (Києву, Києві, Тернополю) не содержат основу из списка — ищем по разборам.
+    # Неоднозначная форма (києві: кий/київ, рівним: рівний/рівне, сумах: сума/суми)
+    # — город только после предлога места перед самим словом (не перед леммой).
     for match in re.finditer(r"\w+", text_lower):
         word = match.group()
         if any(city in word for city in CITY_BLACKLIST):
             continue  # уже найдено проверкой выше
-        for lemma in (morph_uk.get_lemma(word), morph_ru.get_lemma(word)):
-            if lemma not in CITY_BLACKLIST:
-                continue
-            start = max(0, match.start() - 30)
-            end = min(len(text), match.end() + 30)
-            context = text[start:end].replace("\n", " ")
-            if is_false_positive_location(lemma, context):
-                continue
-            found_cities.append({"entity": lemma, "type": "CITY", "context": f"...{context}..."})
-            break  # одно слово — одна находка (uk и ru леммы могут обе быть городом)
+        parsed = _city_parse(word)
+        if parsed is None:
+            continue
+        lemma, ambiguous = parsed
+        start = max(0, match.start() - 30)
+        end = min(len(text), match.end() + 30)
+        context = text[start:end].replace("\n", " ")
+        if ambiguous and not _after_location_preposition(word, context):
+            continue
+        found_cities.append({"entity": lemma, "type": "CITY", "context": f"...{context}..."})
 
     # Проверка Strict Phrases (FAIL)
     for phrase in _STRICT_PHRASES:

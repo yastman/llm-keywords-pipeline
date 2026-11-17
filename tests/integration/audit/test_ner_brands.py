@@ -77,6 +77,24 @@ class TestCityBlacklist:
         result = check_blacklist(text)
         assert result["cities"] == []
 
+    def test_detects_uk_locative_city(self):
+        """'Києві': first UK parse is 'кий', the city parse 'київ' must still count."""
+        result = check_blacklist("Доставка у Києві.")
+        assert [c["entity"] for c in result["cities"]] == ["київ"]
+
+    def test_uk_locative_city_after_preposition(self):
+        """Ambiguous city forms count after a location preposition before the word."""
+        result = check_blacklist("Доставка в Сумах і у Рівному")
+        assert sorted(c["entity"] for c in result["cities"]) == ["рівне", "суми"]
+
+    def test_uk_adjective_rivnyi_not_city(self):
+        """'рівним/рівного' (adjective 'рівний') are not the city Рівне."""
+        text = "Нанесіть рівним шаром на рівну поверхню, рівного кольору"
+        assert check_blacklist(text)["cities"] == []
+
+    def test_rovno_adverb_not_city(self):
+        assert check_blacklist("Отрежьте ровно половину")["cities"] == []
+
     def test_no_cities_in_clean_text(self):
         """Clean text should have no cities."""
         text = "Доставка по всей Украине"
