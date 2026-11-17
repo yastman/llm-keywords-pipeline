@@ -9,6 +9,14 @@ tmp/
 *.bak
 *.orig
 
+# Keyword data and client texts (public repo: kept outside git)
+/categories/
+/uk/
+/data/*.csv
+/data/*.xlsx
+/key_all.csv
+/Структура _Ultimate.csv
+
 # SQL Dumps & Backups
 data/dumps/*.sql
 data/sql_output/*.sql

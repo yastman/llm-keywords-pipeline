@@ -252,6 +252,7 @@ deployment recipe.
 
 | Документ | Что внутри |
 | --- | --- |
+| [AGENTS.md](AGENTS.md) | Как LLM-агент ведёт workflow: раскладка данных, команды, валидаторы. |
 | [Architecture](docs/architecture.md) | Package map, workflow boundaries и supported public surface. |
 | [Testing](docs/testing.md) | Test tiers, default commands, local git hooks, data-required skips. |
 | [Research Workflow](docs/research-workflow.md) | Как clustered keywords превращались в `RESEARCH_PROMPT.md`, `RESEARCH_DATA.md` и content brief. |

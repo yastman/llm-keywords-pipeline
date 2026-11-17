@@ -248,6 +248,7 @@ production deployment recipe.
 
 | Doc | What's in it |
 | --- | --- |
+| [AGENTS.md](AGENTS.md) | How an LLM agent runs the workflow: data layout, commands, validators. |
 | [Architecture](docs/architecture.md) | Package map, workflow boundaries, and supported public surface. |
 | [Testing](docs/testing.md) | Test tiers, default commands, local git hooks, data-required skips. |
 | [Research Workflow](docs/research-workflow.md) | How clustered keywords became `RESEARCH_PROMPT.md`, `RESEARCH_DATA.md`, and a content brief. |
