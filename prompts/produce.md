@@ -66,9 +66,9 @@ Create `categories/{slug}/meta/{slug}_meta.json` in the shape `validate.meta` re
 ```
 
 * `h1`: Same as in Markdown.
-* `meta.title`: 30-60 chars before an optional ` | {brand}` suffix (`[project] brand` of
+* `title`: 30-60 chars before an optional ` | {brand}` suffix (`[project] brand` of
   `project.toml` in the data root; no brand, no suffix). Contains the main keyword, no colon.
-* `meta.description`: 100-160 chars. Contains the main keyword; state only facts about
+* `description`: 100-160 chars. Contains the main keyword; state only facts about
   the store given in the inputs.
 * Client phrases: only those `[meta] required_phrases` of `project.toml` lists for the
   language; none listed, none required.
