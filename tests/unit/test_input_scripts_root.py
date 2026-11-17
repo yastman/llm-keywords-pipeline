@@ -10,7 +10,7 @@ from llm_keywords_pipeline.core import config
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ROOT_MODULES = [
-    "llm_keywords_pipeline.fix.missing_keywords:PROJECT_ROOT",
+    "llm_keywords_pipeline.generate.all_meta:PROJECT_ROOT",
 ]
 PROBE = (
     "import importlib, sys\n"

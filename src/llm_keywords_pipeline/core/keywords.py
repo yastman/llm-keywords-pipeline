@@ -124,7 +124,7 @@ class MorphAnalyzer:
         if self._stemmer:
             return self._stemmer.stemWord(word_lower)
 
-        # Ultimate fallback: strip 2 chars
+        # Last resort: strip 2 chars
         if len(word_lower) > 4:
             return word_lower[:-2]
         return word_lower
@@ -179,7 +179,6 @@ class MorphAnalyzer:
         "засіб": "засоби",
         "віск": "воски",
         "круг": "круги",
-        "торнадор": "торнадори",
         "машинка": "машинки",
         "щітка": "щітки",
         "рукавичка": "рукавички",

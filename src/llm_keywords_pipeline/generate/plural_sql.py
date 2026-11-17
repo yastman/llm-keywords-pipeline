@@ -1,36 +1,45 @@
 #!/usr/bin/env python3
 """
 Generate SQL for plural meta update.
+
+Reads and writes under the data root (core.config.PROJECT_ROOT). Table and language ids
+come from [opencart] of its project.toml: `table_prefix`, `language_ids.uk` and
+`language_ids.ru`; unset stops the command.
 """
 
 import json
 from pathlib import Path
 
+from llm_keywords_pipeline.core.config import PROJECT_ROOT
 from llm_keywords_pipeline.core.project import load_project
-from llm_keywords_pipeline.generate.sql import escape_sql
+from llm_keywords_pipeline.generate.sql import escape_sql, opencart_target
 
 
 def generate_plural_sql(
-    mapping_file: Path = Path("data/opencart_mapping.json"),
-    output_file: Path = Path("data/generated/plural_meta_update.sql"),
+    mapping_file: Path | None = None,
+    output_file: Path | None = None,
 ) -> list[str]:
     """Generate SQL statements for plural meta updates."""
-    with open(mapping_file) as f:
+    root = PROJECT_ROOT
+    generated = root / "data" / "generated"
+    uk_table, uk_language_id = opencart_target(root, "uk")
+    ru_table, ru_language_id = opencart_target(root, "ru")
+
+    with open(mapping_file or root / "data" / "opencart_mapping.json") as f:
         mapping = json.load(f)
     slug_to_id = mapping.get("slug_to_id", {})
 
-    with open("data/generated/plural_manual_uk.json") as f:
+    with open(generated / "plural_manual_uk.json") as f:
         json.load(f)
-    with open("data/generated/plural_manual_ru.json") as f:
+    with open(generated / "plural_manual_ru.json") as f:
         plural_ru = json.load(f)
 
-    # Paths here are relative to the data root (cwd), so is project.toml.
-    brand = load_project(Path.cwd()).brand
+    brand = load_project(root).brand
     suffix = f" | {brand}" if brand else ""
     sql_lines = []
 
-    # UK (language_id=1) - from local meta files
-    for meta_file in sorted(Path("uk/categories").glob("*/meta/*_meta.json")):
+    # UK - from local meta files
+    for meta_file in sorted((root / "uk" / "categories").glob("*/meta/*_meta.json")):
         slug = meta_file.parent.parent.name
         cat_id = slug_to_id.get(slug)
         if not cat_id:
@@ -40,15 +49,16 @@ def generate_plural_sql(
             meta = json.load(f)
 
         h1 = escape_sql(meta.get("h1", ""))
-        # Nested {"meta": {"title"}} (prompts/produce.md) or top-level {"title"} (older files).
+        # Nested {"meta": {"title"}} (the shape validate.meta reads) or top-level {"title"}.
         meta_block = meta["meta"] if isinstance(meta.get("meta"), dict) else meta
         title = escape_sql(meta_block.get("title", ""))
 
         sql_lines.append(
-            f"UPDATE oc_category_description SET meta_h1='{h1}', meta_title='{title}' WHERE category_id={int(cat_id)} AND language_id=1;"
+            f"UPDATE {uk_table} SET meta_h1='{h1}', meta_title='{title}' "
+            f"WHERE category_id={int(cat_id)} AND language_id={uk_language_id};"
         )
 
-    # RU (language_id=3) - from plural mapping directly
+    # RU - from plural mapping directly
     for slug, new_h1 in plural_ru.items():
         cat_id = slug_to_id.get(slug)
         if not cat_id:
@@ -58,10 +68,11 @@ def generate_plural_sql(
         title = escape_sql(f"{new_h1} — купить, цены{suffix}")
 
         sql_lines.append(
-            f"UPDATE oc_category_description SET meta_h1='{h1_escaped}', meta_title='{title}' WHERE category_id={int(cat_id)} AND language_id=3;"
+            f"UPDATE {ru_table} SET meta_h1='{h1_escaped}', meta_title='{title}' "
+            f"WHERE category_id={int(cat_id)} AND language_id={ru_language_id};"
         )
 
-    output_file.write_text("\n".join(sql_lines) + "\n")
+    (output_file or generated / "plural_meta_update.sql").write_text("\n".join(sql_lines) + "\n")
     return sql_lines
 
 

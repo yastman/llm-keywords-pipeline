@@ -35,7 +35,8 @@ categories/{slug}/meta/{slug}_meta.json      meta (RU)
 uk/categories/{slug}/...                     same for UK; text is content/{slug}_uk.md
 data/ru_semantics_master.csv                 master CSV: keyword,volume,category,type,use_in
 key_all.csv                                  volume export: columns "Ключевое слово","Показов в месяц"
-Структура _Ultimate.csv                      legacy semantics CSV, read by analyze.category --list
+project.toml                                 client rules, see New client below
+<[paths] semantics_csv>                      structure CSV (L1:/L2:/L3: rows), see New client
 ```
 
 `_clean.json` keeps `keywords` as a dict of groups `primary`, `secondary`, `supporting`,
@@ -43,7 +44,9 @@ key_all.csv                                  volume export: columns "Ключе�
 carry `"use_in": "meta_only"` and go into meta, not the text. Synonyms sit in a top-level
 `synonyms` list. Example: `tests/fixtures/sample_clean.json`.
 
-Meta file shape read by the validator: `{"h1": "...", "meta": {"title": "...", "description": "..."}}`.
+Meta file shape read by the validator: `{"h1": "...", "meta": {"title": "...", "description": "..."}}`,
+plus an optional `"language": "ru"` or `"uk"` that sets its language when `--lang` is not
+given.
 
 ## Workflow
 
@@ -108,14 +111,84 @@ for `core.synonyms`), the audit brand blacklist, brands all_meta skips as produc
 city check on/off, allowed strict phrases, density substrings, L2-forbidden patterns,
 content standards (Safety block, расход, warnings: off unless switched on) and the
 brief's editorial tone. Each module reads its own key. No file means none of them
-applies; the generic UA/RU city check stays on. Keys and examples: the docstring of
-`src/llm_keywords_pipeline/core/project.py`; `tests/fixtures/project_ultimate.toml` is a
-full car-care example.
+applies; the generic UA/RU city check stays on. Keys and an example: section New client;
+`tests/fixtures/project_ultimate.toml` is a full car-care example.
 
 Thresholds (water, nausea, title/description length, keyword frequency, word counts) live
 in `QUALITY_THRESHOLDS` in `src/llm_keywords_pipeline/core/config.py`; read them there,
 never from a prompt or this file. No validator checks grammar or spelling: proofread by
 `prompts/deliver.md`.
+
+## New client
+
+1. Make a data root outside the clone, set `LLM_KEYWORDS_PROJECT_ROOT` to it and keep the
+   layout of section Where data lives. UK texts stay under `uk/categories/`.
+2. Put `project.toml` in the data root (`src/llm_keywords_pipeline/core/project.py` reads
+   it). No file is an empty config: no client rule applies and generic rules stay on. An
+   invalid file raises `ProjectConfigError` naming the file and the key.
+3. Set only the keys the client needs. A command that cannot run without a key stops
+   with `<root>/project.toml: <key> is not set`: `[paths] semantics_csv` for
+   `batch.generate`, `[opencart]` for `generate.sql` (ru) and `generate.plural_sql` (uk
+   and ru).
+
+Every section, commented (a B2B sweets shop as the example):
+
+```toml
+[project]
+brand = "Genesis"             # meta title suffix " | Genesis"; unset = no suffix
+site = "shop.example"         # read into the config; no command uses it yet
+languages = ["uk", "ru"]      # read into the config; no command uses it yet
+
+[paths]
+# Structure CSV, relative to the data root. batch.generate needs it; analyze.category
+# and extract.export_uk_texts use it when set, else the category folders.
+semantics_csv = "data/structure.csv"
+
+[meta]
+required_phrases = { uk = ["опт\\b"], ru = [] }  # validate.meta: regexes, FAIL if missing
+recommended_phrases = { uk = ["роздріб"] }       # validate.meta: regexes, WARNING if missing
+# generate.all_meta description per language; placeholders {keyword} {name} {types} {brand}
+description_template = { uk = "{name} оптом від {brand}. {types}." }
+type_skip_brands = ["roshen"]  # generate.all_meta: entities with one are not product types
+
+[slugs.ru]                    # category name -> slug; a name not listed = slugify(name)
+"Шоколадные конфеты" = "shokoladnye-konfety"
+[slugs.uk]
+"Шоколадні цукерки" = "shokoladnye-konfety"
+
+[markers]
+commercial = { uk = ["оптом"], ru = ["оптом"] }  # core.seo / analyze.category intent split
+
+[synonyms]
+strip_terms = ["солодощі"]     # core.synonyms: dropped from a keyword before comparing
+stems = { "шоколадн" = "шоколад" }  # core.synonyms: word prefix -> stem
+map = { "цукерки" = "конфеты" }    # analyze.duplicates: substring -> replacement
+commercial_markers = ["киев"]  # core.synonyms (RU): added to its generic commercial markers
+
+[blacklist]
+brands = ["haribo"]           # audit.ner_brands: competitor brands reported in the text
+cities = true                 # audit.ner_brands city check; false = off
+phrases_allow = ["широкий асортимент"]  # strict phrases not checked
+
+[density.category_substrings.ru]  # validate.density (ru): substrings per slug
+shokoladnye-konfety = { primary = ["конфет", "шоколад"], anti = ["печень"] }
+
+[structure.l2_forbidden]      # validate.structural: regexes an L2 text must not contain
+konditerskie-izdeliya = ["шоколадн.*конфет"]
+
+[content_standards]           # validate.content quality mode; each false when not set
+safety_block = false
+howto_steps = true
+evergreen_math = false
+warnings = false
+
+[niche]
+tone = "эксперт по оптовым поставкам сладостей"  # analyze.category: brief editorial tone
+
+[opencart]                    # generate.sql, generate.plural_sql; no default
+table_prefix = "oc_"          # table <prefix>category_description
+language_ids = { uk = 1, ru = 3 }  # language_id of each language in the shop database
+```
 
 ## Changing the code
 

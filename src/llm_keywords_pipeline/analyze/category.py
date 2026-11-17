@@ -138,8 +138,8 @@ def load_keywords_for_slug(slug: str, lang: str = "ru") -> tuple[list[dict], str
 
         return keywords, "raw_json", None
 
-    # 3. Fallback to CSV (RU only: there is no uk semantics CSV; none without the file)
-    if lang == "uk" or not SEMANTICS_CSV.is_file():
+    # 3. Fallback to CSV (RU only: there is no uk semantics CSV; none without the key or file)
+    if lang == "uk" or SEMANTICS_CSV is None or not SEMANTICS_CSV.is_file():
         return [], "none", None
 
     categories = read_semantics_csv(str(SEMANTICS_CSV))
@@ -522,7 +522,7 @@ def list_all_categories(lang: str = "ru"):
     print("=" * 70)
     print()
 
-    if lang == "uk" or not SEMANTICS_CSV.is_file():
+    if lang == "uk" or SEMANTICS_CSV is None or not SEMANTICS_CSV.is_file():
         # No structure CSV (uk never has one): list categories from <categories>/*/data JSON
         _, slug_to_name = get_mappings_for_lang(lang)
         entries = []

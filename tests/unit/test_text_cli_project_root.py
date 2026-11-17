@@ -2,7 +2,6 @@
 
 import importlib
 import json
-from pathlib import Path
 
 import pytest
 
@@ -26,23 +25,6 @@ def test_module_root_is_project_root(module_name, attr):
     root = getattr(module, attr)
     assert root == config.PROJECT_ROOT
     assert (root / "pyproject.toml").is_file()
-
-
-def test_uk_keywords_from_ru_reads_categories_under_project_root(monkeypatch):
-    from llm_keywords_pipeline.generate import uk_keywords_from_ru
-
-    globbed: list[Path] = []
-
-    def fake_glob(self, pattern):
-        globbed.append(self)
-        return iter(())
-
-    monkeypatch.setattr(Path, "glob", fake_glob)
-    with pytest.raises(SystemExit):
-        uk_keywords_from_ru.main()
-
-    assert globbed == [config.PROJECT_ROOT / "categories"]
-    assert (config.PROJECT_ROOT / "pyproject.toml").is_file()
 
 
 def test_synonyms_counts_entity_dictionary(tmp_path, monkeypatch):

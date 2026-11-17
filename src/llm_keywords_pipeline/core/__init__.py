@@ -1,4 +1,4 @@
-"""Core utilities for SEO Ultimate."""
+"""Core utilities of the keywords pipeline."""
 
 from llm_keywords_pipeline.core.config import (
     CATEGORIES_DIR,

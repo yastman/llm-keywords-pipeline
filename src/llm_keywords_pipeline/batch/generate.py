@@ -30,7 +30,7 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 
-from llm_keywords_pipeline.core.config import PROJECT_ROOT, semantics_csv_path
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, SEMANTICS_CSV, require_semantics_csv
 from llm_keywords_pipeline.core.seo import slug_for
 
 # =============================================================================
@@ -40,7 +40,6 @@ from llm_keywords_pipeline.core.seo import slug_for
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 TASKS_DIR = PROJECT_ROOT / "data" / "tasks"
 BATCH_LOG = TASKS_DIR / "batch_log.json"
-SEMANTICS_CSV = semantics_csv_path("data/Структура  Ultimate финал - Лист2.csv")
 
 # =============================================================================
 # Batch Log Management
@@ -104,7 +103,7 @@ def get_all_categories() -> list[dict]:
     current_l3 = None
     current_keywords = []
 
-    with open(SEMANTICS_CSV, encoding="utf-8") as f:
+    with open(require_semantics_csv(SEMANTICS_CSV), encoding="utf-8") as f:
         reader = csv.reader(f)
         for row in reader:
             if not row or not row[0].strip():

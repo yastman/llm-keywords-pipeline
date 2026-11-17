@@ -380,7 +380,7 @@ def analyze_file(filepath: str, output_json: bool = False) -> int:
     """
     Анализирует файл на наличие запрещённых сущностей.
 
-    Язык — по пути файла (detect_language: /uk/ → uk): списки strict/AI-fluff этого языка; natasha NER только для ru.
+    Язык — по пути файла (detect_language: начало uk/categories/ или /uk/ → uk): списки strict/AI-fluff этого языка; natasha NER только для ru.
 
     Returns:
         0 = PASS, 1 = WARNING (found issues) or FAIL (strict phrases)

@@ -9,8 +9,6 @@ from llm_keywords_pipeline.generate import (
     sql,
 )
 
-# uk_keywords_from_ru has external skill dependencies, import directly when needed
-
 __all__ = [
     "all_meta",
     "catalog_json",

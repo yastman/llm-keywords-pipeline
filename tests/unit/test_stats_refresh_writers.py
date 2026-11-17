@@ -2,9 +2,8 @@
 
 import json
 
-from llm_keywords_pipeline.compare import raw_clean
+from llm_keywords_pipeline.core.clean_json import refresh_stats_totals
 from llm_keywords_pipeline.core.synonyms import apply_cleanup
-from llm_keywords_pipeline.fix import cleanup_misplaced, find_orphan_keywords
 
 STATS = {"before": 9, "after": 3, "total_volume": 175}
 
@@ -28,52 +27,15 @@ def _read(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def test_cleanup_misplaced_refreshes_stats(tmp_path, monkeypatch):
-    monkeypatch.setattr(cleanup_misplaced, "CATEGORIES_DIR", tmp_path)
-    path = _write(tmp_path, "cat", {"keywords": _keywords(), "stats": dict(STATS)})
-
-    assert cleanup_misplaced.remove_keywords_from_category("cat", ["BETA"]) == 1
-
-    assert _read(path)["stats"] == {"before": 9, "after": 2, "total_volume": 125}
-
-
-def test_stats_count_extra_group_and_missing_volume(tmp_path, monkeypatch):
-    monkeypatch.setattr(cleanup_misplaced, "CATEGORIES_DIR", tmp_path)
+def test_stats_count_extra_group_and_missing_volume():
     keywords = _keywords()
     keywords["extra"] = [{"keyword": "epsilon", "volume": 7}, {"keyword": "zeta"}]
-    path = _write(tmp_path, "cat", {"keywords": keywords, "stats": dict(STATS)})
+    data = {"keywords": keywords, "stats": dict(STATS)}
 
-    assert cleanup_misplaced.remove_keywords_from_category("cat", ["beta"]) == 1
+    refresh_stats_totals(data)
 
     # every list group counts; an entry without volume counts as 0
-    assert _read(path)["stats"] == {"before": 9, "after": 4, "total_volume": 132}
-
-
-def test_raw_clean_fix_refreshes_stats(tmp_path, monkeypatch):
-    monkeypatch.setattr(raw_clean, "CATEGORIES_DIR", tmp_path)
-    data = {"keywords": _keywords(), "stats": dict(STATS)}
-    path = _write(tmp_path, "cat", data)
-    result = {
-        "added": [{"keyword": "gamma"}],
-        "volume_changed": [{"keyword": "alpha", "csv_volume": 10}],
-    }
-
-    ok, _ = raw_clean.fix_clean_json("cat", data, [], result)
-
-    assert ok
-    assert _read(path)["stats"] == {"before": 9, "after": 2, "total_volume": 60}
-
-
-def test_find_orphans_distribute_refreshes_stats(tmp_path, monkeypatch):
-    monkeypatch.setattr(find_orphan_keywords, "CATEGORIES_DIR", tmp_path)
-    path = _write(tmp_path, "cat", {"keywords": _keywords(), "stats": dict(STATS)})
-
-    added = find_orphan_keywords.distribute_orphans(
-        {"cat": [{"keyword": "delta", "volume": 5}]}, dry_run=False
-    )
-
-    assert added == 1
-    assert _read(path)["stats"] == {"before": 9, "after": 4, "total_volume": 180}
+    assert data["stats"] == {"before": 9, "after": 5, "total_volume": 182}
 
 
 def _synonym_category(tmp_path, data):

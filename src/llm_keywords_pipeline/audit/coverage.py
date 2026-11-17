@@ -3,7 +3,7 @@
 audit_coverage.py — Keyword Coverage Audit Tool
 
 Usage:
-    uv run python -m llm_keywords_pipeline.audit.coverage --slug aktivnaya-pena --lang uk --verbose
+    uv run python -m llm_keywords_pipeline.audit.coverage --slug shokoladnye-konfety --lang uk --verbose
     uv run python -m llm_keywords_pipeline.audit.coverage --lang uk  # batch all UK categories
     uv run python -m llm_keywords_pipeline.audit.coverage --slug X --lang uk --json
 """

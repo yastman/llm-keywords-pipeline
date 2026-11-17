@@ -10,7 +10,7 @@ audit_meta.py — Comprehensive Meta Tags Audit (v1.0)
 Usage:
     uv run python -m llm_keywords_pipeline.audit.meta
     uv run python -m llm_keywords_pipeline.audit.meta --json
-    uv run python -m llm_keywords_pipeline.audit.meta --slug aktivnaya-pena
+    uv run python -m llm_keywords_pipeline.audit.meta --slug shokoladnye-konfety
     uv run python -m llm_keywords_pipeline.audit.meta --min-severity warning
 """
 

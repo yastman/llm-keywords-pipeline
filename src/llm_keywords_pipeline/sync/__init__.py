@@ -2,7 +2,6 @@
 
 from llm_keywords_pipeline.sync import (
     merge_master,
-    restore_csv,
     semantics,
     update_volume,
 )
@@ -10,6 +9,5 @@ from llm_keywords_pipeline.sync import (
 __all__ = [
     "semantics",
     "merge_master",
-    "restore_csv",
     "update_volume",
 ]

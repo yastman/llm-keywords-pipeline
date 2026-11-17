@@ -13,9 +13,6 @@ class TestComparePackageImports:
     def test_match_cats_importable(self):
         from llm_keywords_pipeline.compare import match_cats  # noqa: F401
 
-    def test_raw_clean_importable(self):
-        from llm_keywords_pipeline.compare import raw_clean  # noqa: F401
-
     def test_with_master_importable(self):
         from llm_keywords_pipeline.compare import with_master  # noqa: F401
 

@@ -10,9 +10,6 @@ class TestBatchPackageImports:
     def test_generate_importable(self):
         from llm_keywords_pipeline.batch import generate  # noqa: F401
 
-    def test_uk_init_importable(self):
-        from llm_keywords_pipeline.batch import uk_init  # noqa: F401
-
 
 class TestGetCategoryStatus:
     """batch.generate.get_category_status must return a status dict."""

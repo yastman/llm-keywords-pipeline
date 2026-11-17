@@ -12,7 +12,7 @@ Updated: 2025-12-15
 import os
 from pathlib import Path
 
-from llm_keywords_pipeline.core.project import load_project
+from llm_keywords_pipeline.core.project import load_project, required
 
 # =============================================================================
 # Project Paths
@@ -34,15 +34,15 @@ else:
 CATEGORIES_DIR = PROJECT_ROOT / "categories"
 DATA_DIR = PROJECT_ROOT / "data"
 TASKS_DIR = DATA_DIR / "tasks"
-LEGACY_SEMANTICS_CSV = "Структура _Ultimate.csv"
+_SEMANTICS_CSV_KEY = load_project(PROJECT_ROOT).semantics_csv
+# Structure CSV from [paths] semantics_csv of project.toml; None = not set.
+SEMANTICS_CSV: Path | None = PROJECT_ROOT / _SEMANTICS_CSV_KEY if _SEMANTICS_CSV_KEY else None
 
 
-def semantics_csv_path(legacy: str = LEGACY_SEMANTICS_CSV) -> Path:
-    """Structure CSV: [paths] semantics_csv of project.toml, else the legacy name."""
-    return PROJECT_ROOT / (load_project(PROJECT_ROOT).semantics_csv or legacy)
+def require_semantics_csv(path: Path | None) -> Path:
+    """The structure CSV of a command that needs it; unset key stops naming it."""
+    return required(path, PROJECT_ROOT, "[paths] semantics_csv")
 
-
-SEMANTICS_CSV = semantics_csv_path()
 
 # =============================================================================
 # Quality Thresholds (SEO 2025 v8.5)

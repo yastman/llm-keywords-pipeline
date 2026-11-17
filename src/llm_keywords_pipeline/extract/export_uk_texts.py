@@ -18,10 +18,9 @@ import json
 from collections.abc import Iterable
 from pathlib import Path
 
-from llm_keywords_pipeline.core.config import PROJECT_ROOT, semantics_csv_path
+from llm_keywords_pipeline.core.config import PROJECT_ROOT, SEMANTICS_CSV
 
 ROOT = PROJECT_ROOT
-SEMANTICS_CSV = semantics_csv_path("data/Структура  Ultimate финал - Лист2.csv")
 UK_CATEGORIES_DIR = ROOT / "uk" / "categories"
 
 
@@ -39,8 +38,8 @@ def _slugify_l3(l3_name: str) -> str:
     return slug_for(l3_name)
 
 
-def iter_slugs_from_semantics_csv(csv_path: Path) -> Iterable[str]:
-    if not csv_path.exists():
+def iter_slugs_from_semantics_csv(csv_path: Path | None) -> Iterable[str]:
+    if csv_path is None or not csv_path.exists():
         return
 
     with csv_path.open("r", encoding="utf-8", newline="") as f:

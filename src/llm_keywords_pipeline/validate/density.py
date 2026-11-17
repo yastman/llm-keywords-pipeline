@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from collections import Counter
 from collections.abc import Sequence
@@ -68,19 +67,6 @@ SPAM_THRESHOLD = 3.0  # % - above this is spam
 WARNING_THRESHOLD = 2.5  # % - above this is warning
 OPTIMAL_RANGE = (1.0, 2.5)  # % - ideal keyword density
 
-# Legacy: Common Russian word stems for grouping (fallback if no stemmer)
-STEM_PATTERNS = {
-    "аккумулятор": r"аккумулятор\w*",
-    "полиров": r"полиров\w*",
-    "машин": r"машин\w*",
-    "батаре": r"батаре\w*",
-    "заряд": r"заряд\w*",
-    "работ": r"работ\w*",
-    "мотор": r"мотор\w*",
-    "сетев": r"сетев\w*",
-    "беспровод": r"беспровод\w*",
-}
-
 # Минимальная частота для включения stem-группы в отчёт
 MIN_STEM_FREQUENCY = 3
 
@@ -116,48 +102,31 @@ def count_stem_frequencies(words: list[str], lang: str = "ru") -> dict[str, dict
     elif HAS_STEMMER and STEMMER_RU:
         group_key = STEMMER_RU.stemWord
     else:
-        group_key = None
+        # No stemmer: each word form is its own group
+        def group_key(word: str) -> str:
+            return word
 
-    if group_key:
-        # Новый метод: группировка всех слов по стему/лемме
-        stem_groups: dict[str, dict] = {}
+    stem_groups: dict[str, dict] = {}
 
-        for word in words:
-            # Skip only very short words (1-2 chars) - они не несут смысла
-            if len(word) < 3:
-                continue
+    for word in words:
+        # Skip only very short words (1-2 chars) - они не несут смысла
+        if len(word) < 3:
+            continue
 
-            stem = group_key(word)
+        stem = group_key(word)
 
-            # Не группируем стоп-слова в отчёт, но они уже учтены в total_words
-            if word in stopwords:
-                continue
+        # Не группируем стоп-слова в отчёт, но они уже учтены в total_words
+        if word in stopwords:
+            continue
 
-            if stem not in stem_groups:
-                stem_groups[stem] = {"count": 0, "forms": set(), "example": word}
+        if stem not in stem_groups:
+            stem_groups[stem] = {"count": 0, "forms": set(), "example": word}
 
-            stem_groups[stem]["count"] += 1
-            stem_groups[stem]["forms"].add(word)
+        stem_groups[stem]["count"] += 1
+        stem_groups[stem]["forms"].add(word)
 
-        # Фильтруем: только stem-группы с частотой >= MIN_STEM_FREQUENCY
-        return {
-            stem: data for stem, data in stem_groups.items() if data["count"] >= MIN_STEM_FREQUENCY
-        }
-    else:
-        # Fallback: старый метод с паттернами
-        stem_counts: dict[str, dict] = {}
-
-        for stem, pattern in STEM_PATTERNS.items():
-            regex = re.compile(pattern, re.IGNORECASE)
-            matches = [w for w in words if regex.match(w)]
-            if matches:
-                stem_counts[stem] = {
-                    "count": len(matches),
-                    "forms": set(matches),
-                    "example": matches[0],
-                }
-
-        return stem_counts
+    # Фильтруем: только stem-группы с частотой >= MIN_STEM_FREQUENCY
+    return {stem: data for stem, data in stem_groups.items() if data["count"] >= MIN_STEM_FREQUENCY}
 
 
 def calculate_density(count: int, total_words: int) -> float:
@@ -492,7 +461,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("file", help="Path to markdown file")
     parser.add_argument(
-        "--slug", metavar="SLUG", help="Category slug for substring analysis (e.g., aktivnaya-pena)"
+        "--slug",
+        metavar="SLUG",
+        help="Category slug for substring analysis (e.g., shokoladnye-konfety)",
     )
     parser.add_argument("--with-keywords", metavar="SLUG", help="Load keywords from category slug")
     parser.add_argument(
@@ -519,7 +490,7 @@ def main(argv: list[str] | None = None) -> int:
     # Auto-detect slug from file path if not provided
     slug = args.slug
     if not slug:
-        # Try to extract slug from path like .../aktivnaya-pena/content/...
+        # Try to extract slug from path like .../shokoladnye-konfety/content/...
         parts = file_path.parts
         for i, part in enumerate(parts):
             if part == "content" and i > 0:

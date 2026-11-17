@@ -15,8 +15,7 @@ from llm_keywords_pipeline.analyze import meta as analyze_meta
 from llm_keywords_pipeline.analyze import order as analyze_order
 from llm_keywords_pipeline.analyze import synonyms as analyze_synonyms
 from llm_keywords_pipeline.core.clean_json import keyword_entries, keyword_groups
-from llm_keywords_pipeline.extract import all_keywords, ru_keywords_list, uk_keywords
-from llm_keywords_pipeline.fix import keywords_order
+from llm_keywords_pipeline.extract import all_keywords, ru_keywords_list
 from llm_keywords_pipeline.generate.all_meta import get_primary_keyword
 from llm_keywords_pipeline.sync import merge_master, update_volume
 from llm_keywords_pipeline.sync.semantics import group_by_category, load_master_csv, sync_category
@@ -169,34 +168,9 @@ class TestReadersAcceptDict:
         result = analyze_order.analyze_category(write_clean(tmp_path, data))
         assert result["keywords_order_wrong"] is True
 
-    def test_keywords_order_fix_keeps_groups(self, tmp_path):
-        data = copy.deepcopy(DICT_DATA)
-        data["keywords"]["secondary"] += [
-            {"keyword": "ноль", "volume": 0},
-            {"keyword": "больше", "volume": 70},
-        ]
-        clean = write_clean(tmp_path, data)
-        stats = keywords_order.fix_category(clean)
-        assert stats["keywords_removed"] == 1
-        assert stats["keywords_sorted"] is True
-        assert read(clean)["keywords"] == {
-            "primary": [{"keyword": "главный", "volume": 100, "intent": "commercial"}],
-            "secondary": [{"keyword": "больше", "volume": 70}, {"keyword": "второй", "volume": 50}],
-        }
-
-    def test_keywords_order_fix_flat_stays_flat(self, tmp_path):
-        data = {"keywords": [{"keyword": "a", "volume": 1}, {"keyword": "b", "volume": 5}]}
-        clean = write_clean(tmp_path, data)
-        keywords_order.fix_category(clean)
-        assert read(clean)["keywords"] == [
-            {"keyword": "b", "volume": 5},
-            {"keyword": "a", "volume": 1},
-        ]
-
     def test_extractors(self, tmp_path):
         clean = write_clean(tmp_path, DICT_DATA)
         expected = {"главный": "главный", "второй": "второй"}
-        assert uk_keywords.extract_keywords_from_file(clean) == expected
         assert ru_keywords_list.extract_keywords_from_file(clean) == expected
         rows = all_keywords.extract_from_file(clean)
         assert [(r["keyword"], r["source_type"]) for r in rows] == [
