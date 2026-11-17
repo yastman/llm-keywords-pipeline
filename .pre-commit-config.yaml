@@ -1,53 +1,68 @@
-# Pre-commit hooks
-# Tools: Ruff (Linter/Formatter), MyPy (Type checker)
+# Git hooks. Install both stages once per clone:
+#   uv run pre-commit install --hook-type pre-commit --hook-type pre-push
+#
+# pre-commit stage: lint/format/hygiene on the staged files only.
+# pre-push stage: the CI checks (lockfile, mypy, pytest) on the whole repo.
+# Ruff runs from the uv environment so hooks, CI and uv.lock use one ruff version.
 
 repos:
-  # Ruff - All-in-one linter and formatter (Fastest in 2025)
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.10
+  - repo: local
     hooks:
-      # Linter (fixes imports, unused vars, style)
+      # Linter (fixes imports, unused vars, style); covers src, tests, scripts and root files
       - id: ruff
+        name: ruff check
+        entry: uv run ruff check --force-exclude
         args: [--fix, --exit-non-zero-on-fix, --unsafe-fixes]
-      # Formatter (Black-compatible)
+        language: system
+        types_or: [python, pyi]
+      # Formatter (Black-compatible); only files you commit, existing files are not mass-reformatted
       - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
 
-  # MyPy - Type checking
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.19.1
-  #   hooks:
-  #     - id: mypy
-  #       additional_dependencies: [types-requests]
-  #       args: [--config-file=pyproject.toml]
-
-  # Markdown
-  # Markdown
-  # - repo: https://github.com/igorshubovych/markdownlint-cli
-  #   rev: v0.43.0
-  #   hooks:
-  #     - id: markdownlint
-  #       args: [--fix]
-  #       exclude: ^(archive/|tasks/archive/|\.claude/|artifacts/)
-
-  # YAML
-  # - repo: https://github.com/adrienverge/yamllint
-  #   rev: v1.35.1
-  #   hooks:
-  #     - id: yamllint
-
-  # Basic checks (JSON, TOML, whitespace)
+  # Basic checks (JSON, TOML, YAML, whitespace, merge markers, large files, keys)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: check-json
         exclude: ^(\.vscode/|\.claude/)
       - id: check-toml
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
       - id: trailing-whitespace
         exclude: ^(archive/|.*\.csv$|.*\.md$)
       - id: end-of-file-fixer
         exclude: ^(archive/|.*\.csv$)
 
-# Default config
+  # CI checks before push
+  - repo: local
+    hooks:
+      - id: uv-lock-check
+        name: uv lock --check
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+      - id: pytest
+        name: pytest
+        entry: uv run pytest -q
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
 default_language_version:
   python: python3
 

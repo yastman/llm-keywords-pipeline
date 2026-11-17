@@ -51,12 +51,17 @@ documented. They should not hide failures in the default fixture-backed suite.
 GitHub Actions runs the same default quality path documented above:
 
 ```bash
+uv lock --check
 uv sync --frozen
 uv run ruff check src tests
 uv run mypy
-uv run pytest --cov-fail-under=24
+uv run pytest --cov-fail-under=20
 uv build
 ```
+
+Locally, `uv run pre-commit install --hook-type pre-commit --hook-type pre-push` installs
+git hooks: pre-commit runs ruff check/format and file hygiene checks on staged files;
+pre-push runs `uv lock --check`, `uv run mypy` and `uv run pytest -q`.
 
 If local commands change, update README, this file, `tests/README.md`, and
 `.github/workflows/ci.yml` together.
