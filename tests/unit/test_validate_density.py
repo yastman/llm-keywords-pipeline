@@ -7,7 +7,8 @@ from llm_keywords_pipeline.core.text import (
     tokenize,
 )
 from llm_keywords_pipeline.validate.density import (
-    get_stemmer,
+    STEMMER_RU,
+    count_stem_frequencies,
 )
 
 
@@ -87,28 +88,15 @@ class TestTokenizeStopwords:
 
 
 class TestStemmer:
-    """Tests for language-specific stemmers."""
+    """Tests for language-specific word-form grouping."""
 
-    def test_get_stemmer_ru_default(self):
-        """Default returns Russian stemmer."""
-        stemmer = get_stemmer()
-        assert stemmer is not None
-        # Test Russian word
-        stem = stemmer.stemWord("полировальная")
-        assert stem == "полировальн"
+    def test_ru_stemmer(self):
+        """RU groups by Snowball Russian stem."""
+        assert STEMMER_RU.stemWord("полировальная") == "полировальн"
 
-    def test_get_stemmer_uk(self):
-        """UK returns stemmer (Russian fallback if Ukrainian unavailable)."""
-        stemmer = get_stemmer("uk")
-        assert stemmer is not None
-        # Should work on similar Slavic words
-        stem = stemmer.stemWord("полірувальна")
-        assert len(stem) > 0
-
-    def test_stemmers_are_same_or_different(self):
-        """UK stemmer may be same as RU (fallback) or different."""
-        ru_stemmer = get_stemmer("ru")
-        uk_stemmer = get_stemmer("uk")
-        # Both should exist and work
-        assert ru_stemmer is not None
-        assert uk_stemmer is not None
+    def test_uk_groups_by_lemma(self):
+        """UK groups by Ukrainian lemma, not by the Russian stemmer."""
+        result = count_stem_frequencies(
+            ["полірувальна", "полірувальну", "полірувальною"], lang="uk"
+        )
+        assert {k: v["count"] for k, v in result.items()} == {"полірувальний": 3}
