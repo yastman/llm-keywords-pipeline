@@ -52,8 +52,9 @@ grid: the buyer sees the products first, and the text serves whoever scrolls pas
 4. **Unique to this page.** Google calls one block repeated across categories spam, and
    the 2026 core updates hit templated category text.
 
-Delivery, payment and registration terms have their own pages; a category text holds no
-block about them.
+Terms (delivery, payment, registration, minimum order) live only on their own info pages,
+linked from the home text. A category text carries no terms line and no link to those
+pages.
 
 **Structure (category):** this list governs. The structure, length, FAQ count and trust
 signals printed by `analyze.category` and the content stage of `generate.checklists` are
@@ -70,8 +71,6 @@ information only.
 5. **Links:** a Markdown link to each related category, inside the sentence that names it.
 6. **H2 FAQ:** 3-4 questions about the product (choice, storage, shelf life, packing).
    Delivery and payment questions belong to the terms pages.
-7. **Commercial line:** at most one sentence (for example the minimum order and the
-   carrier), with a link to the delivery or terms page.
 
 **Keywords:** `main_keyword` in H1, title and the first sentence, and its words in at
 least two H2 (`check-seo` warns otherwise); secondary keys where their meaning fits, in
@@ -86,10 +85,10 @@ H2 and text. The `commercial` group (`use_in: meta_only`) goes into meta.
 - who the store is for and what sets it apart, from sourced facts only;
 - delivery, payment and registration: one line of links to their pages.
 
-**Facts:** every fact in the text (brand, weight, packing, minimum order, carrier, region)
-has a source in `brief.md` or the catalog. An unconfirmed fact stays out of the text: add
-it to `Open questions` in `brief.md` and name it in the hand-over as a question for the
-owner. The delivered text is free of placeholders and markers such as `[ПІДТВЕРДИТИ]`.
+**Facts:** every fact in the text (brand, weight, packing, region) has a source in
+`brief.md` or the catalog. An unconfirmed fact stays out of the text: add it to
+`Open questions` in `brief.md` and name it in the hand-over as a question for the owner.
+The delivered text is free of placeholders and markers such as `[ПІДТВЕРДИТИ]`.
 
 **Length:** none is set. The text ends when the jobs above are done for this category.
 The length figure of `analyze.category` and the length WARNING of `validate.content` are
@@ -150,6 +149,7 @@ Then run `validate.meta` on the file with `--keywords` pointing at the `_clean.j
 * [ ] H1 matches in both files.
 * [ ] Content validation passes (refer to `llm_keywords_pipeline.validate` modules).
 * [ ] Text is helpful, structured, and free of "SEO spam".
-* [ ] Every structure item above is present, links included; no terms block.
+* [ ] Every structure item above is present, links included; no terms line
+      and no terms-page link.
 * [ ] No placeholder or confirmation marker; each unconfirmed fact is an owner question
       in `brief.md` and the hand-over.
