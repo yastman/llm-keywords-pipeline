@@ -149,7 +149,7 @@ Then run `validate.meta` on the file with `--keywords` pointing at the `_clean.j
 * [ ] H1 matches in both files.
 * [ ] Content validation passes (refer to `llm_keywords_pipeline.validate` modules).
 * [ ] Text is helpful, structured, and free of "SEO spam".
-* [ ] Every structure item above is present, links included; no terms line
-      and no terms-page link.
+* [ ] Every structure item above is present, links included. Category: no terms line
+      and no terms-page link. Home: one line of links to the terms pages.
 * [ ] No placeholder or confirmation marker; each unconfirmed fact is an owner question
       in `brief.md` and the hand-over.
