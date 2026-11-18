@@ -16,7 +16,7 @@ are not required for running the public test suite.
 | ----------------------------- | --------- | ----------------------------------- |
 | **[intake.md](intake.md)**     | INTAKE    | Client brief: brief.md + project.toml |
 | **[prepare.md](prepare.md)**   | PREPARE   | Category init: folders, keywords     |
-| **[produce.md](produce.md)**   | PRODUCE   | Content generation (RU) + meta       |
+| **[produce.md](produce.md)**   | PRODUCE   | Category/home text (RU) + meta       |
 | **[deliver.md](deliver.md)**   | DELIVER   | Validation + packaging               |
 
 ## Workflow
