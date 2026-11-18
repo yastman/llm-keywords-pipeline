@@ -55,7 +55,9 @@ grid: the buyer sees the products first, and the text serves whoever scrolls pas
 Delivery, payment and registration terms have their own pages; a category text holds no
 block about them.
 
-**Structure (category):**
+**Structure (category):** this list governs. The structure, length, FAQ count and trust
+signals printed by `analyze.category` and the content stage of `generate.checklists` are
+information only.
 
 1. **H1:** Must match `h1` from JSON exactly.
 2. **Opening paragraph:** its first sentence holds `main_keyword` and says what the
