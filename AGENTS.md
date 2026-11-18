@@ -80,8 +80,12 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
    UK has no CSV and no sync: you make each UK file yourself by translating and adapting
    the RU `_clean.json` into `uk/categories/{slug}/data/{slug}_clean.json` (same shape).
 3. **Brief.** `uv run python -m llm_keywords_pipeline.analyze.category <slug> [--lang uk] [--json]`
-   prints the keyword groups, recommended length, coverage target and structure.
-4. **Text and meta.** Write the text by `prompts/produce.md` (RU); prepare and delivery
+   prints the keyword groups, coverage target and structure; its recommended length is
+   information, not a goal.
+4. **Text and meta.** Write the category or home text by `prompts/produce.md` (RU): it
+   sits under the product grid and does four jobs (relevance to the key cluster, help in
+   choosing, internal links, unique to the page); terms stay on their own pages, and an
+   unconfirmed fact stays out of the text as an owner question. Prepare and delivery
    steps are in `prompts/prepare.md` and `prompts/deliver.md`. The meta has the shape
    above; a client phrase is required only when `project.toml` in the data root lists it
    under `[meta] required_phrases` for the language (regexes, e.g.
