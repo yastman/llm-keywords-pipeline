@@ -85,11 +85,12 @@ Run commands from the repo root with `uv run`; data paths are absolute or under 
    structure of `prompts/produce.md` governs the text.
 4. **Text and meta.** Write the category or home text by `prompts/produce.md` (RU): it
    sits under the product grid and does four jobs (relevance to the key cluster, help in
-   choosing, internal links, unique to the page); terms stay on their own pages, and an
-   unconfirmed fact stays out of the text as an owner question. Prepare and delivery
-   steps are in `prompts/prepare.md` and `prompts/deliver.md`. The meta has the shape
-   above; a client phrase is required only when `project.toml` in the data root lists it
-   under `[meta] required_phrases` for the language (regexes, e.g.
+   choosing, internal links, unique to the page); terms stay on their own pages, linked
+   only from the home text, and an unconfirmed fact stays out of the text as an owner
+   question. Prepare and delivery steps are in `prompts/prepare.md` and
+   `prompts/deliver.md`. The meta has the shape above; a client phrase is required only
+   when `project.toml` in the data root lists it under `[meta] required_phrases` for the
+   language (regexes, e.g.
    `required_phrases = { uk = ["опт\\b"], ru = [] }`); `[meta] recommended_phrases`
    gives a WARNING when missing; `[project] brand` is the title suffix ` | {brand}` of
    the meta generators.

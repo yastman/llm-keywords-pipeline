@@ -36,9 +36,9 @@ confirm it where it is ambiguous. Each answer decides keywords or text:
 | --- | --- |
 | Business type: producer, official distributor, importer, reseller, retailer? | «від виробника» / «от производителя» only for a producer; «офіційний дистриб'ютор» only with the owner's confirmation |
 | Wholesale, retail or both? | Keep or drop «опт», «роздріб», «купити 1 шт» keys; `[meta] required_phrases` |
-| Who buys: legal entities, ФОП, private persons; is registration needed to see prices or order? | Keys like «для магазину», «для ФОП»; what the text says about access |
+| Who buys: legal entities, ФОП, private persons; is registration needed to see prices or order? | Keys like «для магазину», «для ФОП»; the access terms stay on the info pages, linked from the home text |
 | Regions served, warehouses, pickup points, delivery carriers? | City keys only where a warehouse or pickup point is confirmed; «доставка по Україні» only if confirmed |
-| Min order, payment methods, deferral, prices shown to guests? | Keys with «мінімальне замовлення», «відтермінування», «ціна»; any number in the text |
+| Min order, payment methods, deferral, prices shown to guests? | Keys with «мінімальне замовлення», «відтермінування», «ціна»; the terms themselves stay on the info pages, linked from the home text |
 | Assortment: which categories and brands are sold; which competitor brands are never named? | Trademark keys only for brands the shop sells; `[blacklist] brands` |
 | Phrases the owner bans or requires? | Required: `[meta] required_phrases`, `recommended_phrases`. Banned: listed in `brief.md` only, no key checks them |
 | Languages, and which is primary? | `[project] languages`; which texts come first |
